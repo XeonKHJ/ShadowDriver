@@ -17,6 +17,7 @@ Environment:
 #include "driver.h"
 #include "device.tmh"
 #include "Callouts.h"
+#include "WfpHelper.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
@@ -90,7 +91,9 @@ Return Value:
         }
 
         PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
-        status = RegisterCalloutFuntions(deviceObject);
+
+        //初始化Windows筛选平台
+        status = InitializeWfp(deviceObject);
     }
 
     return status;

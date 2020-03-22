@@ -42,6 +42,7 @@
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
     <ClCompile Include="Queue.c" />
+    <ClCompile Include="WfpHelper.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Callouts.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="Trace.h" />
+    <ClInclude Include="WfpHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf" />
@@ -185,6 +187,7 @@
       <WppKernelMode>true</WppKernelMode>
       <PreprocessorDefinitions>NDIS_SUPPORT_NDIS6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)fwpkclnt.lib;%(AdditionalDependencies)</AdditionalDependencies>
