@@ -16,7 +16,7 @@ Environment:
 
 #include "driver.h"
 #include "driver.tmh"
-#include "fwpsk.h"
+
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -24,58 +24,12 @@ Environment:
 #pragma alloc_text (PAGE, ShadowDriverEvtDriverContextCleanup)
 #endif
 
-WDFDEVICE wdfDevice;
-NTSTATUS CreateWdfDevice(WDFDRIVER driver)
+
+PDRIVER_OBJECT driversss;
+VOID Unload(PDRIVER_OBJECT DriverObject)
 {
-    //WDF Device Code
-    PWDFDEVICE_INIT deviceInit;
-    PDEVICE_OBJECT deviceObject;
-    NTSTATUS status;
-
-    //分配设备初始化结构
-    deviceInit = WdfControlDeviceInitAllocate(
-        driver,
-        &SDDL_DEVOBJ_KERNEL_ONLY
-    );
-
-    //初始化WDF设备特性
-    WdfDeviceInitSetCharacteristics(
-        deviceInit,
-        FILE_DEVICE_SECURE_OPEN,
-        FALSE
-    );
-
-    //创建WDF设备
-    status = WdfDeviceCreate(&deviceInit, WDF_NO_OBJECT_ATTRIBUTES, &wdfDevice);
-
-    if (status == STATUS_SUCCESS)
-    {
-        WdfControlFinishInitializing(wdfDevice);
-        deviceObject = WdfDeviceWdmGetDeviceObject(wdfDevice);
-    }
-
-    return status;
-}
-
-// {61776EB9-EE7E-46C3-9A23-2A8C4C647AE3}
-static const GUID calloutGuid =
-{ 0x61776eb9, 0xee7e, 0x46c3, { 0x9a, 0x23, 0x2a, 0x8c, 0x4c, 0x64, 0x7a, 0xe3 } };
-
-const FWPS_CALLOUT0 Callout =
-{
-    { 0x61776eb9, 0xee7e, 0x46c3, { 0x9a, 0x23, 0x2a, 0x8c, 0x4c, 0x64, 0x7a, 0xe3 } },
-    0,
-    ClassifyFn,
-    NotifyFn,
-    FlowDeleteFn
-};
-
-UINT32 CalloutId;
-NTSTATUS RegisterCalloutFuntions(PDEVICE_OBJECT deviceObject)
-{
-    NTSTATUS status;
-
-    status = FwpsCalloutRegister0(deviceObject, &Callout, &CalloutId);
+    driversss = DriverObject;
+    
 }
 
 NTSTATUS
@@ -135,11 +89,6 @@ Return Value:
     //自己的代码
     DriverObject->DriverUnload = Unload;
 
-
-    status = InitializeFilterEngine();
-
-    status = InitializeCalloutDriver();
-
     //创建WDF 驱动。
     status = WdfDriverCreate(DriverObject,
                              RegistryPath,
@@ -159,8 +108,6 @@ Return Value:
         return status;
     }
 
-    status = CreateWdfDevice(wdfDriver);
-
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
         WPP_CLEANUP(DriverObject);
@@ -170,11 +117,6 @@ Return Value:
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
 
     return status;
-}
-
-VOID Unload(PDRIVER_OBJECT DriverObject)
-{
-
 }
 
 NTSTATUS

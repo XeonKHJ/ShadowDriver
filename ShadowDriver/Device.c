@@ -16,6 +16,7 @@ Environment:
 
 #include "driver.h"
 #include "device.tmh"
+#include "Callouts.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
@@ -87,6 +88,9 @@ Return Value:
             //
             status = ShadowDriverQueueInitialize(device);
         }
+
+        PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
+        status = RegisterCalloutFuntions(deviceObject);
     }
 
     return status;

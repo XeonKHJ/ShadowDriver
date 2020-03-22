@@ -1,2 +1,5 @@
 #pragma once
-#include "Callouts.h"
+
+NTSTATUS RegisterCalloutFuntions(PDEVICE_OBJECT deviceObject);
+
+
