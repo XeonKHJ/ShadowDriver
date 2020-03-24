@@ -2,6 +2,8 @@
 #include <fwpsk.h>
 #include <fwpmk.h>
 
+#include "ShadowUtilities.h"
+
 // {C21D8417-F64E-4669-A095-1DEB48ADD117}
 static const GUID calloutsGuid =
 { 0xc21d8417, 0xf64e, 0x4669, { 0xa0, 0x95, 0x1d, 0xeb, 0x48, 0xad, 0xd1, 0x17 } };

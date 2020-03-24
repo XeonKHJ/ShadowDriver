@@ -15,23 +15,38 @@ VOID NTAPI ClassifyFn(
 )
 {
     FWPS_STREAM_CALLOUT_IO_PACKET* packet;
-    
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "Here comes the data.\n");
+    FWPS_STREAM_DATA* streamData;
+    SIZE_T length = 0;
+    SIZE_T bytes;
+    CHAR dataBuffer[202] = { 0 };
+    CHAR outputs[400] = { 0 };
 
     packet = (FWPS_STREAM_CALLOUT_IO_PACKET*)layerData;
 
-    RtlZeroMemory(classifyOut, sizeof(FWPS_CLASSIFY_OUT));
-
     if (packet != NULL)
     {
-        packet->streamAction = FWPS_STREAM_ACTION_NONE;
-    }
+        streamData = packet->streamData;
 
-    classifyOut->actionType = FWP_ACTION_PERMIT;
+        RtlZeroMemory(classifyOut, sizeof(FWPS_CLASSIFY_OUT));
 
-    if (filter->flags & FWPS_FILTER_FLAG_CLEAR_ACTION_RIGHT)
-    {
-        classifyOut->actionType &= FWPS_RIGHT_ACTION_WRITE;
+        classifyOut->actionType = FWP_ACTION_PERMIT;
+
+        if (streamData->flags & FWPS_STREAM_FLAG_RECEIVE)
+        {
+            
+            length = streamData->dataLength <= 200 ? streamData->dataLength : 200;
+            //dataBuffer = ExAllocatePoolWithTag(NonPagedPool, length, 'pac');
+
+            //memset(dataBuffer, 0, length);
+
+            FwpsCopyStreamDataToBuffer0(streamData, dataBuffer, length, &bytes);
+
+            ConvertBytesArrayToHexString(dataBuffer, length, outputs, 400);
+
+            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL,"%s", outputs);
+
+            //ExFreePoolWithTag(dataBuffer, 'pac');
+        }
     }
 }
 
