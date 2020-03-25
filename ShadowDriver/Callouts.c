@@ -16,10 +16,10 @@ VOID NTAPI ClassifyFn(
 {
     FWPS_STREAM_CALLOUT_IO_PACKET* packet;
     FWPS_STREAM_DATA* streamData;
-    SIZE_T length = 0;
+    SIZE_T dataLength = 0;
     SIZE_T bytes;
-    CHAR dataBuffer[202] = { 0 };
-    CHAR outputs[400] = { 0 };
+    CHAR* dataBuffer;
+    CHAR* outputs;
 
     packet = (FWPS_STREAM_CALLOUT_IO_PACKET*)layerData;
 
@@ -33,19 +33,31 @@ VOID NTAPI ClassifyFn(
 
         if (streamData->flags & FWPS_STREAM_FLAG_RECEIVE)
         {
-            
-            length = streamData->dataLength <= 200 ? streamData->dataLength : 200;
-            //dataBuffer = ExAllocatePoolWithTag(NonPagedPool, length, 'pac');
+            dataLength = streamData->dataLength <= 200 ? streamData->dataLength : 200;
+            size_t outputLength = CaculateHexStringLength(dataLength);
 
-            //memset(dataBuffer, 0, length);
+            dataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'data');
+            outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
 
-            FwpsCopyStreamDataToBuffer0(streamData, dataBuffer, length, &bytes);
+            if (dataBuffer != NULL)
+            {
+                memset(dataBuffer, 0, dataLength);
+                //memset(dataBuffer, 0, length);
 
-            ConvertBytesArrayToHexString(dataBuffer, length, outputs, 400);
+                FwpsCopyStreamDataToBuffer0(streamData, dataBuffer, dataLength, &bytes);
 
-            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL,"%s", outputs);
+                if (outputs != NULL)
+                {
+                    ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, 400);
 
-            //ExFreePoolWithTag(dataBuffer, 'pac');
+                    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "%s", outputs);
+
+                    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "\n");
+
+                    ExFreePoolWithTag(outputs, 'op');
+                }
+                ExFreePoolWithTag(dataBuffer, 'data');
+            }
         }
     }
 }
