@@ -5,6 +5,12 @@
 UINT32 WpsCalloutId;
 UINT32 WpmCalloutId;
 
+HANDLE InjectHandle = NULL;
+void InjectPacket(PNET_BUFFER_LIST clonedPacket)
+{
+    FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &InjectHandle);
+}
+
 VOID NTAPI ClassifyFn(
     _In_ const FWPS_INCOMING_VALUES0* inFixedValues,
     _In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
@@ -14,50 +20,70 @@ VOID NTAPI ClassifyFn(
     _Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-    FWPS_STREAM_CALLOUT_IO_PACKET* packet;
+    NET_BUFFER_LIST* packet;
     FWPS_STREAM_DATA* streamData;
     SIZE_T dataLength = 0;
-    SIZE_T bytes;
-    CHAR* dataBuffer;
-    CHAR* outputs;
+    SIZE_T bytes = 0;
+    PVOID dataBuffer = NULL;
+    PCHAR outputs = NULL;
+    PNET_BUFFER_LIST clonedPacket;
+    FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
-    packet = (FWPS_STREAM_CALLOUT_IO_PACKET*)layerData;
+    packet = (NET_BUFFER_LIST*)layerData;
 
-    if (packet != NULL)
+    if (InjectHandle != NULL)
     {
-        streamData = packet->streamData;
+        injectionState == FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
 
-        RtlZeroMemory(classifyOut, sizeof(FWPS_CLASSIFY_OUT));
+        if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+            injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+        {
+            classifyOut->actionType = FWP_ACTION_PERMIT;
+        }
+    }
+    
 
+    if (classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
+    {
+        ULONG localIp, remoteIp;
+
+        localIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS].value.uint32;
+        remoteIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
+
+        /*DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "PID is %ld --- Path is %s --- LocalIP is %u.%u.%u.%u --- RemoteIP is %u.%u.%u.%u \r\n", 
+                   (ULONG)inMetaValues->processId,
+                   (PWCHAR)(inMetaValues->processPath->data),
+                   (localIp>>24)&0xFF, (localIp >> 16) & 0xFF, (localIp >> 8) & 0xFF, (localIp) & 0xFF,
+                   (remoteIp >> 24) & 0xFF, (remoteIp >> 16) & 0xFF, (remoteIp >> 8) & 0xFF, (remoteIp) & 0xFF);*/
+        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+
+        if (packet->FirstNetBuffer != NULL)
+        {
+            PNET_BUFFER_LIST clonedBuffer;
+
+            PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+
+            dataBuffer = NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+
+
+            size_t outputLength = CaculateHexStringLength(netBuffer->DataLength);
+            outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+            ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
+
+            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\n", outputs);
+            ExFreePoolWithTag(outputs, 'op');
+        }
+
+        classifyOut->actionType = FWP_ACTION_BLOCK;
+        classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+    }
+    else
+    {
         classifyOut->actionType = FWP_ACTION_PERMIT;
 
-        if (streamData->flags & FWPS_STREAM_FLAG_RECEIVE)
+        if (filter->flags & FWPS_FILTER_FLAG_CLEAR_ACTION_RIGHT)
         {
-            dataLength = streamData->dataLength <= 200 ? streamData->dataLength : 200;
-            size_t outputLength = CaculateHexStringLength(dataLength);
-
-            dataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'data');
-            outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
-
-            if (dataBuffer != NULL)
-            {
-                memset(dataBuffer, 0, dataLength);
-                //memset(dataBuffer, 0, length);
-
-                FwpsCopyStreamDataToBuffer0(streamData, dataBuffer, dataLength, &bytes);
-
-                if (outputs != NULL)
-                {
-                    ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, 400);
-
-                    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "%s", outputs);
-
-                    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "\n");
-
-                    ExFreePoolWithTag(outputs, 'op');
-                }
-                ExFreePoolWithTag(dataBuffer, 'data');
-            }
+            classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
         }
     }
 }
@@ -101,7 +127,7 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
     callout.displayData.description = L"I think you know what it is.";
     callout.displayData.name = L"ShadowCallout";
     callout.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
-    callout.applicableLayer = FWPM_LAYER_STREAM_V4;
+    callout.applicableLayer = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
 
     return FwpmCalloutAdd0(engineHandle, &callout, NULL, &WpmCalloutId);
 }

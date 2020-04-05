@@ -49,14 +49,18 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
 }
 
 
-NTSTATUS AddFileterToWfp(HANDLE engineHandler)
+NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 {
     FWPM_FILTER0 filter = { 0 };
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
+    FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
+    AddrandMask.addr = 0xd4cdd0d;
+    AddrandMask.mask = 0xFFFFFFFF;
+
     filter.displayData.name = L"ShadowDriveFilter";
     filter.displayData.description = L"ShadowDriver's filter";
-    filter.layerKey = FWPM_LAYER_STREAM_V4;
+    filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
     filter.subLayerKey = WFP_SUBLAYER_GUID;
     filter.weight.type = FWP_EMPTY;
     filter.numFilterConditions = 1;
@@ -64,10 +68,10 @@ NTSTATUS AddFileterToWfp(HANDLE engineHandler)
     filter.action.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
     filter.filterCondition = condition;
 
-    condition[0].fieldKey = FWPM_CONDITION_IP_LOCAL_PORT;
-    condition[0].matchType = FWP_MATCH_LESS_OR_EQUAL;
-    condition[0].conditionValue.type = FWP_UINT16;
-    condition[0].conditionValue.uint16 = 65000;
+    condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+    condition[0].matchType = FWP_MATCH_EQUAL;
+    condition[0].conditionValue.type = FWP_V4_ADDR_MASK;
+    condition[0].conditionValue.v4AddrMask = &AddrandMask;
 
     return FwpmFilterAdd0(engineHandler, &filter, NULL, &filterId);
 }
@@ -98,7 +102,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 
     if (NT_SUCCESS(status))
     {
-        status = AddFileterToWfp(EngineHandler);
+        status = AddFilterToWfp(EngineHandler);
     }
 
     if (!NT_SUCCESS(status))
