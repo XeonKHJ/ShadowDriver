@@ -11,6 +11,15 @@ void InjectPacket(PNET_BUFFER_LIST clonedPacket)
     FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &InjectHandle);
 }
 
+void InjectCompleted(
+    void* context,
+    NET_BUFFER_LIST* netBufferList,
+    BOOLEAN dispatchLevel
+)
+{
+    FwpsFreeCloneNetBufferList0(netBufferList, 0);
+}
+
 VOID NTAPI ClassifyFn(
     _In_ const FWPS_INCOMING_VALUES0* inFixedValues,
     _In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
@@ -20,6 +29,7 @@ VOID NTAPI ClassifyFn(
     _Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
+    NTSTATUS status;
     NET_BUFFER_LIST* packet;
     FWPS_STREAM_DATA* streamData;
     SIZE_T dataLength = 0;
@@ -33,12 +43,20 @@ VOID NTAPI ClassifyFn(
 
     if (InjectHandle != NULL)
     {
-        injectionState == FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
+        injectionState = FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
 
         if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
             injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
         {
             classifyOut->actionType = FWP_ACTION_PERMIT;
+        }
+    }
+    else
+    {
+        status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &InjectHandle);
+        if (NT_SUCCESS(status))
+        {
+            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Handle created.\n");
         }
     }
     
@@ -50,13 +68,9 @@ VOID NTAPI ClassifyFn(
         localIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS].value.uint32;
         remoteIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
 
-        /*DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "PID is %ld --- Path is %s --- LocalIP is %u.%u.%u.%u --- RemoteIP is %u.%u.%u.%u \r\n", 
-                   (ULONG)inMetaValues->processId,
-                   (PWCHAR)(inMetaValues->processPath->data),
-                   (localIp>>24)&0xFF, (localIp >> 16) & 0xFF, (localIp >> 8) & 0xFF, (localIp) & 0xFF,
-                   (remoteIp >> 24) & 0xFF, (remoteIp >> 16) & 0xFF, (remoteIp >> 8) & 0xFF, (remoteIp) & 0xFF);*/
         DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
 
+        //´òÓ¡IP±¨
         if (packet->FirstNetBuffer != NULL)
         {
             PNET_BUFFER_LIST clonedBuffer;
@@ -70,12 +84,19 @@ VOID NTAPI ClassifyFn(
             outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
             ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
 
-            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\n", outputs);
+            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
             ExFreePoolWithTag(outputs, 'op');
         }
+        
+        status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL,0, &clonedPacket);
 
         classifyOut->actionType = FWP_ACTION_BLOCK;
         classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+        if (NT_SUCCESS(status))
+        {
+            status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+        }
     }
     else
     {
@@ -108,6 +129,8 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
 {
     NTSTATUS status;
 
+
+
     FWPS_CALLOUT0 callout = { 0 };
 
     callout.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
@@ -128,6 +151,8 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
     callout.displayData.name = L"ShadowCallout";
     callout.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
     callout.applicableLayer = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+
+
 
     return FwpmCalloutAdd0(engineHandle, &callout, NULL, &WpmCalloutId);
 }
