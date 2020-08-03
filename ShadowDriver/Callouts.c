@@ -51,14 +51,6 @@ VOID NTAPI ClassifyFn(
             classifyOut->actionType = FWP_ACTION_PERMIT;
         }
     }
-    else
-    {
-        status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &InjectHandle);
-        if (NT_SUCCESS(status))
-        {
-            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Handle created.\n");
-        }
-    }
     
 
     if (classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
@@ -139,6 +131,15 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
     callout.notifyFn = NotifyFn;
     callout.flowDeleteFn = FlowDeleteFn;
     status = FwpsCalloutRegister0(deviceObject, &callout, &WpsCalloutId);
+
+    return status;
+}
+
+NTSTATUS CreateInjector()
+{
+    NTSTATUS status;
+
+    status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &InjectHandle);
 
     return status;
 }

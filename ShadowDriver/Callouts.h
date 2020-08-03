@@ -1,4 +1,5 @@
 #pragma once
+
 #include <fwpsk.h>
 #include <fwpmk.h>
 
@@ -15,3 +16,5 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject);
 NTSTATUS AddCalloutToWfp(IN HANDLE engineHandler);
 
 VOID UnRegisterCallout(HANDLE engineHandle);
+
+NTSTATUS CreateInjector();

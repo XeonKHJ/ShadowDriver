@@ -92,6 +92,11 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 
     if (NT_SUCCESS(status))
     {
+        status = CreateInjector();
+    }
+
+    if (NT_SUCCESS(status))
+    {
         status = AddCalloutToWfp(EngineHandler);
     }
 
