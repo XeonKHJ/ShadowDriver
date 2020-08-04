@@ -1,3 +1,19 @@
+/*++
+
+Module Name:
+
+    Callout.c
+
+Abstract:
+
+    包含了关于WFP中包的捕获和转发的主要逻辑函数。
+
+Environment:
+
+    Kernel-mode Driver Framework
+
+--*/
+
 #include "driver.h"
 #include "device.tmh"
 #include "Callouts.h"
@@ -36,7 +52,7 @@ VOID NTAPI ClassifyFn(
     SIZE_T bytes = 0;
     PVOID dataBuffer = NULL;
     PCHAR outputs = NULL;
-    PNET_BUFFER_LIST clonedPacket;
+    PNET_BUFFER_LIST clonedPacket = NULL;
     FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
     packet = (NET_BUFFER_LIST*)layerData;
@@ -45,10 +61,23 @@ VOID NTAPI ClassifyFn(
     {
         injectionState = FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
 
+        //如果捕获的数据包是主动
         if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
             injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
         {
             classifyOut->actionType = FWP_ACTION_PERMIT;
+        }
+        //该数据包不是被手动注入的数据包
+        else if (injectionState == FWPS_PACKET_NOT_INJECTED)
+        {
+            status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+
+            //如果为克隆的数据包创建缓冲区失败的话，则阻断这个数据包。
+            if (!NT_SUCCESS(status))
+            {
+                classifyOut->actionType = FWP_ACTION_BLOCK;
+                classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+            }
         }
     }
     
