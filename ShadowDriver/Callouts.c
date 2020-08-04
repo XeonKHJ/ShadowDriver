@@ -33,7 +33,17 @@ void InjectCompleted(
     BOOLEAN dispatchLevel
 )
 {
+    NDIS_STATUS status = netBufferList->Status;
+
+    FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(InjectHandle, netBufferList, NULL);
+
+    if (status == NDIS_STATUS_SUCCESS)
+    {
+        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Completed\n");
+    }
+
     FwpsFreeCloneNetBufferList0(netBufferList, 0);
+    
 }
 
 VOID NTAPI ClassifyFn(
@@ -75,59 +85,79 @@ VOID NTAPI ClassifyFn(
             //如果为克隆的数据包创建缓冲区失败的话，则阻断这个数据包。
             if (!NT_SUCCESS(status))
             {
-                classifyOut->actionType = FWP_ACTION_BLOCK;
-                classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+            }
+            //如果数据包缓冲区创建成功
+            else
+            {
+                
+                //status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
+                status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+
+                if (!NT_SUCCESS(status))
+                {
+                    DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Failed\n");
+                }
+                else
+                {
+                    DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Success\n");
+                }
             }
         }
+
+
+        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+        classifyOut->actionType = FWP_ACTION_BLOCK;
+        classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
     }
     
 
-    if (classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
-    {
-        ULONG localIp, remoteIp;
+    //if (classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
+    //{
+    //    ULONG localIp, remoteIp;
 
-        localIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS].value.uint32;
-        remoteIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
+    //    localIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS].value.uint32;
+    //    remoteIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
 
-        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+    //    DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
 
-        //打印IP报
-        if (packet->FirstNetBuffer != NULL)
-        {
-            PNET_BUFFER_LIST clonedBuffer;
+    //    //打印IP报
+    //    if (packet->FirstNetBuffer != NULL)
+    //    {
+    //        PNET_BUFFER_LIST clonedBuffer;
 
-            PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+    //        PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 
-            dataBuffer = NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+    //        dataBuffer = NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
 
 
-            size_t outputLength = CaculateHexStringLength(netBuffer->DataLength);
-            outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
-            ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
+    //        size_t outputLength = CaculateHexStringLength(netBuffer->DataLength);
+    //        outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+    //        ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
 
-            DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
-            ExFreePoolWithTag(outputs, 'op');
-        }
-        
-        status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL,0, &clonedPacket);
+    //        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
+    //        ExFreePoolWithTag(outputs, 'op');
+    //    }
+    //    
+    //    status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL,0, &clonedPacket);
 
-        classifyOut->actionType = FWP_ACTION_BLOCK;
-        classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+    //    //classifyOut->actionType = FWP_ACTION_BLOCK;
+    //    //classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
-        if (NT_SUCCESS(status))
-        {
-            status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
-        }
-    }
-    else
-    {
-        classifyOut->actionType = FWP_ACTION_PERMIT;
+    //    //if (NT_SUCCESS(status))
+    //    //{
+    //    //    status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+    //    //}
+    //}
+    //else
+    //{
+    //    classifyOut->actionType = FWP_ACTION_PERMIT;
 
-        if (filter->flags & FWPS_FILTER_FLAG_CLEAR_ACTION_RIGHT)
-        {
-            classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-        }
-    }
+    //    if (filter->flags & FWPS_FILTER_FLAG_CLEAR_ACTION_RIGHT)
+    //    {
+    //        classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+    //    }
+    //}
 }
 
 NTSTATUS NTAPI NotifyFn(
