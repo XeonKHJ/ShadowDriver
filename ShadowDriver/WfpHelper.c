@@ -48,19 +48,23 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
     return FwpmSubLayerAdd0(engineHandler, &sublayer, NULL);
 }
 
-
+/// <summary>
+/// 为指定的WFP引擎添加过滤器
+/// </summary>
+/// <param name="engineHandler">WFP引擎句柄</param>
+/// <returns>NT状态</returns>
 NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 {
     FWPM_FILTER0 filter = { 0 };
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
     FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
-    AddrandMask.addr = 0xd4cdd0d;
+    AddrandMask.addr = 0xC0A800C6;
     AddrandMask.mask = 0xFFFFFFFF;
 
     filter.displayData.name = L"ShadowDriveFilter";
     filter.displayData.description = L"ShadowDriver's filter";
-    filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+    filter.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
     filter.subLayerKey = WFP_SUBLAYER_GUID;
     filter.weight.type = FWP_EMPTY;
     filter.numFilterConditions = 1;
