@@ -27,6 +27,7 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 {
 	PVOID dataBuffer = NULL;
 	PCHAR outputs = NULL;
+	PVOID copiedDataBuffer = NULL;
 	//打印IP报
 	if (packet->FirstNetBuffer != NULL)
 	{
@@ -36,9 +37,18 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 
 		int dataLength = netBuffer->DataLength;
 
+		//NdisRetreatNetBufferDataStart(netBuffer, 0, 0, NULL);
+		int orignalDataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
+		
+		copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, orignalDataLength, 'cpk');
+
+		dataLength = orignalDataLength;
+
 		while (dataBuffer == NULL)
 		{
-			dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, NULL, 1, 0);
+			
+			dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, copiedDataBuffer, 1, 0);
+			
 			--dataLength;
 		}
 		++dataLength;
@@ -118,7 +128,7 @@ VOID NTAPI ClassifyFn(
 			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 		{
 			classifyOut->actionType = FWP_ACTION_PERMIT;
-			PrintNetBufferList(packet);
+			//PrintNetBufferList(packet);
 		}
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
