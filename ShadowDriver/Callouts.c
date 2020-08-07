@@ -22,6 +22,44 @@ UINT32 WpsCalloutId;
 UINT32 WpmCalloutId;
 
 HANDLE InjectHandle = NULL;
+
+void PrintNetBufferList(PNET_BUFFER_LIST packet)
+{
+	PVOID dataBuffer = NULL;
+	PCHAR outputs = NULL;
+	//打印IP报
+	if (packet->FirstNetBuffer != NULL)
+	{
+		PNET_BUFFER_LIST clonedBuffer;
+
+		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+
+		int dataLength = netBuffer->DataLength;
+
+		while (dataBuffer == NULL)
+		{
+			dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, NULL, 1, 0);
+			--dataLength;
+		}
+		++dataLength;
+
+		if (dataBuffer != NULL)
+		{
+			size_t outputLength = CaculateHexStringLength(dataLength);
+			outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+
+			ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
+
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
+			ExFreePoolWithTag(outputs, 'op');
+		}
+		else
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "DataBuffer Fetch Failed!\t\n", outputs);
+		}
+	}
+}
+
 void InjectPacket(PNET_BUFFER_LIST clonedPacket)
 {
 	FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &InjectHandle);
@@ -42,9 +80,13 @@ void InjectCompleted(
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Completed\n");
 	}
 
+	//PrintNetBufferList(netBufferList);
+
 	FwpsFreeCloneNetBufferList0(netBufferList, 0);
 
 }
+
+
 
 VOID NTAPI ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
@@ -60,8 +102,8 @@ VOID NTAPI ClassifyFn(
 	FWPS_STREAM_DATA* streamData;
 	SIZE_T dataLength = 0;
 	SIZE_T bytes = 0;
-	PVOID dataBuffer = NULL;
-	PCHAR outputs = NULL;
+	
+	
 	PNET_BUFFER_LIST clonedPacket = NULL;
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
@@ -76,10 +118,12 @@ VOID NTAPI ClassifyFn(
 			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 		{
 			classifyOut->actionType = FWP_ACTION_PERMIT;
+			PrintNetBufferList(packet);
 		}
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
+			PrintNetBufferList(packet);
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			//如果为克隆的数据包创建缓冲区失败的话，则阻断这个数据包。
@@ -108,25 +152,6 @@ VOID NTAPI ClassifyFn(
 			classifyOut->actionType = FWP_ACTION_BLOCK;
 			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 		}
-
-		//打印IP报
-		//if (packet->FirstNetBuffer != NULL)
-		//{
-		//	PNET_BUFFER_LIST clonedBuffer;
-
-		//	PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
-
-		//	dataBuffer = NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
-
-		//	size_t outputLength = CaculateHexStringLength(netBuffer->DataLength);
-		//	outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
-		//	ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
-
-		//	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
-		//	ExFreePoolWithTag(outputs, 'op');
-		//}
-
-
 
 	}
 
