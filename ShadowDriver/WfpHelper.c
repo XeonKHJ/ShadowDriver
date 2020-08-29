@@ -59,7 +59,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
     FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
-    AddrandMask.addr = 0xC0A800C6;
+    AddrandMask.addr = 0xC0A800B1;
     AddrandMask.mask = 0xFFFFFFFF;
 
     filter.displayData.name = L"ShadowDriveFilter";
