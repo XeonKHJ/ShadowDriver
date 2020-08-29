@@ -5,6 +5,12 @@ VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowDriver", "ShadowDriver\ShadowDriver.vcxproj", "{2219ED12-59FA-407D-A421-8E98ABCC059F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ShadowDriver.RPC", "ShadowDriver.RPC", "{616ACEE9-13AB-43F6-82D6-B46EEE6A265E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowDriver.RPC.Common", "ShadowDriver.RPC\ShadowDriver.RPC.Common\ShadowDriver.RPC.Common.vcxitems", "{DB6CBF72-C2CC-43FD-ADBC-B99144811749}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowDriver.RPC.Server", "ShadowDriver.RPC\ShadowDriver.RPC.Server\ShadowDriver.RPC.Server.vcxproj", "{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -41,9 +47,25 @@ Global
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.ActiveCfg = Release|Win32
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.Build.0 = Release|Win32
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.Deploy.0 = Release|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|ARM.ActiveCfg = Debug|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|x64.ActiveCfg = Debug|x64
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|x64.Build.0 = Debug|x64
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|x86.ActiveCfg = Debug|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Debug|x86.Build.0 = Debug|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|ARM.ActiveCfg = Release|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|ARM64.ActiveCfg = Release|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|x64.ActiveCfg = Release|x64
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|x64.Build.0 = Release|x64
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|x86.ActiveCfg = Release|Win32
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DB6CBF72-C2CC-43FD-ADBC-B99144811749} = {616ACEE9-13AB-43F6-82D6-B46EEE6A265E}
+		{4218B1F5-A12F-48C7-A75A-D96B6C7B175F} = {616ACEE9-13AB-43F6-82D6-B46EEE6A265E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5466DB6D-0D82-4182-864A-BC33190A425B}
