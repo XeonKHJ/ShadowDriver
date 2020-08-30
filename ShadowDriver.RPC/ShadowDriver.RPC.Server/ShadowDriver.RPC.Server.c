@@ -2,42 +2,8 @@
 //
 
 #include "../ShadowDriver.RPC.Common/ShadowDriverRPC.h"
-#include <windows.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
 
-int main()
-{
-	RPC_STATUS status;
-
-	LPWSTR pszProtocolSequence = L"ncacn_np";
-	LPWSTR pszSecurity = NULL;
-	LPWSTR pszEndpoint = L"\\pipe\\ShadowDriverRPC";
-	unsigned int    cMinCalls = 1;
-	unsigned int    fDontWait = FALSE;
-
-	status = RpcServerUseProtseqEp(pszProtocolSequence,
-		RPC_C_LISTEN_MAX_CALLS_DEFAULT,
-		pszEndpoint,
-		pszSecurity);
-
-	if (status) exit(status);
-
-	status = RpcServerRegisterIf(ShadowDriverRPC_v1_0_s_ifspec,
-		NULL,
-		NULL);
-
-	if (status) exit(status);
-
-	status = RpcServerListen(cMinCalls,
-		RPC_C_LISTEN_MAX_CALLS_DEFAULT,
-		fDontWait);
-
-	if (status) exit(status);
-}
-
-int InitializeRPCServer()
+long InitializeShadowDriverRPCServer()
 {
 	RPC_STATUS status;
 
@@ -54,7 +20,7 @@ int InitializeRPCServer()
 
 	if (status)
 	{
-		return -1;
+		return status;
 	}
 
 	status = RpcServerRegisterIf(ShadowDriverRPC_v1_0_s_ifspec,
@@ -63,7 +29,7 @@ int InitializeRPCServer()
 
 	if (status)
 	{
-		return -1;
+		return status;
 	}
 
 	status = RpcServerListen(cMinCalls,
@@ -72,6 +38,6 @@ int InitializeRPCServer()
 
 	if (status)
 	{
-		return -1;
+		return status;
 	}
 }
