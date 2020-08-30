@@ -16,7 +16,7 @@ Environment:
 
 #include "driver.h"
 #include "driver.tmh"
-
+#include <windowsx.h>
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -29,7 +29,21 @@ PDRIVER_OBJECT driversss;
 VOID Unload(PDRIVER_OBJECT DriverObject)
 {
     driversss = DriverObject;
-    
+}
+
+void StartInitializeRPC(
+    PVOID StartContext
+)
+{
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "RPC Thread Created.\n");
+}
+
+NTSTATUS InitializeRPCServer()
+{
+    NTSTATUS status;
+    HANDLE threadHandle;
+    status = PsCreateSystemThread(&threadHandle, SYNCHRONIZE | DELETE, NULL, NULL, NULL, StartInitializeRPC, NULL);
+    return status;
 }
 
 NTSTATUS
@@ -97,16 +111,18 @@ Return Value:
                              &wdfDriver
                              );
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "First message.\n");
-    DbgPrintEx(DPFLTR_IHVAUDIO_ID, 7, "Second message.\n");
-    DbgPrintEx(DPFLTR_IHVBUS_ID, DPFLTR_MASK | 0x10, "Third message.\n");
-    DbgPrint("Fourth message.\n");
-
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
         WPP_CLEANUP(DriverObject);
         return status;
     }
+    //Æô¶¯RPC
+    status = InitializeRPCServer();
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "First message.\n");
+    DbgPrintEx(DPFLTR_IHVAUDIO_ID, 7, "Second message.\n");
+    DbgPrintEx(DPFLTR_IHVBUS_ID, DPFLTR_MASK | 0x10, "Third message.\n");
+    DbgPrint("Fourth message.\n");
 
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);

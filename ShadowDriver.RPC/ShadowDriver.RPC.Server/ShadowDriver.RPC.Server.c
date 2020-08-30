@@ -37,14 +37,41 @@ int main()
 	if (status) exit(status);
 }
 
-_Must_inspect_result_
-_Ret_maybenull_ _Post_writable_byte_size_(size)
-void* __RPC_USER MIDL_user_allocate(_In_ size_t size)
+int InitializeRPCServer()
 {
-	return(malloc(size));
-}
+	RPC_STATUS status;
 
-void __RPC_USER midl_user_free(_Pre_maybenull_ _Post_invalid_ void* ptr)
-{
-	free(ptr);
+	LPWSTR pszProtocolSequence = L"ncacn_np";
+	LPWSTR pszSecurity = NULL;
+	LPWSTR pszEndpoint = L"\\pipe\\ShadowDriverRPC";
+	unsigned int    cMinCalls = 1;
+	unsigned int    fDontWait = FALSE;
+
+	status = RpcServerUseProtseqEp(pszProtocolSequence,
+		RPC_C_LISTEN_MAX_CALLS_DEFAULT,
+		pszEndpoint,
+		pszSecurity);
+
+	if (status)
+	{
+		return -1;
+	}
+
+	status = RpcServerRegisterIf(ShadowDriverRPC_v1_0_s_ifspec,
+		NULL,
+		NULL);
+
+	if (status)
+	{
+		return -1;
+	}
+
+	status = RpcServerListen(cMinCalls,
+		RPC_C_LISTEN_MAX_CALLS_DEFAULT,
+		fDontWait);
+
+	if (status)
+	{
+		return -1;
+	}
 }

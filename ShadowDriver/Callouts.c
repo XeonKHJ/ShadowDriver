@@ -58,14 +58,17 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 			size_t outputLength = CaculateHexStringLength(dataLength);
 			outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
 
-			ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
+			if (outputs != NULL)
+			{
+				ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
 
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
-			ExFreePoolWithTag(outputs, 'op');
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
+				ExFreePoolWithTag(outputs, 'op');
+			}
 		}
 		else
 		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "DataBuffer Fetch Failed!\t\n", outputs);
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "DataBuffer Fetch Failed!\t\n");
 		}
 	}
 }
