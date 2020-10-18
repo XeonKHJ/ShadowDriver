@@ -99,6 +99,59 @@ void InjectCompleted(
 
 }
 
+VOID ModifyPacket(PNET_BUFFER_LIST packet)
+{
+	if (packet != NULL)
+	{
+		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+
+		//获取数据缓冲区
+		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+
+		ULONG dataLength = netBuffer->DataLength;
+		ULONG ipPacketLength = 20;
+		ULONG ipaddrOffset = 12;
+		PBYTE ipAddrPos = (dataBuffer += dataLength);
+
+		BYTE modifiedAddress[] = { 192, 168, 10, 1 };
+
+		//修改IP地址
+		for (int i = 0; i < 4; ++i, ++ipAddrPos)
+		{
+			ipAddrPos[i] = modifiedAddress[i];
+		}
+
+		INT32 sum = 0;
+		//将校验和置零
+		dataBuffer[10] = dataBuffer[11] = 0;
+
+		//计算校验和
+		for (int i = 0; i < 10; i += 2)
+		{
+			WORD dBytes = dataBuffer[i];
+			dBytes = (dBytes << 16) + dataBuffer[i+1];
+
+			sum += dBytes;
+		}
+
+		//处理进位部分
+		while (sum > 0xFFFF)
+		{
+			INT32 carryPart = (sum & 0xFFFF0000) >> 32;
+			sum = sum & 0xFFFF;
+			sum += carryPart;
+		}
+
+		//截取最低4字节
+		DWORD dwordSum = sum & 0xFFFF;
+
+		//取反码
+		dwordSum = ~dwordSum;
+
+		//填充进数据包
+		(*(PDWORD) & (dataBuffer[10])) = dwordSum;
+	}
+}
 
 
 VOID NTAPI ClassifyFn(
@@ -147,6 +200,7 @@ VOID NTAPI ClassifyFn(
 			//如果数据包缓冲区创建成功
 			else
 			{
+				ModifyPacket(clonedPacket);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
