@@ -108,6 +108,23 @@ VOID ModifyPacket(PNET_BUFFER_LIST packet)
 		//获取数据缓冲区
 		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
 
+		//从MDL中提取信息
+		PVOID mdlBuffer = MmGetMdlVirtualAddress(netBuffer->CurrentMdl);
+
+		//dataBuffer = (PBYTE)mdlBuffer;
+
+		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
+		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
+		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
+
+		char toModifyChar = ((PCHAR)mdlBuffer)[16];
+
+		((PCHAR)mdlBuffer)[16] = (CHAR)192;
+		((PCHAR)mdlBuffer)[17] = (CHAR)168;
+		((PCHAR)mdlBuffer)[18] = (CHAR)1;
+		((PCHAR)mdlBuffer)[19] = (CHAR)101;
+
 		ULONG dataLength = netBuffer->DataLength;
 		ULONG ipPacketLength = 20;
 		ULONG ipaddrOffset = 12;
@@ -121,35 +138,38 @@ VOID ModifyPacket(PNET_BUFFER_LIST packet)
 			ipAddrPos[i] = modifiedAddress[i];
 		}
 
-		INT32 sum = 0;
-		//将校验和置零
-		dataBuffer[10] = dataBuffer[11] = 0;
+		//INT32 sum = 0;
+		////将校验和置零
+		//dataBuffer[10] = dataBuffer[11] = 0;
 
-		//计算校验和
-		for (int i = 0; i < 10; i += 2)
-		{
-			WORD dBytes = dataBuffer[i];
-			dBytes = (dBytes << 16) + dataBuffer[i+1];
+		////计算校验和
+		//for (int i = 0; i < 10; i += 2)
+		//{
+		//	WORD dBytes = dataBuffer[i];
+		//	dBytes = (dBytes << 16) + dataBuffer[i+1];
 
-			sum += dBytes;
-		}
+		//	sum += dBytes;
+		//}
 
-		//处理进位部分
-		while (sum > 0xFFFF)
-		{
-			INT32 carryPart = (sum & 0xFFFF0000) >> 32;
-			sum = sum & 0xFFFF;
-			sum += carryPart;
-		}
+		////处理进位部分
+		//while (sum > 0xFFFF)
+		//{
+		//	UINT32 carryPart = (sum & 0x00FF0000) >> 16;
+		//	sum = sum & 0xFFFF;
+		//	sum += carryPart;
+		//}
 
-		//截取最低4字节
-		DWORD dwordSum = sum & 0xFFFF;
+		////截取最低4字节
+		//DWORD dwordSum = sum & 0xFFFF;
 
-		//取反码
-		dwordSum = ~dwordSum;
+		////取反码
+		//dwordSum = ~dwordSum;
 
-		//填充进数据包
-		(*(PDWORD) & (dataBuffer[10])) = dwordSum;
+		////填充进数据包
+		//(*(PDWORD) & (dataBuffer[10])) = dwordSum;
+
+		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
 	}
 }
 
@@ -174,7 +194,7 @@ VOID NTAPI ClassifyFn(
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
 	packet = (NET_BUFFER_LIST*)layerData;
-
+	PrintNetBufferList(packet);
 	if (InjectHandle != NULL)
 	{
 		injectionState = FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
@@ -189,7 +209,7 @@ VOID NTAPI ClassifyFn(
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
-			PrintNetBufferList(packet);
+			
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			//如果为克隆的数据包创建缓冲区失败的话，则阻断这个数据包。
@@ -201,7 +221,7 @@ VOID NTAPI ClassifyFn(
 			else
 			{
 				ModifyPacket(clonedPacket);
-
+				PrintNetBufferList(clonedPacket);
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
 
