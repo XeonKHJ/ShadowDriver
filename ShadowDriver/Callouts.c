@@ -18,8 +18,13 @@ Environment:
 #include "device.tmh"
 #include "Callouts.h"
 
-UINT32 WpsCalloutId;
-UINT32 WpmCalloutId;
+//当回调函数向设备注册时获得。
+UINT32 WpsSendCalloutId;
+UINT32 WpsReceiveCalloutId;
+
+//当回调函数添加进过滤引擎时获得。
+UINT32 WpmSendCalloutId;
+UINT32 WpmReceiveCalloutId;
 
 HANDLE SendInjectHandle = NULL;
 HANDLE ReceiveInjectHandle = NULL;
@@ -196,7 +201,9 @@ VOID NTAPI ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 	PrintNetBufferList(packet);
-	if (SendInjectHandle != NULL)
+
+	//暂时先让这段不进行观察过去的包
+	if (SendInjectHandle != NULL && FALSE)
 	{
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
@@ -240,7 +247,7 @@ VOID NTAPI ClassifyFn(
 			classifyOut->actionType = FWP_ACTION_BLOCK;
 			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 		}
-
+		classifyOut->actionType = FWP_ACTION_PERMIT;
 	}
 }
 
@@ -264,16 +271,34 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
 {
 	NTSTATUS status;
 
+	FWPS_CALLOUT0 sendCallout = { 0 };
 
+	sendCallout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+	sendCallout.flags = 0;
+	sendCallout.classifyFn = ClassifyFn;
+	sendCallout.notifyFn = NotifyFn;
+	sendCallout.flowDeleteFn = FlowDeleteFn;
+	status = FwpsCalloutRegister0(deviceObject, &sendCallout, &WpsSendCalloutId);
 
-	FWPS_CALLOUT0 callout = { 0 };
+	if (!NT_SUCCESS(status))
+	{
+		return status;
+	}
 
-	callout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-	callout.flags = 0;
-	callout.classifyFn = ClassifyFn;
-	callout.notifyFn = NotifyFn;
-	callout.flowDeleteFn = FlowDeleteFn;
-	status = FwpsCalloutRegister0(deviceObject, &callout, &WpsCalloutId);
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Registered Send Callout to Device Object.\n");
+
+	FWPS_CALLOUT0 receiveCallout = { 0 };
+	receiveCallout.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
+	receiveCallout.flags = 0;
+	receiveCallout.classifyFn = ClassifyFn;
+	receiveCallout.notifyFn = NotifyFn;
+	receiveCallout.flowDeleteFn = FlowDeleteFn;
+	status = FwpsCalloutRegister0(deviceObject, &receiveCallout, &WpsReceiveCalloutId);
+
+	if (NT_SUCCESS(status))
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Registered Receive Callout to Device Object.\n");
+	}
 
 	return status;
 }
@@ -289,29 +314,62 @@ NTSTATUS CreateInjector()
 	return status;
 }
 
+/// <summary>
+/// 添加回调到过滤引擎
+/// </summary>
+/// <param name="engineHandle">过滤引擎句柄</param>
+/// <returns>状态</returns>
 NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
 {
-	FWPM_CALLOUT0 callout = { 0 };
-	callout.flags = 0;
-	callout.displayData.description = L"I think you know what it is.";
-	callout.displayData.name = L"ShadowCallout";
-	callout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-	callout.applicableLayer = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+	NTSTATUS status;
+	FWPM_CALLOUT0 sendCallout = { 0 };
 
+	//用于捕捉再发送道路上的数据包
+	sendCallout.flags = 0;
+	sendCallout.displayData.description = L"I think you know what it is.";
+	sendCallout.displayData.name = L"ShadowSendCallouts";
+	sendCallout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+	sendCallout.applicableLayer = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+	status = FwpmCalloutAdd0(engineHandle, &sendCallout, NULL, &WpmSendCalloutId);
+	
 
-
-	return FwpmCalloutAdd0(engineHandle, &callout, NULL, &WpmCalloutId);
-}
-
-VOID UnRegisterCallout(HANDLE engineHandle)
-{
-	if (WpmCalloutId != 0)
+	if (!NT_SUCCESS(status))
 	{
-		FwpmCalloutDeleteById(engineHandle, WpmCalloutId);
+		return status;
 	}
 
-	if (WpsCalloutId != 0)
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Send Callout to WFP.\n");
+
+	//用于捕捉在接收道路上的数据包
+	FWPM_CALLOUT0 receiveCallout = { 0 };
+	receiveCallout.flags = 0;
+	receiveCallout.displayData.description = L"I think you know what it is.";
+	receiveCallout.displayData.name = L"ShadowReceiveCallouts";
+	receiveCallout.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
+	receiveCallout.applicableLayer = FWPM_LAYER_INBOUND_IPPACKET_V4;
+	status = FwpmCalloutAdd0(engineHandle, &receiveCallout, NULL, &WpmReceiveCalloutId);
+
+	if (NT_SUCCESS(status))
 	{
-		FwpsCalloutUnregisterById0(WpsCalloutId);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Receive Callout to WFP.\n");
+	}
+
+	return status;
+}
+
+/// <summary>
+/// 向过滤引擎和设备注销回调。
+/// </summary>
+/// <param name="engineHandle"></param>
+VOID UnRegisterCallout(HANDLE engineHandle)
+{
+	if (WpmSendCalloutId != 0)
+	{
+		FwpmCalloutDeleteById(engineHandle, WpmSendCalloutId);
+	}
+
+	if (WpsSendCalloutId != 0)
+	{
+		FwpsCalloutUnregisterById0(WpsSendCalloutId);
 	}
 }

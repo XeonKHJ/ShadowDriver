@@ -119,10 +119,7 @@ Return Value:
     //Æô¶¯RPC
     status = InitializeRPCServer();
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "First message.\n");
-    DbgPrintEx(DPFLTR_IHVAUDIO_ID, 7, "Second message.\n");
-    DbgPrintEx(DPFLTR_IHVBUS_ID, DPFLTR_MASK | 0x10, "Third message.\n");
-    DbgPrint("Fourth message.\n");
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Driver Installing.\n");
 
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);

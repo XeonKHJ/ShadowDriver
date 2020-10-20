@@ -8,7 +8,10 @@ static HANDLE EngineHandler = NULL;
 
 //筛选器标识符。
 //仅有再调用 NTSTATUS AddFileterToWfp(HANDLE engineHandler) 函数后才会有值。
+//目前好像就用来删除和判断filter是否被成功添加到WFP
 static UINT64 filterId; 
+static UINT64 filterId2;
+
 VOID UnInitWfp()
 {
     if (EngineHandler != NULL)
@@ -41,7 +44,7 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
 {
     FWPM_SUBLAYER0 sublayer = { 0 };
 
-    sublayer.displayData.name = L"ShadowDriverSublayer";
+    sublayer.displayData.name = L"ShadowDriverFilterSublayer";
     sublayer.displayData.description = L"ShadowDriver Sublayer";
     sublayer.subLayerKey = WFP_SUBLAYER_GUID;
     sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
@@ -57,51 +60,64 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 {
     NTSTATUS status;
 
-    FWPM_FILTER0 filter = { 0 };
+    FWPM_FILTER0 sendFilter = { 0 };
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
     FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
     AddrandMask.addr = 0xC0A800B1;
     AddrandMask.mask = 0xFFFFFFFF;
 
-    filter.displayData.name = L"ShadowDriveFilter";
-    filter.displayData.description = L"ShadowDriver's filter";
-    filter.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
-    filter.subLayerKey = WFP_SUBLAYER_GUID;
-    filter.weight.type = FWP_EMPTY;
-    filter.numFilterConditions = 1;
-    filter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-    filter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-    filter.filterCondition = condition;
+    sendFilter.displayData.name = L"ShadowDriveFilter";
+    sendFilter.displayData.description = L"ShadowDriver's filter";
+    sendFilter.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+    sendFilter.subLayerKey = WFP_SUBLAYER_GUID;
+    sendFilter.weight.type = FWP_EMPTY;
+    sendFilter.numFilterConditions = 1;
+    sendFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+    sendFilter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+    sendFilter.filterCondition = condition;
 
     condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
     condition[0].matchType = FWP_MATCH_EQUAL;
     condition[0].conditionValue.type = FWP_V4_ADDR_MASK;
     condition[0].conditionValue.v4AddrMask = &AddrandMask;
 
-    status = FwpmFilterAdd0(engineHandler, &filter, NULL, &filterId);
+    status = FwpmFilterAdd0(engineHandler, &sendFilter, NULL, &filterId);
 
     if (!NT_SUCCESS(status))
     {
         return status;
     }
 
-    FWPM_FILTER0 filter2 = { 0 };
-    FWPM_FILTER_CONDITION0 condition2[1] = { 0 };
-    filter2.displayData.name = L"ShadowDriveFilter";
-    filter2.displayData.description = L"ShadowDriver's filter";
-    filter2.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
-    filter2.subLayerKey = WFP_SUBLAYER_GUID;
-    filter2.weight.type = FWP_EMPTY;
-    filter2.numFilterConditions = 1;
-    filter2.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-    filter2.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-    filter2.filterCondition = condition;
+    DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Send Filter to WPF.\n");
 
-    condition2[0].fieldKey = FWPM_CONDITION_IP_SOURCE_ADDRESS;
+    FWP_V4_ADDR_AND_MASK AddrandMask2 = { 0 };
+    AddrandMask2.addr = 0xC0A80167;
+    AddrandMask2.mask = 0xFFFFFFFF;
+
+    FWPM_FILTER0 receiveFilter = { 0 };
+    FWPM_FILTER_CONDITION0 condition2[1] = { 0 };
+    receiveFilter.displayData.name = L"ShadowDriveFilter";
+    receiveFilter.displayData.description = L"ShadowDriver's filter";
+    receiveFilter.layerKey = FWPM_LAYER_INBOUND_IPPACKET_V4;
+    receiveFilter.subLayerKey = WFP_SUBLAYER_GUID;
+    receiveFilter.weight.type = FWP_EMPTY;
+    receiveFilter.numFilterConditions = 1;
+    receiveFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+    receiveFilter.action.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
+    receiveFilter.filterCondition = condition2;
+
+    condition2[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
     condition2[0].matchType = FWP_MATCH_EQUAL;
     condition2[0].conditionValue.type = FWP_V4_ADDR_MASK;
-    condition2[0].conditionValue.v4AddrMask = &AddrandMask;
+    condition2[0].conditionValue.v4AddrMask = &AddrandMask2;
+
+    status = FwpmFilterAdd0(engineHandler, &receiveFilter, NULL, 0);
+
+    if (NT_SUCCESS(status))
+    {
+        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Receive Filter to WPF.\n");
+    }
 
     return status;
 }
