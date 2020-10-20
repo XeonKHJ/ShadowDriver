@@ -55,6 +55,8 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
 /// <returns>NT״̬</returns>
 NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 {
+    NTSTATUS status;
+
     FWPM_FILTER0 filter = { 0 };
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
@@ -69,7 +71,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     filter.weight.type = FWP_EMPTY;
     filter.numFilterConditions = 1;
     filter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-    filter.action.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
+    filter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
     filter.filterCondition = condition;
 
     condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
@@ -77,7 +79,31 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     condition[0].conditionValue.type = FWP_V4_ADDR_MASK;
     condition[0].conditionValue.v4AddrMask = &AddrandMask;
 
-    return FwpmFilterAdd0(engineHandler, &filter, NULL, &filterId);
+    status = FwpmFilterAdd0(engineHandler, &filter, NULL, &filterId);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    FWPM_FILTER0 filter2 = { 0 };
+    FWPM_FILTER_CONDITION0 condition2[1] = { 0 };
+    filter2.displayData.name = L"ShadowDriveFilter";
+    filter2.displayData.description = L"ShadowDriver's filter";
+    filter2.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+    filter2.subLayerKey = WFP_SUBLAYER_GUID;
+    filter2.weight.type = FWP_EMPTY;
+    filter2.numFilterConditions = 1;
+    filter2.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+    filter2.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+    filter2.filterCondition = condition;
+
+    condition2[0].fieldKey = FWPM_CONDITION_IP_SOURCE_ADDRESS;
+    condition2[0].matchType = FWP_MATCH_EQUAL;
+    condition2[0].conditionValue.type = FWP_V4_ADDR_MASK;
+    condition2[0].conditionValue.v4AddrMask = &AddrandMask;
+
+    return status;
 }
 
 NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)

@@ -21,7 +21,8 @@ Environment:
 UINT32 WpsCalloutId;
 UINT32 WpmCalloutId;
 
-HANDLE InjectHandle = NULL;
+HANDLE SendInjectHandle = NULL;
+HANDLE ReceiveInjectHandle = NULL;
 
 void PrintNetBufferList(PNET_BUFFER_LIST packet)
 {
@@ -75,7 +76,7 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 
 void InjectPacket(PNET_BUFFER_LIST clonedPacket)
 {
-	FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &InjectHandle);
+	FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &SendInjectHandle);
 }
 
 void InjectCompleted(
@@ -86,7 +87,7 @@ void InjectCompleted(
 {
 	NDIS_STATUS status = netBufferList->Status;
 
-	FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(InjectHandle, netBufferList, NULL);
+	FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, netBufferList, NULL);
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
@@ -195,9 +196,9 @@ VOID NTAPI ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 	PrintNetBufferList(packet);
-	if (InjectHandle != NULL)
+	if (SendInjectHandle != NULL)
 	{
-		injectionState = FwpsQueryPacketInjectionState0(InjectHandle, packet, NULL);
+		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
 		//如果捕获的数据包是主动
 		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
@@ -223,7 +224,7 @@ VOID NTAPI ClassifyFn(
 				ModifyPacket(clonedPacket);
 				PrintNetBufferList(clonedPacket);
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
 
 				if (!NT_SUCCESS(status))
 				{
@@ -241,54 +242,6 @@ VOID NTAPI ClassifyFn(
 		}
 
 	}
-
-
-	//if (classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
-	//{
-	//    ULONG localIp, remoteIp;
-
-	//    localIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_ADDRESS].value.uint32;
-	//    remoteIp = inFixedValues->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
-
-	//    DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
-
-	//    //打印IP报
-	//    if (packet->FirstNetBuffer != NULL)
-	//    {
-	//        PNET_BUFFER_LIST clonedBuffer;
-
-	//        PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
-
-	//        dataBuffer = NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
-
-
-	//        size_t outputLength = CaculateHexStringLength(netBuffer->DataLength);
-	//        outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
-	//        ConvertBytesArrayToHexString(dataBuffer, netBuffer->DataLength, outputs, 400);
-
-	//        DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
-	//        ExFreePoolWithTag(outputs, 'op');
-	//    }
-	//    
-	//    status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL,0, &clonedPacket);
-
-	//    //classifyOut->actionType = FWP_ACTION_BLOCK;
-	//    //classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
-	//    //if (NT_SUCCESS(status))
-	//    //{
-	//    //    status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
-	//    //}
-	//}
-	//else
-	//{
-	//    classifyOut->actionType = FWP_ACTION_PERMIT;
-
-	//    if (filter->flags & FWPS_FILTER_FLAG_CLEAR_ACTION_RIGHT)
-	//    {
-	//        classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-	//    }
-	//}
 }
 
 NTSTATUS NTAPI NotifyFn(
@@ -315,7 +268,7 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
 
 	FWPS_CALLOUT0 callout = { 0 };
 
-	callout.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
+	callout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
 	callout.flags = 0;
 	callout.classifyFn = ClassifyFn;
 	callout.notifyFn = NotifyFn;
@@ -329,7 +282,9 @@ NTSTATUS CreateInjector()
 {
 	NTSTATUS status;
 
-	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &InjectHandle);
+	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &SendInjectHandle);
+
+	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &ReceiveInjectHandle);
 
 	return status;
 }
@@ -340,7 +295,7 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
 	callout.flags = 0;
 	callout.displayData.description = L"I think you know what it is.";
 	callout.displayData.name = L"ShadowCallout";
-	callout.calloutKey = WFP_ESTABLISHED_CALLOUT_GUID;
+	callout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
 	callout.applicableLayer = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
 
 
