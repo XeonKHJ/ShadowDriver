@@ -132,20 +132,20 @@ VOID ModifyPacket(PNET_BUFFER_LIST packet)
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
-		((PCHAR)mdlBuffer)[19] = (CHAR)101;
+		((PCHAR)mdlBuffer)[19] = (CHAR)102;
 
-		ULONG dataLength = netBuffer->DataLength;
-		ULONG ipPacketLength = 20;
-		ULONG ipaddrOffset = 12;
-		PBYTE ipAddrPos = (dataBuffer += dataLength);
+		//ULONG dataLength = netBuffer->DataLength;
+		//ULONG ipPacketLength = 20;
+		//ULONG ipaddrOffset = 12;
+		//PBYTE ipAddrPos = (dataBuffer += dataLength);
 
-		BYTE modifiedAddress[] = { 192, 168, 10, 1 };
+		//BYTE modifiedAddress[] = { 192, 168, 10, 1 };
 
-		//修改IP地址
-		for (int i = 0; i < 4; ++i, ++ipAddrPos)
-		{
-			ipAddrPos[i] = modifiedAddress[i];
-		}
+		////修改IP地址
+		//for (int i = 0; i < 4; ++i, ++ipAddrPos)
+		//{
+		//	ipAddrPos[i] = modifiedAddress[i];
+		//}
 
 		//INT32 sum = 0;
 		////将校验和置零
