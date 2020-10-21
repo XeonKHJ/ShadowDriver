@@ -29,6 +29,9 @@ UINT32 WpmReceiveCalloutId;
 HANDLE SendInjectHandle = NULL;
 HANDLE ReceiveInjectHandle = NULL;
 
+extern UINT64 filterId;
+extern UINT64 filterId2;
+
 void PrintNetBufferList(PNET_BUFFER_LIST packet)
 {
 	PVOID dataBuffer = NULL;
@@ -201,9 +204,9 @@ VOID NTAPI ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 	PrintNetBufferList(packet);
-
+	
 	//暂时先让这段不进行观察过去的包
-	if (SendInjectHandle != NULL && FALSE)
+	if (SendInjectHandle != NULL && filter->filterId == filterId)
 	{
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
@@ -247,7 +250,6 @@ VOID NTAPI ClassifyFn(
 			classifyOut->actionType = FWP_ACTION_BLOCK;
 			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 		}
-		classifyOut->actionType = FWP_ACTION_PERMIT;
 	}
 }
 

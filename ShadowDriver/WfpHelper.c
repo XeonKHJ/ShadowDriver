@@ -9,8 +9,8 @@ static HANDLE EngineHandler = NULL;
 //筛选器标识符。
 //仅有再调用 NTSTATUS AddFileterToWfp(HANDLE engineHandler) 函数后才会有值。
 //目前好像就用来删除和判断filter是否被成功添加到WFP
-static UINT64 filterId; 
-static UINT64 filterId2;
+extern UINT64 filterId; 
+extern UINT64 filterId2;
 
 VOID UnInitWfp()
 {
@@ -83,6 +83,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     condition[0].conditionValue.v4AddrMask = &AddrandMask;
 
     status = FwpmFilterAdd0(engineHandler, &sendFilter, NULL, &filterId);
+    UINT64 abc = filterId;
 
     if (!NT_SUCCESS(status))
     {
@@ -112,7 +113,8 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     condition2[0].conditionValue.type = FWP_V4_ADDR_MASK;
     condition2[0].conditionValue.v4AddrMask = &AddrandMask2;
 
-    status = FwpmFilterAdd0(engineHandler, &receiveFilter, NULL, 0);
+    status = FwpmFilterAdd0(engineHandler, &receiveFilter, NULL, &filterId2);
+    UINT64 abc2 = filterId2;
 
     if (NT_SUCCESS(status))
     {
