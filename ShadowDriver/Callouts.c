@@ -108,7 +108,7 @@ void InjectCompleted(
 
 }
 
-VOID ModifyPacket(PNET_BUFFER_LIST packet)
+VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 {
 	if (packet != NULL)
 	{
@@ -133,6 +133,37 @@ VOID ModifyPacket(PNET_BUFFER_LIST packet)
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
 		((PCHAR)mdlBuffer)[19] = (CHAR)102;
+
+		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
+	}
+}
+
+VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
+{
+	if (packet != NULL)
+	{
+		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+
+		//获取数据缓冲区
+		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+
+		//从MDL中提取信息
+		PVOID mdlBuffer = MmGetMdlVirtualAddress(netBuffer->CurrentMdl);
+
+		//dataBuffer = (PBYTE)mdlBuffer;
+
+		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
+		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
+		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
+
+		char toModifyChar = ((PCHAR)mdlBuffer)[16];
+
+		((PCHAR)mdlBuffer)[12] = (CHAR)192;
+		((PCHAR)mdlBuffer)[13] = (CHAR)168;
+		((PCHAR)mdlBuffer)[14] = (CHAR)0;
+		((PCHAR)mdlBuffer)[15] = (CHAR)177;
 
 		//ULONG dataLength = netBuffer->DataLength;
 		//ULONG ipPacketLength = 20;
@@ -205,51 +236,62 @@ VOID NTAPI ClassifyFn(
 	packet = (NET_BUFFER_LIST*)layerData;
 	PrintNetBufferList(packet);
 	
-	//暂时先让这段不进行观察过去的包
-	if (SendInjectHandle != NULL && filter->filterId == filterId)
+	status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+
+	//如果为克隆的数据包创建缓冲区失败的话，则令这个包正常通过。
+	if (NT_SUCCESS(status) && SendInjectHandle != NULL)
 	{
-		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
-
-		//如果捕获的数据包是主动
-		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
-			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+		//暂时先让这段不进行观察过去的包
+		if (filter->filterId == filterId)
 		{
-			classifyOut->actionType = FWP_ACTION_PERMIT;
-			//PrintNetBufferList(packet);
-		}
-		//该数据包不是被手动注入的数据包
-		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
-		{
-			
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+			injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
-			//如果为克隆的数据包创建缓冲区失败的话，则阻断这个数据包。
-			if (!NT_SUCCESS(status))
+			//如果捕获的数据包是主动
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
-
+				classifyOut->actionType = FWP_ACTION_PERMIT;
+				//PrintNetBufferList(packet);
 			}
-			//如果数据包缓冲区创建成功
-			else
+			//该数据包不是被手动注入的数据包
+			else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 			{
-				ModifyPacket(clonedPacket);
+
+				//如果数据包缓冲区创建成功
+				ModifySendIPPacket(clonedPacket);
+
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: ");
 				PrintNetBufferList(clonedPacket);
+
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
 
+				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
 				{
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Failed\n");
+					classifyOut->actionType = FWP_ACTION_PERMIT;
 				}
 				else
 				{
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Success\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 				}
 			}
-
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
-			classifyOut->actionType = FWP_ACTION_BLOCK;
-			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 		}
+		else if(filter->filterId == filterId2)
+		{
+			NdisRetreatNetBufferDataStart(NET_BUFFER_LIST_FIRST_NB(clonedPacket), NET_BUFFER_LIST_FIRST_NB(clonedPacket)->DataOffset, 0, NULL);
+			ModifySendIPPacket(clonedPacket);
+			
+		}
+	}
+	else
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Net Buffer clone faild.\t\n");
+		classifyOut->actionType = FWP_ACTION_PERMIT;
 	}
 }
 
@@ -305,13 +347,12 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
 	return status;
 }
 
-NTSTATUS CreateInjector()
+NTSTATUS CreateInjectors()
 {
 	NTSTATUS status;
 
-	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &SendInjectHandle);
-
-	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK | FWPS_INJECTION_TYPE_FORWARD, &ReceiveInjectHandle);
+	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &SendInjectHandle);
+	status = FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &ReceiveInjectHandle);
 
 	return status;
 }

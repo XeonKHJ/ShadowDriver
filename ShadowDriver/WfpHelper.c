@@ -140,7 +140,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 
     if (NT_SUCCESS(status))
     {
-        status = CreateInjector();
+        status = CreateInjectors();
     }
 
     if (NT_SUCCESS(status))

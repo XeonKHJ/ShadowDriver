@@ -19,4 +19,4 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandler);
 
 VOID UnRegisterCallout(HANDLE engineHandle);
 
-NTSTATUS CreateInjector();
+NTSTATUS CreateInjectors();
