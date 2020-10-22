@@ -82,12 +82,7 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 	}
 }
 
-void InjectPacket(PNET_BUFFER_LIST clonedPacket)
-{
-	FwpsInjectionHandleCreate0(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &SendInjectHandle);
-}
-
-void InjectCompleted(
+void SendInjectCompleted(
 	void* context,
 	NET_BUFFER_LIST* netBufferList,
 	BOOLEAN dispatchLevel
@@ -96,6 +91,23 @@ void InjectCompleted(
 	NDIS_STATUS status = netBufferList->Status;
 
 	FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, netBufferList, NULL);
+
+	if (status == NDIS_STATUS_SUCCESS)
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Completed\n");
+	}
+	FwpsFreeCloneNetBufferList0(netBufferList, 0);
+}
+
+void ReceiveInjectCompleted(
+	void* context,
+	NET_BUFFER_LIST* netBufferList,
+	BOOLEAN dispatchLevel
+)
+{
+	NDIS_STATUS status = netBufferList->Status;
+
+	FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(ReceiveInjectHandle, netBufferList, NULL);
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
@@ -128,7 +140,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
-		((PCHAR)mdlBuffer)[19] = (CHAR)102;
+		((PCHAR)mdlBuffer)[19] = (CHAR)103;
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
@@ -257,11 +269,11 @@ VOID NTAPI ClassifyFn(
 				//如果数据包缓冲区创建成功
 				ModifySendIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: ");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: \n");
 				PrintNetBufferList(clonedPacket);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
 
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
@@ -286,8 +298,7 @@ VOID NTAPI ClassifyFn(
 	}
 	else if (ReceiveInjectHandle != NULL && filter->filterId == filterId2)
 	{
-		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
-
+		injectionState = FwpsQueryPacketInjectionState0(ReceiveInjectHandle, packet, NULL);
 		//如果捕获的数据包是主动
 		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
@@ -302,17 +313,18 @@ VOID NTAPI ClassifyFn(
 
 			if (NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: ");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: \n");
 				PrintNetBufferList(clonedPacket);
 
 				//如果数据包缓冲区创建成功
-				//ModifyReceiveIPPacket(clonedPacket);
+				ModifyReceiveIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: ");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: \n");
 				PrintNetBufferList(clonedPacket);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				status = FwpsInjectNetworkSendAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, InjectCompleted, NULL);
+				//status = FwpsInjectNetworkSendAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, ReceiveInjectCompleted, NULL);
+				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32, inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32, clonedPacket, ReceiveInjectCompleted, NULL);
 
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
