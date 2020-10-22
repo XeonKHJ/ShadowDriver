@@ -93,7 +93,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Send Filter to WPF.\n");
 
     FWP_V4_ADDR_AND_MASK AddrandMask2 = { 0 };
-    AddrandMask2.addr = 0xC0A80167;
+    AddrandMask2.addr = 0xC0A80166;
     AddrandMask2.mask = 0xFFFFFFFF;
 
     FWPM_FILTER0 receiveFilter = { 0 };
