@@ -207,12 +207,12 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 
 		//修改目标IP地址
-		/*
+		
 		mdlCharBuffer[12] = (CHAR)192;
 		mdlCharBuffer[13] = (CHAR)168;
-		mdlCharBuffer[14] = (CHAR)1;
-		mdlCharBuffer[15] = (CHAR)103;
-		*/
+		mdlCharBuffer[14] = (CHAR)0;
+		mdlCharBuffer[15] = (CHAR)177;
+		
 
 		
 
