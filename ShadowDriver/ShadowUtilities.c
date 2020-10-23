@@ -57,9 +57,16 @@ void ConvertBytesArrayToHexString(char* bytes, size_t bytesLength, char* outputS
 /// <param name="bytes">要计算校验和的缓冲区指针，记得把校验和所在的位置置零再传进来。</param>
 /// <param name="byteCounts">缓冲区大小（字节）</param>
 /// <returns>校验和</returns>
-unsigned short CalculateCheckSum(char* bytes, int byteCounts)
+unsigned short CalculateCheckSum(char* bytes, char* fakeHeader, int byteCounts, int fakeHeaderCounts)
 {
 	unsigned int sum = 0;
+
+	for (int i = 0; i < fakeHeaderCounts; i += 2)
+	{
+		unsigned int perSum = (unsigned int)(fakeHeader[i + 1] & 0xff) + (((unsigned int)((fakeHeader[i])) << 8) & 0xff00);
+		sum += perSum;
+	}
+
 	for (int i = 0; i < byteCounts; i += 2)
 	{
 		unsigned int perSum = (unsigned int)(bytes[i + 1] & 0xff) + (((unsigned int)((bytes[i])) << 8) & 0xff00);

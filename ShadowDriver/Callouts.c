@@ -127,7 +127,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 		//从MDL中提取信息
 		PVOID mdlBuffer = MmGetMdlVirtualAddress(netBuffer->CurrentMdl);
-
+		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 		//dataBuffer = (PBYTE)mdlBuffer;
 
 		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
@@ -135,12 +135,48 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
 
-		char toModifyChar = ((PCHAR)mdlBuffer)[16];
-
+		
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
 		((PCHAR)mdlBuffer)[19] = (CHAR)103;
+		
+
+		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
+		//检查协议
+		CHAR protocal = mdlCharBuffer[9];
+
+		//获取网络层以上的数据长度（不包括网络层）。
+		short ipHeaderLength = (mdlCharBuffer[0] & 0xf) * 4;
+		short totalLength = (mdlCharBuffer[2] << 8) + mdlCharBuffer[3];
+		short transportDataLength = totalLength - ipHeaderLength;
+
+		switch (protocal)
+		{
+		case 6: //TCP协议
+		{
+			CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
+								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
+								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
+
+			//TCP报文段在缓冲区的起始指针
+			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
+
+			//将TCP的校验和位置零
+			tcpStartPos[16] = tcpStartPos[17] = 0;
+
+			//计算校验和
+			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12);
+
+			//将校验和填充到TCP报文段中。
+			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
+			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
+		}
+		break;
+		case 17: //UDP协议
+			break;
+		}
+
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
@@ -153,70 +189,67 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 	{
 		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 
-		//获取数据缓冲区
-		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+		////获取数据缓冲区
+		//PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
 
 		//从MDL中提取信息
 		PVOID mdlBuffer = MmGetMdlVirtualAddress(netBuffer->CurrentMdl);
 
 		//dataBuffer = (PBYTE)mdlBuffer;
 
+		/*++++++打印+++++++*/
 		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
+		/*------打印-------*/
 
-		char toModifyChar = ((PCHAR)mdlBuffer)[16];
+		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 
-		((PCHAR)mdlBuffer)[12] = (CHAR)192;
-		((PCHAR)mdlBuffer)[13] = (CHAR)168;
-		((PCHAR)mdlBuffer)[14] = (CHAR)0;
-		((PCHAR)mdlBuffer)[15] = (CHAR)177;
-
+		//修改目标IP地址
 		/*
-		ULONG dataLength = netBuffer->DataLength;
-		ULONG ipPacketLength = 20;
-		ULONG ipaddrOffset = 12;
-		PBYTE ipAddrPos = (dataBuffer += dataLength);
-
-		BYTE modifiedAddress[] = { 192, 168, 10, 1 };
-
-		//修改IP地址
-		for (int i = 0; i < 4; ++i, ++ipAddrPos)
-		{
-			ipAddrPos[i] = modifiedAddress[i];
-		}
-
-		INT32 sum = 0;
-		//将校验和置零
-		dataBuffer[10] = dataBuffer[11] = 0;
-
-		//计算校验和
-		for (int i = 0; i < 10; i += 2)
-		{
-			WORD dBytes = dataBuffer[i];
-			dBytes = (dBytes << 16) + dataBuffer[i+1];
-
-			sum += dBytes;
-		}
-
-		//处理进位部分
-		while (sum > 0xFFFF)
-		{
-			UINT32 carryPart = (sum & 0x00FF0000) >> 16;
-			sum = sum & 0xFFFF;
-			sum += carryPart;
-		}
-
-		//截取最低4字节
-		DWORD dwordSum = sum & 0xFFFF;
-
-		////取反码
-		//dwordSum = ~dwordSum;
-
-		////填充进数据包
-		//(*(PDWORD) & (dataBuffer[10])) = dwordSum;
+		mdlCharBuffer[12] = (CHAR)192;
+		mdlCharBuffer[13] = (CHAR)168;
+		mdlCharBuffer[14] = (CHAR)1;
+		mdlCharBuffer[15] = (CHAR)103;
 		*/
+
+		
+
+		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
+		//检查协议
+		CHAR protocal = mdlCharBuffer[9];
+
+		//获取网络层以上的数据长度（不包括网络层）。
+		short ipHeaderLength = (mdlCharBuffer[0] & 0xff) * 4;
+		short totalLength = (mdlCharBuffer[2] << 8) + mdlCharBuffer[3];
+		short transportDataLength = totalLength - ipHeaderLength;
+
+		switch (protocal)
+		{
+		case 6: //TCP协议
+		{
+			CHAR fakeHeader[] = { mdlCharBuffer[8] , mdlCharBuffer[9] , mdlCharBuffer[10] , mdlCharBuffer[11],
+								  mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
+								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff)};
+
+			//TCP报文段在缓冲区的起始指针
+			PCHAR tcpStartPos =  &(mdlCharBuffer[ipHeaderLength - 1]);
+
+			//将TCP的校验和位置零
+			tcpStartPos[16] = tcpStartPos[17] = 0;
+
+			//计算校验和
+			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, ipHeaderLength);
+
+			//将校验和填充到TCP报文段中。
+			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
+			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
+		}
+			break;
+		case 17: //UDP协议
+			break;
+		}
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
@@ -244,6 +277,7 @@ VOID NTAPI ClassifyFn(
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
 	packet = (NET_BUFFER_LIST*)layerData;
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Original Net Buffer List:\t\n");
 	PrintNetBufferList(packet);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
