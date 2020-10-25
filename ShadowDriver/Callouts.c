@@ -32,7 +32,7 @@ HANDLE ReceiveInjectHandle = NULL;
 extern UINT64 filterId;
 extern UINT64 filterId2;
 
-void PrintNetBufferList(PNET_BUFFER_LIST packet)
+void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 {
 	PVOID dataBuffer = NULL;
 	PCHAR outputs = NULL;
@@ -71,13 +71,13 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet)
 			{
 				ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "%s\t\n", outputs);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "%s\t\n", outputs);
 				ExFreePoolWithTag(outputs, 'op');
 			}
 		}
 		else
 		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "DataBuffer Fetch Failed!\t\n");
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "DataBuffer Fetch Failed!\t\n");
 		}
 	}
 }
@@ -94,7 +94,7 @@ void SendInjectCompleted(
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Completed\n");
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Completed\n");
 	}
 	FwpsFreeCloneNetBufferList0(netBufferList, 0);
 }
@@ -111,8 +111,16 @@ void ReceiveInjectCompleted(
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Completed\n");
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Completed\n");
 	}
+	else
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Receive injection failed. Error code: %02X\n", status);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error NBL: ");
+
+		PrintNetBufferList(netBufferList, DPFLTR_ERROR_LEVEL);
+	}
+
 	FwpsFreeCloneNetBufferList0(netBufferList, 0);
 }
 
@@ -266,7 +274,7 @@ VOID NTAPI ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	NTSTATUS status;
+	NTSTATUS status = 0;
 	NET_BUFFER_LIST* packet;
 	FWPS_STREAM_DATA* streamData;
 	SIZE_T dataLength = 0;
@@ -278,7 +286,7 @@ VOID NTAPI ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Original Net Buffer List:\t\n");
-	PrintNetBufferList(packet);
+	PrintNetBufferList(packet, DPFLTR_INFO_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	//暂时先让这段不进行观察过去的包
@@ -304,7 +312,7 @@ VOID NTAPI ClassifyFn(
 				ModifySendIPPacket(clonedPacket);
 
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: \n");
-				PrintNetBufferList(clonedPacket);
+				PrintNetBufferList(clonedPacket, DPFLTR_INFO_LEVEL);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
@@ -312,13 +320,13 @@ VOID NTAPI ClassifyFn(
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Failed\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Failed\n");
 					classifyOut->actionType = FWP_ACTION_PERMIT;
 				}
 				else
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Success\n");
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Success\n");
+					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
 					classifyOut->actionType = FWP_ACTION_BLOCK;
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 				}
@@ -342,33 +350,40 @@ VOID NTAPI ClassifyFn(
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
-			NdisRetreatNetBufferListDataStart(packet, 20, 0, NULL, NULL);
+			//NdisRetreatNetBufferListDataStart(packet, 20, 0, NULL, NULL);
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			if (NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: \n");
-				PrintNetBufferList(clonedPacket);
+				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: \n");
+				//PrintNetBufferList(clonedPacket);
 
 				//如果数据包缓冲区创建成功
-				ModifyReceiveIPPacket(clonedPacket);
+				//ModifyReceiveIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: \n");
-				PrintNetBufferList(clonedPacket);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Receving Net Buffer List: \n");
+				PrintNetBufferList(clonedPacket, DPFLTR_INFO_LEVEL);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				//status = FwpsInjectNetworkSendAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, ReceiveInjectCompleted, NULL);
-				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32, inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32, clonedPacket, ReceiveInjectCompleted, NULL);
+
+				FWPS_INCOMING_VALUE ifIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
+				FWPS_INCOMING_VALUE subIfIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
+				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0, 
+					(inMetaValues->currentMetadataValues & FWPS_METADATA_FIELD_COMPARTMENT_ID ? inMetaValues->compartmentId : UNSPECIFIED_COMPARTMENT_ID),
+					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32, 
+					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32, 
+					clonedPacket, ReceiveInjectCompleted, NULL);
 
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Failed\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Failed\n");
 				}
 				else
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Inject Start\n");
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Start\n");
+					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
 					classifyOut->actionType = FWP_ACTION_BLOCK;
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 				}
