@@ -249,8 +249,8 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		{
 		case 6: //TCP协议
 		{
-			CHAR fakeHeader[] = { mdlCharBuffer[8] , mdlCharBuffer[9] , mdlCharBuffer[10] , mdlCharBuffer[11],
-								  mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
+			CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
+								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
 								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
 
 			//TCP报文段在缓冲区的起始指针
@@ -260,13 +260,9 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
 			//计算校验和
-			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, ipHeaderLength);
+			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12);
 
 			//将校验和填充到TCP报文段中。
-
-			CHAR currentCheckSum1 = tcpStartPos[16];
-			CHAR currentCheckSum2 = tcpStartPos[17];
-
 			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
 			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
 		}
