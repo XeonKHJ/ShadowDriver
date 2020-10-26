@@ -143,12 +143,12 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", outputs);
 
-		
+
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
 		((PCHAR)mdlBuffer)[19] = (CHAR)103;
-		
+
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
 		//检查协议
@@ -215,23 +215,35 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 
 		//修改目标IP地址
-		
+
 		mdlCharBuffer[12] = (CHAR)192;
 		mdlCharBuffer[13] = (CHAR)168;
 		mdlCharBuffer[14] = (CHAR)0;
 		mdlCharBuffer[15] = (CHAR)177;
-		
 
-		
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
 		//检查协议
 		CHAR protocal = mdlCharBuffer[9];
 
 		//获取网络层以上的数据长度（不包括网络层）。
-		short ipHeaderLength = (mdlCharBuffer[0] & 0xff) * 4;
+		short ipHeaderLength = (mdlCharBuffer[0] & 0xf) * 4;
 		short totalLength = (mdlCharBuffer[2] << 8) + mdlCharBuffer[3];
 		short transportDataLength = totalLength - ipHeaderLength;
+
+
+		//计算IP校验和
+		CHAR currentCheckSum1 = mdlCharBuffer[10];
+		CHAR currentCheckSum2 = mdlCharBuffer[11];
+
+		//校验和置零
+		mdlCharBuffer[10] = 0;
+		mdlCharBuffer[11] = 0;
+
+		unsigned short checkSum = CalculateCheckSum(mdlCharBuffer, NULL, ipHeaderLength, 0);
+
+		mdlCharBuffer[10] = (CHAR)((checkSum & 0xff00) >> 8);
+		mdlCharBuffer[11] = (CHAR)(checkSum & 0xff);
 
 		switch (protocal)
 		{
@@ -239,10 +251,10 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		{
 			CHAR fakeHeader[] = { mdlCharBuffer[8] , mdlCharBuffer[9] , mdlCharBuffer[10] , mdlCharBuffer[11],
 								  mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
-								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff)};
+								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
 
 			//TCP报文段在缓冲区的起始指针
-			PCHAR tcpStartPos =  &(mdlCharBuffer[ipHeaderLength - 1]);
+			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
 
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
@@ -251,10 +263,14 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, ipHeaderLength);
 
 			//将校验和填充到TCP报文段中。
+
+			CHAR currentCheckSum1 = tcpStartPos[16];
+			CHAR currentCheckSum2 = tcpStartPos[17];
+
 			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
 			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
 		}
-			break;
+		break;
 		case 17: //UDP协议
 			break;
 		}
@@ -351,7 +367,7 @@ VOID NTAPI ClassifyFn(
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
 			UINT32 ipHeaderSize = 0;
-			
+
 			if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
 			{
 				ipHeaderSize = inMetaValues->ipHeaderSize;
@@ -366,7 +382,7 @@ VOID NTAPI ClassifyFn(
 				//PrintNetBufferList(clonedPacket);
 
 				//如果数据包缓冲区创建成功
-				//ModifyReceiveIPPacket(clonedPacket);
+				ModifyReceiveIPPacket(clonedPacket);
 
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Receving Net Buffer List: \n");
 				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
@@ -376,10 +392,10 @@ VOID NTAPI ClassifyFn(
 
 				FWPS_INCOMING_VALUE ifIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
 				FWPS_INCOMING_VALUE subIfIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
-				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0, 
+				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0,
 					(inMetaValues->currentMetadataValues & FWPS_METADATA_FIELD_COMPARTMENT_ID ? inMetaValues->compartmentId : UNSPECIFIED_COMPARTMENT_ID),
-					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32, 
-					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32, 
+					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32,
+					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32,
 					clonedPacket, ReceiveInjectCompleted, NULL);
 
 				//如果注入失败，则令包正常通过。
@@ -409,11 +425,12 @@ VOID NTAPI ReceiveClassifyFn(
 )
 {
 	UINT32 ipHeaderSize = inMetaValues->ipHeaderSize;
-
+	NDIS_TCP_IP_CHECKSUM_PACKET_INFO checkSum = { 0 };
 	if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
 	{
-
 	}
+
+	checkSum.Value = (ULONG)(ULONG_PTR)NET_BUFFER_LIST_INFO((NET_BUFFER_LIST*)layerData, TcpIpChecksumNetBufferListInfo);
 }
 
 NTSTATUS NTAPI NotifyFn(
