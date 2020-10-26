@@ -141,7 +141,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", outputs);
 
 		
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
@@ -187,7 +187,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", outputs);
 	}
 }
 
@@ -209,7 +209,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "CurrentMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", outputs);
 		/*------打印-------*/
 
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
@@ -260,7 +260,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		}
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "ModifiedMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", outputs);
 	}
 }
 
@@ -285,8 +285,8 @@ VOID NTAPI ClassifyFn(
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
 	packet = (NET_BUFFER_LIST*)layerData;
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Original Net Buffer List:\t\n");
-	PrintNetBufferList(packet, DPFLTR_INFO_LEVEL);
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+	PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	//暂时先让这段不进行观察过去的包
@@ -311,8 +311,8 @@ VOID NTAPI ClassifyFn(
 				//如果数据包缓冲区创建成功
 				ModifySendIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Net Buffer List: \n");
-				PrintNetBufferList(clonedPacket, DPFLTR_INFO_LEVEL);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \n");
+				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
@@ -320,7 +320,7 @@ VOID NTAPI ClassifyFn(
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Failed\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Send Inject Failed\n");
 					classifyOut->actionType = FWP_ACTION_PERMIT;
 				}
 				else
@@ -350,9 +350,16 @@ VOID NTAPI ClassifyFn(
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
-			//NdisRetreatNetBufferListDataStart(packet, 20, 0, NULL, NULL);
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+			UINT32 ipHeaderSize = 0;
+			
+			if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
+			{
+				ipHeaderSize = inMetaValues->ipHeaderSize;
+			}
 
+			NdisRetreatNetBufferListDataStart(packet, ipHeaderSize, 0, NULL, NULL);
+			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+			NdisAdvanceNetBufferListDataStart(packet, ipHeaderSize, FALSE, 0);
 			if (NT_SUCCESS(status))
 			{
 				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: \n");
@@ -361,8 +368,8 @@ VOID NTAPI ClassifyFn(
 				//如果数据包缓冲区创建成功
 				//ModifyReceiveIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modified Receving Net Buffer List: \n");
-				PrintNetBufferList(clonedPacket, DPFLTR_INFO_LEVEL);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Receving Net Buffer List: \n");
+				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				//status = FwpsInjectNetworkSendAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, ReceiveInjectCompleted, NULL);
@@ -378,7 +385,7 @@ VOID NTAPI ClassifyFn(
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
 				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Failed\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Receive Inject Failed\n");
 				}
 				else
 				{
@@ -389,6 +396,23 @@ VOID NTAPI ClassifyFn(
 				}
 			}
 		}
+	}
+}
+
+VOID NTAPI ReceiveClassifyFn(
+	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
+	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
+	_Inout_opt_ void* layerData,
+	_In_ const FWPS_FILTER0* filter,
+	_In_ UINT64 flowContext,
+	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
+)
+{
+	UINT32 ipHeaderSize = inMetaValues->ipHeaderSize;
+
+	if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
+	{
+
 	}
 }
 
