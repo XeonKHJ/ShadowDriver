@@ -1,17 +1,17 @@
 #include "ShadowUtilities.h"
 
-size_t CaculateHexStringLength(size_t bytesCount)
+unsigned long long CaculateHexStringLength(unsigned long long bytesCount)
 {
 	//"0A:0B:0C"
 	//"123123123
 	return bytesCount * 3;
 }
 
-void ConvertBytesArrayToHexString(char* bytes, size_t bytesLength, char* outputString, size_t ouputLength)
+void ConvertBytesArrayToHexString(char* bytes, unsigned long long bytesLength, char* outputString, unsigned long long ouputLength)
 {
-	size_t hexLength = 2 * sizeof(char);
-	size_t seprateLength = 1 * sizeof(char);
-	size_t endSymbolLength = 1 * sizeof(char);
+	unsigned long long hexLength = 2 * sizeof(char);
+	unsigned long long seprateLength = 1 * sizeof(char);
+	unsigned long long endSymbolLength = 1 * sizeof(char);
 	char* currentBytePos = bytes;
 	char* currentOutputPos = outputString;
 	for (int i = 0;
@@ -57,9 +57,10 @@ void ConvertBytesArrayToHexString(char* bytes, size_t bytesLength, char* outputS
 /// <param name="bytes">要计算校验和的缓冲区指针，记得把校验和所在的位置置零再传进来。</param>
 /// <param name="byteCounts">缓冲区大小（字节）</param>
 /// <returns>校验和</returns>
-unsigned short CalculateCheckSum(char* bytes, char* fakeHeader, int byteCounts, int fakeHeaderCounts)
+unsigned short CalculateCheckSum(char* bytes, char* fakeHeader, int byteCounts, int fakeHeaderCounts, int marginBytes)
 {
 	unsigned int sum = 0;
+	int paddings = byteCounts % marginBytes;
 
 	for (int i = 0; i < fakeHeaderCounts; i += 2)
 	{
@@ -67,9 +68,28 @@ unsigned short CalculateCheckSum(char* bytes, char* fakeHeader, int byteCounts, 
 		sum += perSum;
 	}
 
-	for (int i = 0; i < byteCounts; i += 2)
+	for (int i = 0; i < (byteCounts + paddings); i += 2)
 	{
-		unsigned int perSum = (unsigned int)(bytes[i + 1] & 0xff) + (((unsigned int)((bytes[i])) << 8) & 0xff00);
+		unsigned int perSum = 0;
+
+		if (i < byteCounts)
+		{
+			perSum += (((unsigned int)((bytes[i])) << 8) & 0xff00);
+		}
+		else
+		{
+			perSum += 0;
+		}
+
+		if (i+1 < byteCounts)
+		{
+			perSum += (unsigned int)(bytes[i + 1] & 0xff);
+		}
+		else
+		{
+			perSum += 0;
+		}
+		
 		sum += perSum;
 	}
 

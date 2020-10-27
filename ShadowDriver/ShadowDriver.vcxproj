@@ -43,6 +43,7 @@
     <ClCompile Include="Driver.c" />
     <ClCompile Include="Queue.c" />
     <ClCompile Include="ShadowUtilities.c" />
+    <ClCompile Include="ShaDriHelper.c" />
     <ClCompile Include="WfpHelper.c" />
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +53,7 @@
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="ShadowUtilities.h" />
+    <ClInclude Include="ShaDriHelper.h" />
     <ClInclude Include="Trace.h" />
     <ClInclude Include="WfpHelper.h" />
   </ItemGroup>

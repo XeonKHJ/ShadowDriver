@@ -17,6 +17,7 @@ Environment:
 #include "driver.h"
 #include "device.tmh"
 #include "Callouts.h"
+#include "ShaDriHelper.h"
 
 //当回调函数向设备注册时获得。
 UINT32 WpsSendCalloutId;
@@ -31,6 +32,39 @@ HANDLE ReceiveInjectHandle = NULL;
 
 extern UINT64 filterId;
 extern UINT64 filterId2;
+
+void ConvertNetBufferListToTcpRawPacket(ShadowTcpRawPacket* dataBuffer, PNET_BUFFER_LIST ndl, UINT32 nblOffset)
+{
+	PNET_BUFFER firstNb = NET_BUFFER_LIST_FIRST_NB(ndl);
+	PMDL firstMdl = NET_BUFFER_FIRST_MDL(firstNb);
+	PMDL currentMdl = firstMdl;
+
+	UINT32 offsetTrace = nblOffset;
+	UINT32 headerOffsetTrace;
+	PCHAR packetStartPos;
+	while (currentMdl)
+	{
+		PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
+		//位移还没有结束
+		if (offsetTrace > 0 && currentMdl->ByteCount <= offsetTrace)
+		{
+			offsetTrace -= currentMdl->ByteCount;
+			continue;
+		}
+		else if (offsetTrace > 0 && currentMdl->ByteCount > offsetTrace)
+		{
+			//在这里位移
+			packetStartPos = mdlAddr + offsetTrace;
+		}
+		else if (offsetTrace == 0)
+		{
+			//输入信息环节
+			
+		}
+	}
+	
+	
+}
 
 void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 {
@@ -138,16 +172,16 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 		//dataBuffer = (PBYTE)mdlBuffer;
 
-		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
+		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char *)outputs);
 
 
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
-		((PCHAR)mdlBuffer)[19] = (CHAR)103;
+		((PCHAR)mdlBuffer)[19] = (CHAR)106;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
@@ -163,6 +197,11 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		{
 		case 6: //TCP协议
 		{
+			if (transportDataLength % 2 == 1)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
+			}
+
 			CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
 								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
 								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
@@ -170,11 +209,22 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			//TCP报文段在缓冲区的起始指针
 			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
 
+			CHAR tcpOriginalCheckSum1 = tcpStartPos[16];
+			CHAR tcpOriginalCheckSum2 = tcpStartPos[17];
+
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
 			//计算校验和
-			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12);
+			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12, 2);
+
+			CHAR tcpCheckSum1 = (CHAR)((checkSum & 0xff00) >> 8);
+			CHAR tcpCheckSum2 = (CHAR)(checkSum & 0xff);
+
+			if (tcpOriginalCheckSum1 != tcpCheckSum1 || tcpOriginalCheckSum2 != tcpCheckSum2)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
+			}
 
 			//将校验和填充到TCP报文段中。
 			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
@@ -185,9 +235,8 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			break;
 		}
 
-
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char *)outputs);
 	}
 }
 
@@ -206,10 +255,10 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		//dataBuffer = (PBYTE)mdlBuffer;
 
 		/*++++++打印+++++++*/
-		int mdlStringLength = CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
+		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char *)outputs);
 		/*------打印-------*/
 
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
@@ -218,8 +267,8 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 
 		mdlCharBuffer[12] = (CHAR)192;
 		mdlCharBuffer[13] = (CHAR)168;
-		mdlCharBuffer[14] = (CHAR)0;
-		mdlCharBuffer[15] = (CHAR)177;
+		mdlCharBuffer[14] = (CHAR)1;
+		mdlCharBuffer[15] = (CHAR)106;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
@@ -240,7 +289,16 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		mdlCharBuffer[10] = 0;
 		mdlCharBuffer[11] = 0;
 
-		unsigned short checkSum = CalculateCheckSum(mdlCharBuffer, NULL, ipHeaderLength, 0);
+		unsigned short checkSum = CalculateCheckSum(mdlCharBuffer, NULL, ipHeaderLength, 0, 2);
+
+		//检验
+		CHAR checkSum1 = (CHAR)((checkSum & 0xff00) >> 8);
+		CHAR checkSum2 = (CHAR)((checkSum & 0xff));
+
+		if (checkSum1 != currentCheckSum1 || checkSum2 != currentCheckSum2)
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "IP header checksum calculation in receive path error!\n");
+		}
 
 		mdlCharBuffer[10] = (CHAR)((checkSum & 0xff00) >> 8);
 		mdlCharBuffer[11] = (CHAR)(checkSum & 0xff);
@@ -256,11 +314,23 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 			//TCP报文段在缓冲区的起始指针
 			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
 
+
+			CHAR tcpOriginalCheckSum1 = tcpStartPos[16];
+			CHAR tcpOriginalCheckSum2 = tcpStartPos[17];
+
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
 			//计算校验和
-			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12);
+			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12, 2);
+
+			CHAR tcpCheckSum1 = (CHAR)((checkSum & 0xff00) >> 8);
+			CHAR tcpCheckSum2 = (CHAR)(checkSum & 0xff);
+
+			if (tcpOriginalCheckSum1 != tcpCheckSum1 || tcpOriginalCheckSum2 != tcpCheckSum2)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in receive path error!\n");
+			}
 
 			//将校验和填充到TCP报文段中。
 			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
@@ -272,7 +342,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		}
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char *)outputs);
 	}
 }
 
@@ -323,6 +393,9 @@ VOID NTAPI ClassifyFn(
 				//如果数据包缓冲区创建成功
 				ModifySendIPPacket(clonedPacket);
 
+				//检查校验和
+
+						
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \n");
 				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
 
