@@ -4,8 +4,9 @@
 typedef struct PacketDataBuffer
 {
 	void* CurrentBuffer;
-	unsigned long long bytes;
+	unsigned long long Bytes;
 	struct PacketDataBuffer* NextBuffer;
+	struct PacketDataBuffer* Previousfer;
 }PacketDataBuffer;
 
 typedef struct ShadowTcpRawPacket

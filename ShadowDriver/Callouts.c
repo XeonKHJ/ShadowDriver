@@ -33,42 +33,148 @@ HANDLE ReceiveInjectHandle = NULL;
 extern UINT64 filterId;
 extern UINT64 filterId2;
 
-void ConvertNetBufferListToTcpRawPacket(ShadowTcpRawPacket* dataBuffer, PNET_BUFFER_LIST nbl, UINT32 nblOffset)
+void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketPoint, _In_ PNET_BUFFER_LIST nbl, _In_ UINT32 nblOffset)
 {
 	PNET_BUFFER firstNb = NET_BUFFER_LIST_FIRST_NB(nbl);
 	PMDL firstMdl = NET_BUFFER_FIRST_MDL(firstNb);
 
-	//初始化循环条件
-	PMDL currentMdl = firstMdl;
-	PNET_BUFFER currentNb = firstNb;
-	UINT32 offsetTrace = nblOffset;
-	UINT32 headerOffsetTrace;
-	PCHAR packetStartPos;
-	for (PNET_BUFFER currentNb = NET_BUFFER_LIST_FIRST_NB(nbl); currentNb; NET_BUFFER_NEXT_NB(currentNb))
-	{
-		PMDL firstMdlPerNb = NET_BUFFER_FIRST_MDL(currentNb);
-		for(PMDL currentMdl = firstMdlPerNb; currentMdl; currentMdl = currentMdl->Next)
-		{
-			PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
-			//位移还没有结束
-			if (offsetTrace > 0 && currentMdl->ByteCount <= offsetTrace)
-			{
-				offsetTrace -= currentMdl->ByteCount;
-				continue;
-			}
-			else if (offsetTrace > 0 && currentMdl->ByteCount > offsetTrace)
-			{
-				//在这里位移
-				packetStartPos = mdlAddr + offsetTrace;
-			}
-			//开始解析TCP报文段。
-			else if (offsetTrace == 0)
-			{
-				//
+	//为ShadowTcpRawPacket分配内存空间。
+	*tcpRawPacketPoint = (ShadowTcpRawPacket*)ExAllocatePoolWithTag(NonPagedPool, sizeof(ShadowTcpRawPacket), 'strp');
 
+	if (*tcpRawPacketPoint)
+	{
+		ShadowTcpRawPacket* tcpRawPacket = *tcpRawPacketPoint;
+		PacketDataBuffer** dataPos = &(tcpRawPacket->Data);
+
+		//初始化循环条件
+		size_t offsetTrace = nblOffset;
+		size_t offsetRemainInMDL = 0;
+		size_t headerOffsetTrace = 0;
+		size_t tcpHeaderLength = 20;
+		BOOL isHeaderParsed = FALSE;
+		BOOL isHeaderLengthAcquired = FALSE;
+		PCHAR packetStartPos;
+		for (PNET_BUFFER currentNb = NET_BUFFER_LIST_FIRST_NB(nbl); currentNb; NET_BUFFER_NEXT_NB(currentNb))
+		{
+			PMDL firstMdlPerNb = NET_BUFFER_FIRST_MDL(currentNb);
+			for (PMDL currentMdl = firstMdlPerNb; currentMdl; currentMdl = currentMdl->Next)
+			{
+				PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
+				int currentRemainBytes = currentMdl->ByteCount;
+				//位移还没有结束
+				if (offsetTrace > 0 && currentRemainBytes <= offsetTrace)
+				{
+					offsetTrace -= currentRemainBytes;
+					continue;
+				}
+				else if (offsetTrace > 0 && currentRemainBytes > offsetTrace)
+				{
+					//在这里位移
+					packetStartPos = mdlAddr + offsetTrace;
+					offsetRemainInMDL = (currentRemainBytes)-offsetTrace + 1;
+
+					currentRemainBytes -= offsetTrace;
+					offsetTrace = 0;
+					mdlAddr = packetStartPos;
+				}
+
+				//开始解析TCP报文段。
+				if (offsetTrace == 0)
+				{
+					//获取TCP长度。
+					if (!isHeaderParsed)
+					{
+						for (size_t initPos = 0; initPos < currentRemainBytes; ++initPos, ++headerOffsetTrace, ++mdlAddr)
+						{
+							switch (headerOffsetTrace)
+							{
+							case 0:
+								break;
+							case 1:
+								break;
+							case 2:
+								break;
+							case 3:
+								break;
+							case 4:
+								break;
+							case 6:
+								break;
+							case 7:
+								break;
+							case 8:
+								break;
+							case 9:
+								break;
+							case 10:
+								break;
+							case 11:
+								break;
+							case 12:
+								break;
+							case 13:
+								break;
+							case 14:
+								break;
+							case 15:
+								break;
+							case 16:
+								break;
+							case 17:
+								break;
+							case 18:
+								break;
+							case 19:
+								break;
+							}
+						}
+
+						if (headerOffsetTrace == tcpHeaderLength)
+						{
+							isHeaderParsed = TRUE;
+						}
+					}
+
+					if (isHeaderParsed)
+					{
+						//这个记得换
+						*dataPos = (PacketDataBuffer*)ExAllocatePoolWithTag(NonPagedPool, sizeof(PacketDataBuffer), 'pdb');
+						PacketDataBuffer* currentDataBuffer = *dataPos;
+						currentDataBuffer->Bytes = currentRemainBytes;
+						currentDataBuffer->CurrentBuffer = mdlAddr;
+						dataPos = &(currentDataBuffer->NextBuffer);
+					}
+				}
 			}
 		}
 	}
+	else
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Allocate pool for tcpRawPacketPoint failed.");
+	}
+}
+
+void DeleteTcpRawPacket(_In_ ShadowTcpRawPacket* tcpRawPacket)
+{
+	//先释放里面的PacketDataBuffer数据结构
+	int chainNumber = 0;
+	for (PacketDataBuffer* buffer = tcpRawPacket->Data; buffer; buffer = buffer->NextBuffer)
+	{
+		++chainNumber;
+	}
+
+	PacketDataBuffer* previousBuffer;
+	for (PacketDataBuffer* buffer = tcpRawPacket->Data; buffer; buffer = buffer->NextBuffer)
+	{
+		if (buffer->NextBuffer)
+		{
+			previousBuffer = buffer->NextBuffer;
+		}
+		
+		ExFreePoolWithTag(buffer, 'pdb');
+	}
+
+	ExFreePoolWithTag(tcpRawPacket, 'strp');
 }
 
 void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
@@ -181,7 +287,6 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char *)outputs);
-
 
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
