@@ -54,7 +54,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 		BOOL isHeaderParsed = FALSE;
 		BOOL isHeaderLengthAcquired = FALSE;
 		PCHAR packetStartPos;
-		for (PNET_BUFFER currentNb = NET_BUFFER_LIST_FIRST_NB(nbl); currentNb; NET_BUFFER_NEXT_NB(currentNb))
+		for (PNET_BUFFER currentNb = NET_BUFFER_LIST_FIRST_NB(nbl); currentNb; currentNb = NET_BUFFER_NEXT_NB(currentNb))
 		{
 			PMDL firstMdlPerNb = NET_BUFFER_FIRST_MDL(currentNb);
 			for (PMDL currentMdl = firstMdlPerNb; currentMdl; currentMdl = currentMdl->Next)
@@ -84,7 +84,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 					//获取TCP长度。
 					if (!isHeaderParsed)
 					{
-						for (size_t initPos = 0; initPos < currentRemainBytes; ++initPos, ++headerOffsetTrace, ++mdlAddr)
+						for (size_t initPos = 0; initPos < currentRemainBytes && headerOffsetTrace < tcpHeaderLength; ++initPos, ++headerOffsetTrace)
 						{
 							switch (headerOffsetTrace)
 							{
@@ -142,6 +142,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 						PacketDataBuffer* currentDataBuffer = *dataPos;
 						currentDataBuffer->Bytes = currentRemainBytes;
 						currentDataBuffer->CurrentBuffer = mdlAddr;
+						currentDataBuffer->NextBuffer = NULL;
 						dataPos = &(currentDataBuffer->NextBuffer);
 					}
 				}
@@ -163,15 +164,13 @@ void DeleteTcpRawPacket(_In_ ShadowTcpRawPacket* tcpRawPacket)
 		++chainNumber;
 	}
 
+	PacketDataBuffer* nextBuffer;
 	PacketDataBuffer* previousBuffer;
-	for (PacketDataBuffer* buffer = tcpRawPacket->Data; buffer; buffer = buffer->NextBuffer)
+	for (PacketDataBuffer* buffer = tcpRawPacket->Data; buffer; )
 	{
-		if (buffer->NextBuffer)
-		{
-			previousBuffer = buffer->NextBuffer;
-		}
-		
-		ExFreePoolWithTag(buffer, 'pdb');
+		previousBuffer = buffer;
+		buffer = buffer->NextBuffer;
+		ExFreePoolWithTag(previousBuffer, 'pdb');
 	}
 
 	ExFreePoolWithTag(tcpRawPacket, 'strp');
@@ -286,7 +285,8 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char *)outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char*)outputs);
+
 
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
@@ -316,17 +316,35 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
 								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
 
+			ShadowTcpRawPacket* rawPacket;
+
 			//TCP报文段在缓冲区的起始指针
 			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
 
 			CHAR tcpOriginalCheckSum1 = tcpStartPos[16];
 			CHAR tcpOriginalCheckSum2 = tcpStartPos[17];
+			unsigned short originalCheckSum = ((tcpOriginalCheckSum1 << 8) & 0xFF00) + (tcpOriginalCheckSum2 & 0xFF);
+			
 
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
+
 			//计算校验和
 			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12, 2);
+
+			
+
+			//----------------------------------------------------------------------
+			ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+			unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+			DeleteTcpRawPacket(rawPacket);
+
+			if (sum != originalCheckSum)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Test: TCP header checksum calculation in send path error!\n");
+			}
+			//-----------------------------------------------------------------------
 
 			CHAR tcpCheckSum1 = (CHAR)((checkSum & 0xff00) >> 8);
 			CHAR tcpCheckSum2 = (CHAR)(checkSum & 0xff);
@@ -346,7 +364,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		}
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char *)outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char*)outputs);
 	}
 }
 
@@ -368,7 +386,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char *)outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char*)outputs);
 		/*------打印-------*/
 
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
@@ -452,7 +470,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		}
 
 		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char *)outputs);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char*)outputs);
 	}
 }
 
@@ -505,7 +523,7 @@ VOID NTAPI ClassifyFn(
 
 				//检查校验和
 
-						
+
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \n");
 				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
 

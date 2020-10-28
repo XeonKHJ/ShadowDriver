@@ -3,10 +3,9 @@
 //定义相关结构体
 typedef struct PacketDataBuffer
 {
-	void* CurrentBuffer;
+	char* CurrentBuffer;
 	unsigned long long Bytes;
 	struct PacketDataBuffer* NextBuffer;
-	struct PacketDataBuffer* Previousfer;
 }PacketDataBuffer;
 
 typedef struct ShadowTcpRawPacket
@@ -25,3 +24,4 @@ typedef struct ShadowTcpRawPacket
 unsigned long long CaculateHexStringLength(unsigned long long bytesCount);
 void ConvertBytesArrayToHexString(char* bytes, unsigned long long bytesCount, char* outputString, unsigned long long outputStringLength);
 unsigned short CalculateCheckSum(char* bytes, char* fakeHeader, int byteCounts, int fakeHeaderCounts, int marginBytes);
+unsigned short CalculateCheckSum1(ShadowTcpRawPacket* packet, char* fakeHeader, unsigned long long fakeHeaderCounts, int marginBytes);

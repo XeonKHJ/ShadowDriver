@@ -138,7 +138,7 @@ unsigned short CalculateCheckSum1(ShadowTcpRawPacket* packet, char* fakeHeader, 
 			if (totalOffset < byteCounts)
 			{
 				//位移为偶数，则要向左位移两位。
-				if (totalOffset % 2)
+				if (!(totalOffset % 2))
 				{
 					sum += (((unsigned int)((currentDataBuffer[i])) << 8) & 0xff00);
 				}
