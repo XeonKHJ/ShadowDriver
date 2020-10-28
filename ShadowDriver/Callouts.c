@@ -33,37 +33,42 @@ HANDLE ReceiveInjectHandle = NULL;
 extern UINT64 filterId;
 extern UINT64 filterId2;
 
-void ConvertNetBufferListToTcpRawPacket(ShadowTcpRawPacket* dataBuffer, PNET_BUFFER_LIST ndl, UINT32 nblOffset)
+void ConvertNetBufferListToTcpRawPacket(ShadowTcpRawPacket* dataBuffer, PNET_BUFFER_LIST nbl, UINT32 nblOffset)
 {
-	PNET_BUFFER firstNb = NET_BUFFER_LIST_FIRST_NB(ndl);
+	PNET_BUFFER firstNb = NET_BUFFER_LIST_FIRST_NB(nbl);
 	PMDL firstMdl = NET_BUFFER_FIRST_MDL(firstNb);
-	PMDL currentMdl = firstMdl;
 
+	//初始化循环条件
+	PMDL currentMdl = firstMdl;
+	PNET_BUFFER currentNb = firstNb;
 	UINT32 offsetTrace = nblOffset;
 	UINT32 headerOffsetTrace;
 	PCHAR packetStartPos;
-	while (currentMdl)
+	for (PNET_BUFFER currentNb = NET_BUFFER_LIST_FIRST_NB(nbl); currentNb; NET_BUFFER_NEXT_NB(currentNb))
 	{
-		PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
-		//位移还没有结束
-		if (offsetTrace > 0 && currentMdl->ByteCount <= offsetTrace)
+		PMDL firstMdlPerNb = NET_BUFFER_FIRST_MDL(currentNb);
+		for(PMDL currentMdl = firstMdlPerNb; currentMdl; currentMdl = currentMdl->Next)
 		{
-			offsetTrace -= currentMdl->ByteCount;
-			continue;
-		}
-		else if (offsetTrace > 0 && currentMdl->ByteCount > offsetTrace)
-		{
-			//在这里位移
-			packetStartPos = mdlAddr + offsetTrace;
-		}
-		else if (offsetTrace == 0)
-		{
-			//输入信息环节
-			
+			PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
+			//位移还没有结束
+			if (offsetTrace > 0 && currentMdl->ByteCount <= offsetTrace)
+			{
+				offsetTrace -= currentMdl->ByteCount;
+				continue;
+			}
+			else if (offsetTrace > 0 && currentMdl->ByteCount > offsetTrace)
+			{
+				//在这里位移
+				packetStartPos = mdlAddr + offsetTrace;
+			}
+			//开始解析TCP报文段。
+			else if (offsetTrace == 0)
+			{
+				//
+
+			}
 		}
 	}
-	
-	
 }
 
 void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
