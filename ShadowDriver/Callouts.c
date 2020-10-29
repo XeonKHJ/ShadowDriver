@@ -35,8 +35,6 @@ extern UINT64 filterId2;
 
 void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketPoint, _In_ PNET_BUFFER_LIST nbl, _In_ UINT32 nblOffset)
 {
-	PNET_BUFFER firstNb = NET_BUFFER_LIST_FIRST_NB(nbl);
-	PMDL firstMdl = NET_BUFFER_FIRST_MDL(firstNb);
 
 	//为ShadowTcpRawPacket分配内存空间。
 	*tcpRawPacketPoint = (ShadowTcpRawPacket*)ExAllocatePoolWithTag(NonPagedPool, sizeof(ShadowTcpRawPacket), 'strp');
@@ -59,7 +57,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 			PMDL firstMdlPerNb = NET_BUFFER_FIRST_MDL(currentNb);
 			for (PMDL currentMdl = firstMdlPerNb; currentMdl; currentMdl = currentMdl->Next)
 			{
-				PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(firstMdl);
+				PCHAR mdlAddr = (PCHAR)MmGetMdlVirtualAddress(currentMdl);
 				int currentRemainBytes = currentMdl->ByteCount;
 				//位移还没有结束
 				if (offsetTrace > 0 && currentRemainBytes <= offsetTrace)
@@ -310,11 +308,16 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			if (transportDataLength % 2 == 1)
 			{
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
+				if (transportDataLength == 0x55d)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is 0x55d\n");
+				}
 			}
 
 			CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
 								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
 								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
+
 
 			ShadowTcpRawPacket* rawPacket;
 
@@ -351,12 +354,12 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 			if (tcpOriginalCheckSum1 != tcpCheckSum1 || tcpOriginalCheckSum2 != tcpCheckSum2)
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum OLD calculation in send path error!\n");
 			}
 
 			//将校验和填充到TCP报文段中。
-			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
-			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
+			tcpStartPos[16] = (CHAR)((sum & 0xff00) >> 8);
+			tcpStartPos[17] = (CHAR)(sum & 0xff);
 		}
 		break;
 		case 17: //UDP协议
