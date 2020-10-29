@@ -192,7 +192,7 @@ void DeleteTcpRawPacket(_In_ ShadowTcpRawPacket* tcpRawPacket)
 	ExFreePoolWithTag(tcpRawPacket, 'strp');
 }
 
-void CalculateIpPacketCheckSum();
+//void CalculateIpPacketCheckSum();
 
 void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 {
