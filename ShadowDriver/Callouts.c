@@ -298,7 +298,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 		//获取网络层以上的数据长度（不包括网络层）。
 		short ipHeaderLength = (mdlCharBuffer[0] & 0xf) * 4;
-		short totalLength = (mdlCharBuffer[2] << 8) + mdlCharBuffer[3];
+		short totalLength = (mdlCharBuffer[2] << 8) + (mdlCharBuffer[3] & 0xFF);
 		short transportDataLength = totalLength - ipHeaderLength;
 
 		switch (protocal)
@@ -346,6 +346,12 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			if (sum != originalCheckSum)
 			{
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Test: TCP header checksum calculation in send path error!\n");
+
+#if DBG
+				ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+				unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+				DeleteTcpRawPacket(rawPacket);
+#endif
 			}
 			//-----------------------------------------------------------------------
 
