@@ -206,20 +206,14 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 
 		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 
-		int dataLength = netBuffer->DataLength;
-
 		//NdisRetreatNetBufferDataStart(netBuffer, 0, 0, NULL);
-		int orignalDataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
+		ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 
-		copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, orignalDataLength, 'cpk');
-
-		dataLength = orignalDataLength;
+		copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'cpk');
 
 		while (dataBuffer == NULL)
 		{
-
 			dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, copiedDataBuffer, 1, 0);
-
 			--dataLength;
 		}
 		++dataLength;
