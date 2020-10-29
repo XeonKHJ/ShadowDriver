@@ -153,6 +153,57 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 	}
 }
 
+void CalculateTcpPacketCheckSum(short transportDataLength, PCHAR mdlCharBuffer, CHAR protocal, short ipHeaderLength, PNET_BUFFER_LIST packet)
+{
+	if (transportDataLength % 2 == 1)
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
+		if (transportDataLength == 0x55d)
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is 0x55d\n");
+		}
+	}
+
+	CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
+						  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
+						  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
+
+
+	ShadowTcpRawPacket* rawPacket;
+
+	//TCP报文段在缓冲区的起始指针
+	PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
+
+	CHAR tcpOriginalCheckSum1 = tcpStartPos[16];
+	CHAR tcpOriginalCheckSum2 = tcpStartPos[17];
+	unsigned short originalCheckSum = ((tcpOriginalCheckSum1 << 8) & 0xFF00) + (tcpOriginalCheckSum2 & 0xFF);
+
+
+	//将TCP的校验和位置零
+	tcpStartPos[16] = tcpStartPos[17] = 0;
+
+	//----------------------------------------------------------------------
+	ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+	unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+	DeleteTcpRawPacket(rawPacket);
+
+	if (sum != originalCheckSum)
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
+
+#if DBG
+		ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+		unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+		DeleteTcpRawPacket(rawPacket);
+#endif
+	}
+	//-----------------------------------------------------------------------
+
+	//将校验和填充到TCP报文段中。
+	tcpStartPos[16] = (CHAR)((sum & 0xff00) >> 8);
+	tcpStartPos[17] = (CHAR)(sum & 0xff);
+}
+
 void DeleteTcpRawPacket(_In_ ShadowTcpRawPacket* tcpRawPacket)
 {
 	//先释放里面的PacketDataBuffer数据结构
@@ -305,6 +356,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		{
 		case 6: //TCP协议
 		{
+			//CalculateTcpPacketCheckSum(transportDataLength, mdlCharBuffer, protocal, ipHeaderLength, packet);
 			if (transportDataLength % 2 == 1)
 			{
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
@@ -332,12 +384,6 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
-
-			//计算校验和
-			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12, 2);
-
-			
-
 			//----------------------------------------------------------------------
 			ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
 			unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
@@ -345,7 +391,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 			if (sum != originalCheckSum)
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Test: TCP header checksum calculation in send path error!\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
 
 #if DBG
 				ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
@@ -354,14 +400,6 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 #endif
 			}
 			//-----------------------------------------------------------------------
-
-			CHAR tcpCheckSum1 = (CHAR)((checkSum & 0xff00) >> 8);
-			CHAR tcpCheckSum2 = (CHAR)(checkSum & 0xff);
-
-			if (tcpOriginalCheckSum1 != tcpCheckSum1 || tcpOriginalCheckSum2 != tcpCheckSum2)
-			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum OLD calculation in send path error!\n");
-			}
 
 			//将校验和填充到TCP报文段中。
 			tcpStartPos[16] = (CHAR)((sum & 0xff00) >> 8);
@@ -404,8 +442,8 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 
 		mdlCharBuffer[12] = (CHAR)192;
 		mdlCharBuffer[13] = (CHAR)168;
-		mdlCharBuffer[14] = (CHAR)1;
-		mdlCharBuffer[15] = (CHAR)106;
+		mdlCharBuffer[14] = (CHAR)0;
+		mdlCharBuffer[15] = (CHAR)177;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
@@ -414,7 +452,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 
 		//获取网络层以上的数据长度（不包括网络层）。
 		short ipHeaderLength = (mdlCharBuffer[0] & 0xf) * 4;
-		short totalLength = (mdlCharBuffer[2] << 8) + mdlCharBuffer[3];
+		short totalLength = (mdlCharBuffer[2] << 8) + (mdlCharBuffer[3] & 0xFF);
 		short transportDataLength = totalLength - ipHeaderLength;
 
 
@@ -444,34 +482,53 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		{
 		case 6: //TCP协议
 		{
+			if (transportDataLength % 2 == 1)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
+				if (transportDataLength == 0x55d)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is 0x55d\n");
+				}
+			}
+
 			CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
 								  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
 								  (CHAR)0, protocal, (CHAR)((transportDataLength & 0xff00) >> 8), (CHAR)(transportDataLength & 0xff) };
 
+
+			ShadowTcpRawPacket* rawPacket;
+
 			//TCP报文段在缓冲区的起始指针
 			PCHAR tcpStartPos = &(mdlCharBuffer[ipHeaderLength]);
 
-
 			CHAR tcpOriginalCheckSum1 = tcpStartPos[16];
 			CHAR tcpOriginalCheckSum2 = tcpStartPos[17];
+			unsigned short originalCheckSum = ((tcpOriginalCheckSum1 << 8) & 0xFF00) + (tcpOriginalCheckSum2 & 0xFF);
+
 
 			//将TCP的校验和位置零
 			tcpStartPos[16] = tcpStartPos[17] = 0;
 
-			//计算校验和
-			unsigned short checkSum = CalculateCheckSum(tcpStartPos, fakeHeader, transportDataLength, 12, 2);
+			//-------------------------计算校验和-------------------------------------
+			ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+			unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+			DeleteTcpRawPacket(rawPacket);
 
-			CHAR tcpCheckSum1 = (CHAR)((checkSum & 0xff00) >> 8);
-			CHAR tcpCheckSum2 = (CHAR)(checkSum & 0xff);
-
-			if (tcpOriginalCheckSum1 != tcpCheckSum1 || tcpOriginalCheckSum2 != tcpCheckSum2)
+			if (sum != originalCheckSum)
 			{
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in receive path error!\n");
+
+#if DBG
+				ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+				unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+				DeleteTcpRawPacket(rawPacket);
+#endif
 			}
+			//-----------------------------------------------------------------------
 
 			//将校验和填充到TCP报文段中。
-			tcpStartPos[16] = (CHAR)((checkSum & 0xff00) >> 8);
-			tcpStartPos[17] = (CHAR)(checkSum & 0xff);
+			tcpStartPos[16] = (CHAR)((sum & 0xff00) >> 8);
+			tcpStartPos[17] = (CHAR)(sum & 0xff);
 		}
 		break;
 		case 17: //UDP协议
