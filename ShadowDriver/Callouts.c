@@ -232,9 +232,23 @@ VOID NTAPI ClassifyFn(
 	PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
-	//暂时先让这段不进行观察过去的包
-	if (SendInjectHandle != NULL && filter->filterId == filterId)
+	if (packet)
 	{
+		if (NET_BUFFER_LIST_NEXT_NBL(packet))
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer list link to another list. \n");
+		}
+
+		if (NET_BUFFER_NEXT_NB(NET_BUFFER_LIST_FIRST_NB(packet)))
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer link to another buffer. \n");
+		}
+	}
+
+
+	if (SendInjectHandle != NULL && filter->filterId == filterId && packet)
+	{
+
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
 		//如果捕获的数据包是主动

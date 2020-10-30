@@ -122,14 +122,14 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 
 void CalculateTcpPacketCheckSum(short transportDataLength, PCHAR mdlCharBuffer, CHAR protocal, short ipHeaderLength, PNET_BUFFER_LIST packet)
 {
-	if (transportDataLength % 2 == 1)
-	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
-		if (transportDataLength == 0x55d)
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is 0x55d\n");
-		}
-	}
+	//if (transportDataLength % 2 == 1)
+	//{
+	//	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is odd\n");
+	//	if (transportDataLength == 0x55d)
+	//	{
+	//		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "TCP header length is 0x55d\n");
+	//	}
+	//}
 
 	CHAR fakeHeader[] = { mdlCharBuffer[12] , mdlCharBuffer[13] , mdlCharBuffer[14] , mdlCharBuffer[15],
 						  mdlCharBuffer[16] , mdlCharBuffer[17] , mdlCharBuffer[18] , mdlCharBuffer[19],
@@ -154,16 +154,16 @@ void CalculateTcpPacketCheckSum(short transportDataLength, PCHAR mdlCharBuffer, 
 	unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
 	DeleteTcpRawPacket(rawPacket);
 
-	if (sum != originalCheckSum)
-	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
-
-#if DBG
-		ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
-		unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
-		DeleteTcpRawPacket(rawPacket);
-#endif
-	}
+//	if (sum != originalCheckSum)
+//	{
+//		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "TCP header checksum calculation in send path error!\n");
+//
+//#if DBG
+//		ConvertNetBufferListToTcpRawPacket(&rawPacket, packet, ipHeaderLength);
+//		unsigned short sum = CalculateCheckSum1(rawPacket, fakeHeader, 12, 2);
+//		DeleteTcpRawPacket(rawPacket);
+//#endif
+//	}
 	//-----------------------------------------------------------------------
 
 	//将校验和填充到TCP报文段中。
