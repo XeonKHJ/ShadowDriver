@@ -176,15 +176,17 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		mdlCharBuffer[11] = 0;
 
 		unsigned short checkSum = CalculateCheckSum(mdlCharBuffer, NULL, ipHeaderLength, 0, 2);
-
+		
+#if DBG
 		//¼ìÑé
 		CHAR checkSum1 = (CHAR)((checkSum & 0xff00) >> 8);
 		CHAR checkSum2 = (CHAR)((checkSum & 0xff));
 
 		if (checkSum1 != currentCheckSum1 || checkSum2 != currentCheckSum2)
 		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "IP header checksum calculation in receive path error!\n");
+			//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "IP header checksum calculation in receive path error!\n");
 		}
+#endif
 
 		mdlCharBuffer[10] = (CHAR)((checkSum & 0xff00) >> 8);
 		mdlCharBuffer[11] = (CHAR)(checkSum & 0xff);
