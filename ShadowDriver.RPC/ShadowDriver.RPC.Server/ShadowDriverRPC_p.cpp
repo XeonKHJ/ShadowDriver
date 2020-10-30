@@ -9,12 +9,12 @@ void RPCTest(
 
 void GetShadowDriverVersion(void)
 {
-
+	//to-do
 }
 
 void Shutdown(void)
 {
-
+	//to-do
 }
 
 _Must_inspect_result_
