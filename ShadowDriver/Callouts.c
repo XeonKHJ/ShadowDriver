@@ -98,7 +98,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
-		((PCHAR)mdlBuffer)[19] = (CHAR)106;
+		((PCHAR)mdlBuffer)[19] = (CHAR)103;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
