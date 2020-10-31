@@ -62,12 +62,12 @@ void ReceiveInjectCompleted(
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Completed\n");
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Completed.\t\n");
 	}
 	else
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Receive injection failed. Error code: %02X\n", status);
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error NBL: ");
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Receive injection failed. Error code: %02X\t\n", status);
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error NBL: \t\n");
 
 		PrintNetBufferList(netBufferList, DPFLTR_ERROR_LEVEL);
 	}
@@ -232,19 +232,22 @@ VOID NTAPI ClassifyFn(
 	PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
+	BOOL hasNextNBL = FALSE;
+	BOOL hasNextNB = FALSE;
 	if (packet)
 	{
 		if (NET_BUFFER_LIST_NEXT_NBL(packet))
 		{
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer list link to another list. \n");
+			hasNextNBL = TRUE;
 		}
 
 		if (NET_BUFFER_NEXT_NB(NET_BUFFER_LIST_FIRST_NB(packet)))
 		{
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer link to another buffer. \n");
+			hasNextNB = TRUE;
 		}
 	}
-
 
 	if (SendInjectHandle != NULL && filter->filterId == filterId && packet)
 	{
@@ -265,14 +268,30 @@ VOID NTAPI ClassifyFn(
 
 			if (NT_SUCCESS(status))
 			{
+				if (hasNextNB || hasNextNBL)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Original net buffers:\n");
+					PrintNetBufferList(clonedPacket, DPFLTR_WARNING_LEVEL);
+				}
+
 				//如果数据包缓冲区创建成功
 				ModifySendIPPacket(clonedPacket);
 
 				//检查校验和
 
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \n");
-				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \t\n");
+
+				if (hasNextNB || hasNextNBL)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Modified net buffers:\n");
+					PrintNetBufferList(clonedPacket, DPFLTR_WARNING_LEVEL);
+				}
+				else
+				{
+					PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
+				}
+				
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
 				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
@@ -328,7 +347,7 @@ VOID NTAPI ClassifyFn(
 				//如果数据包缓冲区创建成功
 				ModifyReceiveIPPacket(clonedPacket);
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Receving Net Buffer List: \n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Receving Net Buffer List: \t\n");
 				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);

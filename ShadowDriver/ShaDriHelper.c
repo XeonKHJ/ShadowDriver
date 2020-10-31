@@ -202,38 +202,40 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 	//´òÓ¡IP±¨
 	if (packet->FirstNetBuffer != NULL)
 	{
-		PNET_BUFFER_LIST clonedBuffer;
 
-		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
-
-		//NdisRetreatNetBufferDataStart(netBuffer, 0, 0, NULL);
-		ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
-
-		copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'cpk');
-
-		while (dataBuffer == NULL)
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "Start printing net buffer list:\t\n");
+		for (PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet); netBuffer; netBuffer = NET_BUFFER_NEXT_NB(netBuffer))
 		{
-			dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, copiedDataBuffer, 1, 0);
-			--dataLength;
-		}
-		++dataLength;
+			//NdisRetreatNetBufferDataStart(netBuffer, 0, 0, NULL);
+			ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 
-		if (dataBuffer != NULL)
-		{
-			size_t outputLength = CaculateHexStringLength(dataLength);
-			outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+			copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'cpk');
 
-			if (outputs != NULL)
+			while (dataBuffer == NULL)
 			{
-				ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
+				dataBuffer = NdisGetDataBuffer(netBuffer, dataLength, copiedDataBuffer, 1, 0);
+				--dataLength;
+			}
+			++dataLength;
 
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "%s\t\n", outputs);
-				ExFreePoolWithTag(outputs, 'op');
+			if (dataBuffer != NULL)
+			{
+				size_t outputLength = CaculateHexStringLength(dataLength);
+				outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+
+				if (outputs != NULL)
+				{
+					ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
+					
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "%s\t\n", outputs);
+					ExFreePoolWithTag(outputs, 'op');
+				}
+			}
+			else
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "DataBuffer Fetch Failed!\t\n");
 			}
 		}
-		else
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "DataBuffer Fetch Failed!\t\n");
-		}
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "Finish printing net buffer list.\t\n");
 	}
 }
