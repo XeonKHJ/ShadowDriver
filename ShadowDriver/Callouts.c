@@ -82,10 +82,31 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 
 		//获取数据缓冲区
-		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, netBuffer->DataLength, NULL, 1, 0);
+		PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
+
+		PMDL currentMdl = NET_BUFFER_CURRENT_MDL(netBuffer);
 
 		//从MDL中提取信息
-		PVOID mdlBuffer = MmGetMdlVirtualAddress(netBuffer->CurrentMdl);
+		PVOID mdlBuffer = MmGetMdlVirtualAddress(currentMdl);
+		
+#if DBG //调试输出多个NB的MDL是否相同。
+		PHYSICAL_ADDRESS mdlPhysicalBuffer = MmGetPhysicalAddress(mdlBuffer);
+		for (PNET_BUFFER testNetBuffer = NET_BUFFER_NEXT_NB(netBuffer); testNetBuffer; testNetBuffer = NET_BUFFER_NEXT_NB(testNetBuffer))
+		{
+			PMDL testMdl = NET_BUFFER_CURRENT_MDL(testNetBuffer);
+			PVOID testMdlBuffer = MmGetMdlVirtualAddress(testMdl);
+			PHYSICAL_ADDRESS testMdlPhysicalBuffer = MmGetPhysicalAddress(testMdlBuffer);
+			if (mdlPhysicalBuffer.QuadPart == testMdlPhysicalBuffer.QuadPart)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "MDLs are the same!\t\n");
+			}
+			else
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "MDLs are not the same!\t\n");
+			}
+		}
+#endif
+
 		PCHAR mdlCharBuffer = (PCHAR)mdlBuffer;
 		//dataBuffer = (PBYTE)mdlBuffer;
 
