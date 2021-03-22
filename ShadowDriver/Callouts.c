@@ -119,7 +119,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 		((PCHAR)mdlBuffer)[16] = (CHAR)192;
 		((PCHAR)mdlBuffer)[17] = (CHAR)168;
 		((PCHAR)mdlBuffer)[18] = (CHAR)1;
-		((PCHAR)mdlBuffer)[19] = (CHAR)103;
+		((PCHAR)mdlBuffer)[19] = (CHAR)102;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
@@ -174,8 +174,8 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 
 		mdlCharBuffer[12] = (CHAR)192;
 		mdlCharBuffer[13] = (CHAR)168;
-		mdlCharBuffer[14] = (CHAR)0;
-		mdlCharBuffer[15] = (CHAR)177;
+		mdlCharBuffer[14] = (CHAR)1;
+		mdlCharBuffer[15] = (CHAR)104;
 
 
 		//如果传输层协议时TCP或者UDP，则要重新计算TCP或者UDP的校验和。
