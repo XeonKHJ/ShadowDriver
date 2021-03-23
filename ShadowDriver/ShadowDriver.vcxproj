@@ -41,6 +41,7 @@
     <ClCompile Include="Callouts.c" />
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
+    <ClCompile Include="IrpFunctions.c" />
     <ClCompile Include="Queue.c" />
     <ClCompile Include="ShadowUtilities.c" />
     <ClCompile Include="ShaDriHelper.c" />
@@ -50,6 +51,7 @@
     <ClInclude Include="Callouts.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="IrpFunctions.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="ShadowUtilities.h" />

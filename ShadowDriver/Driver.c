@@ -17,6 +17,7 @@ Environment:
 #include "driver.h"
 #include "driver.tmh"
 #include <windowsx.h>
+#include "IrpFunctions.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -111,6 +112,9 @@ Return Value:
                              &wdfDriver
                              );
 
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriver_IRP_IoControl;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = ShadowDriver_IRP_Create;
+
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
         WPP_CLEANUP(DriverObject);
@@ -128,7 +132,7 @@ Return Value:
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
-
+    DRIVER_DISPATCH abcd;
     return status;
 }
 

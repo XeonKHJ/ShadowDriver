@@ -54,6 +54,9 @@
     <ClInclude Include="ShaDriHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IrpFunctions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Device.c">
@@ -75,6 +78,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ShaDriHelper.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IrpFunctions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
