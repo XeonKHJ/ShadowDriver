@@ -61,7 +61,7 @@ Return Value:
     RtlInitUnicodeString(&deviceDosName, L"\\DosDevices\\ShadowDriver");
 
     //status = WdfDeviceInitAssignName(DeviceInit, &deviceName);
-    
+    WdfDeviceInitSetDeviceType(DeviceInit, FILE_DEVICE_NETWORK);
     status = WdfDeviceCreate(&DeviceInit, &deviceAttributes, &device);
     status = WdfDeviceCreateSymbolicLink(device, &deviceDosName);
     if (NT_SUCCESS(status)) {
