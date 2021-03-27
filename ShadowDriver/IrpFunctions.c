@@ -7,7 +7,8 @@ ShadowDriver_IRP_IoControl(
 )
 {
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "ShadowDriver_IRP_IoControl\n");
-    NTSTATUS status;
+    NTSTATUS status = STATUS_SUCCESS;
+    UINT dwDataWritten = 0;
     //È¡³öIRP
     PIO_STACK_LOCATION pIoStackIrp = IoGetCurrentIrpStackLocation(Irp);
     if (pIoStackIrp)
@@ -29,7 +30,12 @@ ShadowDriver_IRP_IoControl(
         }
     }
 
-    return 0;
+    Irp->IoStatus.Status = status;
+    Irp->IoStatus.Information = dwDataWritten;
+
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+    return status;
 }
 
 NTSTATUS
