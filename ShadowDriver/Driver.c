@@ -32,20 +32,20 @@ VOID Unload(PDRIVER_OBJECT DriverObject)
     driversss = DriverObject;
 }
 
-void StartInitializeRPC(
-    PVOID StartContext
-)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "RPC Thread Created.\n");
-}
-
-NTSTATUS InitializeRPCServer()
-{
-    NTSTATUS status;
-    HANDLE threadHandle;
-    status = PsCreateSystemThread(&threadHandle, SYNCHRONIZE | DELETE, NULL, NULL, NULL, StartInitializeRPC, NULL);
-    return status;
-}
+//void StartInitializeRPC(
+//    PVOID StartContext
+//)
+//{
+//    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, "RPC Thread Created.\n");
+//}
+//
+//NTSTATUS InitializeRPCServer()
+//{
+//    NTSTATUS status;
+//    HANDLE threadHandle;
+//    status = PsCreateSystemThread(&threadHandle, SYNCHRONIZE | DELETE, NULL, NULL, NULL, StartInitializeRPC, NULL);
+//    return status;
+//}
 
 NTSTATUS
 DriverEntry(
@@ -124,7 +124,7 @@ Return Value:
         return status;
     }
     //Æô¶¯RPC
-    status = InitializeRPCServer();
+    //status = InitializeRPCServer();
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Driver Installing.\n");
 

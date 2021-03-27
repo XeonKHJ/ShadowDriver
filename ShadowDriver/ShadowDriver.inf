@@ -79,8 +79,20 @@ KmdfLibraryVersion = $KMDFVERSION$
 
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
-ManufacturerName="<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+ManufacturerName="Hongjia" ;TODO: Replace with your manufacturer name
 ClassName="Samples" ; TODO: edit ClassName
 DiskName = "ShadowDriver Installation Disk"
 ShadowDriver.DeviceDesc = "ShadowDriver Device"
 ShadowDriver.SVCDESC = "ShadowDriver Service"
+
+;自己添加的区域
+
+[ShadowDriver_Device.NT.Interfaces]
+AddInterface= {45f22bb7-6bc3-4545-96ed-73de89c46e7d},,AddInterfaceSection
+
+[AddInterfaceSection]
+AddProperty= AddInterfaceSection.AddProps
+
+[AddInterfaceSection.AddProps]
+; DEVPKEY_DeviceInterface_UnrestrictedAppCapabilities
+{026e516e-b814-414b-83cd-856d6fef4822}, 8, 0x2012,, "hongjia.ioctltest_xe7ejb7dfnp4r"
