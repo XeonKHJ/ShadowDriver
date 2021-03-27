@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CustomCapabilityDescriptor xmlns="http://schemas.microsoft.com/appx/2016/sccd" xmlns:s="http://schemas.microsoft.com/appx/2016/sccd">
+	<CustomCapabilities>
+		<CustomCapability Name="hongjia.ioctltest_xe7ejb7dfnp4r"></CustomCapability>
+	</CustomCapabilities>
+  <AuthorizedEntities>
+    <AuthorizedEntity AppPackageFamilyName="Hongjia.ShadowCapturer_xe7ejb7dfnp4r" CertificateSignatureHash="c39c58eff76e19113531f0776e2f5b7c34e5172f5d62aa31482f9e37b32ec342"></AuthorizedEntity>
+  </AuthorizedEntities>
+	<Catalog>xxxx</Catalog>
+</CustomCapabilityDescriptor>
