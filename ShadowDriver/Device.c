@@ -18,10 +18,44 @@ Environment:
 #include "device.tmh"
 #include "Callouts.h"
 #include "WfpHelper.h"
+#include "IrpFunctions.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
 #endif
+
+typedef struct _INVERTED_DEVICE_CONTEXT {
+    WDFQUEUE    NotificationQueue;
+    LONG       Sequence;
+} INVERTED_DEVICE_CONTEXT, * PINVERTED_DEVICE_CONTEXT;
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(INVERTED_DEVICE_CONTEXT, InvertedGetContextFromDevice)
+
+/// <summary>
+/// 初始化IO队列
+/// </summary>
+/// <returns></returns>
+NTSTATUS InitiateWdfIOQueue(WDFDEVICE device)
+{
+    WDF_IO_QUEUE_CONFIG queueConfig;
+    WDFQUEUE queueFunc;
+    NTSTATUS status;
+    //添加IOCTL的队列信息
+    WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchParallel);
+    queueConfig.EvtIoDeviceControl = InvertedEvtIoDeviceControl;
+    queueConfig.PowerManaged = WdfFalse;
+    status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+    //queueConfig.EvtIoCanceledOnQueue = InvertedEvtIoDeviceControl;
+    queueConfig.PowerManaged = WdfFalse;
+
+    status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &queueFunc);
+    return status;
+}
 
 NTSTATUS
 ShadowDriverCreateDevice(
@@ -63,7 +97,18 @@ Return Value:
     //status = WdfDeviceInitAssignName(DeviceInit, &deviceName);
     WdfDeviceInitSetDeviceType(DeviceInit, FILE_DEVICE_NETWORK);
     status = WdfDeviceCreate(&DeviceInit, &deviceAttributes, &device);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
     status = WdfDeviceCreateSymbolicLink(device, &deviceDosName);
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
     if (NT_SUCCESS(status)) {
         //
         // Get a pointer to the device context structure that we just associated

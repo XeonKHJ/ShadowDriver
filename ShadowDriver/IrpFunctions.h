@@ -1,12 +1,14 @@
 #pragma once
 #include <fwpsk.h>
-#include <fwpmk.h>
+#include <wdf.h>
 
 #define IOCTL_SHADOWDRIVER_START_WFP                    CTL_CODE(FILE_DEVICE_NETWORK, 0x909, METHOD_IN_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)
 #define IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO     CTL_CODE(FILE_DEVICE_NETWORK, 0x910, METHOD_IN_DIRECT, FILE_ANY_ACCESS)
 #define IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_SHIT   CTL_CODE(FILE_DEVICE_NETWORK, 0x911, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_SHADOWDRIVER_REQUIRE_VERSION_INFO CTL_CODE(FILE_DEVICE_NETWORK, 0x901, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION CTL_CODE(FILE_DEVICE_NETWORK, 0x921, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+NTSTATUS InitializeIRPHandlings();
 
 NTSTATUS
 ShadowDriver_IRP_IoControl(
@@ -18,4 +20,18 @@ NTSTATUS
 ShadowDriver_IRP_Create(
     _In_ struct _DEVICE_OBJECT* DeviceObject,
     _Inout_ struct _IRP* Irp
+);
+
+VOID
+InvertedEvtIoDeviceControl(
+    _In_
+    WDFQUEUE Queue,
+    _In_
+    WDFREQUEST Request,
+    _In_
+    size_t OutputBufferLength,
+    _In_
+    size_t InputBufferLength,
+    _In_
+    ULONG IoControlCode
 );

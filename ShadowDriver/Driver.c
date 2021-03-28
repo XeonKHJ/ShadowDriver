@@ -114,6 +114,7 @@ Return Value:
 
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriver_IRP_IoControl;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = ShadowDriver_IRP_Create;
+    
     //DriverObject->MajorFunction[IRP_MJ_CLOSE] = ShadowDriver_IRP_Close;
     //DriverObject->MajorFunction[IRP_MJ_CLEANUP] = ShadowDriver_IRP_CLEANUP;
     //DriverObject->MajorFunction[IRP_MJ_WRITE] = 
