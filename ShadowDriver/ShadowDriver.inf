@@ -95,4 +95,4 @@ AddProperty= AddInterfaceSection.AddProps
 
 [AddInterfaceSection.AddProps]
 ; DEVPKEY_DeviceInterface_UnrestrictedAppCapabilities
-{026e516e-b814-414b-83cd-856d6fef4822}, 8, 0x2012,, "hongjia.ioctltest_xe7ejb7dfnp4r"
+{026e516e-b814-414b-83cd-856d6fef4822}, 8, 0x2012,, "hongjia.shadowdrivercontrol_xe7ejb7dfnp4r"

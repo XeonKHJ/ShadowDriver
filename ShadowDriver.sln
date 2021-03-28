@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShadowDriver", "ShadowDriver\ShadowDriver.vcxproj", "{2219ED12-59FA-407D-A421-8E98ABCC059F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShadowCapturer", "ShadowCapturer\ShadowCapturer.csproj", "{DCAB9694-219A-4EF8-B381-D29B7D76AECD}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -43,30 +41,6 @@ Global
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.ActiveCfg = Release|Win32
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.Build.0 = Release|Win32
 		{2219ED12-59FA-407D-A421-8E98ABCC059F}.Release|x86.Deploy.0 = Release|Win32
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM.ActiveCfg = Debug|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM.Build.0 = Debug|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM.Deploy.0 = Debug|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM64.ActiveCfg = Debug|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM64.Build.0 = Debug|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|ARM64.Deploy.0 = Debug|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x64.ActiveCfg = Debug|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x64.Build.0 = Debug|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x64.Deploy.0 = Debug|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x86.ActiveCfg = Debug|x86
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x86.Build.0 = Debug|x86
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Debug|x86.Deploy.0 = Debug|x86
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM.ActiveCfg = Release|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM.Build.0 = Release|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM.Deploy.0 = Release|ARM
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM64.ActiveCfg = Release|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM64.Build.0 = Release|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|ARM64.Deploy.0 = Release|ARM64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x64.ActiveCfg = Release|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x64.Build.0 = Release|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x64.Deploy.0 = Release|x64
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x86.ActiveCfg = Release|x86
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x86.Build.0 = Release|x86
-		{DCAB9694-219A-4EF8-B381-D29B7D76AECD}.Release|x86.Deploy.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
