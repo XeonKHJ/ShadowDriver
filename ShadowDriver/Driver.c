@@ -124,8 +124,8 @@ Return Value:
         WPP_CLEANUP(DriverObject);
         return status;
     }
-    //Æô¶¯RPC
-    //status = InitializeRPCServer();
+
+    status = InitializeIRPHandlings();
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Driver Installing.\n");
 
@@ -136,7 +136,6 @@ Return Value:
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
-    DRIVER_DISPATCH abcd;
     return status;
 }
 

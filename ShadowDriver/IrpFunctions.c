@@ -33,8 +33,10 @@ CsqInsertIrpEx(
     _In_ PVOID             InsertContext
 )
 {
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqInsertIrpEx\n");
     NTSTATUS status = STATUS_FAIL_CHECK;
     PIRP_LINK_ENTRY newEntry = InitializeIrpLinkEntry();
+    newEntry->Irp = Irp;
     if (newEntry)
     {
         InsertTailList(&(_irpLinkEntry.ListEntry), &(newEntry->ListEntry));
@@ -49,10 +51,10 @@ CsqRemoveIrp(
     _In_ PIRP    Irp
 )
 {
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqRemoveIrp\n");
     if (!IsListEmpty(&(_irpLinkEntry.ListEntry)))
     {
         PLIST_ENTRY tailEntry = RemoveTailList(&(_irpLinkEntry.ListEntry));
-
     }
 }
 
@@ -63,18 +65,30 @@ CsqPeekNextIrp(
     _In_ PVOID   PeekContext
 )
 {
-    PLIST_ENTRY finalEntry = _irpLinkEntry.ListEntry.Blink;
-    PIRP_LINK_ENTRY tailIrpEntry = CONTAINING_RECORD(&_irpLinkEntry.ListEntry, IRP_LINK_ENTRY, ListEntry);
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqPeekNextIrp\n");
+    PLIST_ENTRY finalEntry = NULL;
+    PIRP_LINK_ENTRY tailIrpEntry = NULL;
+    if (!IsListEmpty(&(_irpLinkEntry.ListEntry)))
+    {
+        finalEntry = _irpLinkEntry.ListEntry.Blink;
+        tailIrpEntry = CONTAINING_RECORD(&_irpLinkEntry.ListEntry, IRP_LINK_ENTRY, ListEntry);
+    }
+    else
+    {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL Queue is empty!\n");
+    }
     return tailIrpEntry->Irp;
 }
 
 VOID CsqAcquireLock(PIO_CSQ IoCsq, PKIRQL PIrql)
 {
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqAcquireLock\n");
     KeAcquireSpinLock(&_spinLock, PIrql);
 }
 
 VOID CsqReleaseLock(PIO_CSQ IoCsq, KIRQL Irql)
 {
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqReleaseLock\n");
     KeReleaseSpinLock(&_spinLock, Irql);
 }
 
@@ -84,6 +98,7 @@ CsqCompleteCanceledIrp(
     _In_ PIRP       Irp
 )
 {
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqCompleteCanceledIrp\n");
     Irp->IoStatus.Status = STATUS_CANCELLED;
     Irp->IoStatus.Information = 0;
 
@@ -129,6 +144,14 @@ ShadowDriver_IRP_IoControl(
             break;
         case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_SHIT:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_WTF\n");
+            PIRP dequeuedIrp = IoCsqRemoveNextIrp(&_csq, NULL);
+            if (dequeuedIrp != NULL)
+            {
+                if (IoGetCurrentIrpStackLocation(dequeuedIrp)->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION)
+                {
+                    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Dequeue a irp\n");
+                }
+            }
             break;
         case IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
