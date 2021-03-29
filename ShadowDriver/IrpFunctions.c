@@ -187,6 +187,45 @@ void TestDequeueIOCTL()
 
 }
 
+void IoctlStartWpf(PIRP irp)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    irp->IoStatus.Status = status;
+    irp->IoStatus.Information = 0;
+
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+}
+void IoctlRequirePacketInfo(PIRP irp)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    UINT dwDataWritten = 0;
+    irp->IoStatus.Status = status;
+    irp->IoStatus.Information = dwDataWritten;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+}
+NTSTATUS IoctlGetDriverVersion(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    PVOID outputBuffer = irp->AssociatedIrp.SystemBuffer;
+    WCHAR version[] = L"0.0.1";
+    int dataWrittenSize = sizeof(version);
+    if (ioStackLocation->Parameters.DeviceIoControl.OutputBufferLength >= (ULONG)dataWrittenSize)
+    {
+        memset(outputBuffer, 0, 64);
+        RtlCopyMemory(outputBuffer, version, dataWrittenSize);
+        irp->IoStatus.Status = status;
+        irp->IoStatus.Information = dataWrittenSize;
+    }
+    else
+    {
+        status = STATUS_BUFFER_TOO_SMALL;
+    }
+
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+
+    return status;
+}
+
 NTSTATUS
 ShadowDriver_IRP_IoControl(
     _In_ struct _DEVICE_OBJECT* DeviceObject,
@@ -205,31 +244,26 @@ ShadowDriver_IRP_IoControl(
         {
         case IOCTL_SHADOWDRIVER_START_WFP:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
-            Irp->IoStatus.Status = status;
-            Irp->IoStatus.Information = dwDataWritten;
-
-            IoCompleteRequest(Irp, IO_NO_INCREMENT);
+            IoctlStartWpf(Irp);
             break;
         case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO\n");
-            Irp->IoStatus.Status = status;
-            Irp->IoStatus.Information = dwDataWritten;
-
-            IoCompleteRequest(Irp, IO_NO_INCREMENT);
-
-
+            IoctlRequirePacketInfo(Irp);
             break;
         case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_SHIT:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_WTF\n");
             Irp->IoStatus.Status = status;
             Irp->IoStatus.Information = dwDataWritten;
-
             IoCompleteRequest(Irp, IO_NO_INCREMENT);
             TestDequeueIOCTL();
             break;
         case IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION:
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
             status = IoCsqInsertIrpEx(&_csq, Irp, NULL, NULL);
+            break;
+        case IOCTL_SHADOWDRIVER_GET_DRIVER_VERSION:
+            DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
+            IoctlGetDriverVersion(Irp, pIoStackIrp);
             break;
         default:
             break;
