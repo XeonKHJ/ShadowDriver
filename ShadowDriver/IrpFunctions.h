@@ -10,6 +10,8 @@
 
 NTSTATUS InitializeIRPHandlings();
 
+void TestDequeueIOCTL();
+
 NTSTATUS
 ShadowDriver_IRP_IoControl(
     _In_ struct _DEVICE_OBJECT* DeviceObject,

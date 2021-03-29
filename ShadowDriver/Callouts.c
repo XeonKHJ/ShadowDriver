@@ -18,6 +18,7 @@ Environment:
 #include "device.tmh"
 #include "Callouts.h"
 #include "ShaDriHelper.h"
+#include "IrpFunctions.h"
 
 //当回调函数向设备注册时获得。
 UINT32 WpsSendCalloutId;
@@ -272,7 +273,6 @@ VOID NTAPI ClassifyFn(
 
 	if (SendInjectHandle != NULL && filter->filterId == filterId && packet)
 	{
-
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
 		//如果捕获的数据包是主动
@@ -285,6 +285,8 @@ VOID NTAPI ClassifyFn(
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
+
+
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			if (NT_SUCCESS(status))
