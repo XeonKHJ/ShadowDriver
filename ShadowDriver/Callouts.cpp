@@ -19,6 +19,7 @@ Environment:
 #include "Callouts.h"
 #include "ShaDriHelper.h"
 #include "IrpFunctions.h"
+#include "WfpHelper.h"
 
 //当回调函数向设备注册时获得。
 UINT32 WpsSendCalloutId;
@@ -30,9 +31,6 @@ UINT32 WpmReceiveCalloutId;
 
 HANDLE SendInjectHandle = NULL;
 HANDLE ReceiveInjectHandle = NULL;
-
-extern UINT64 filterId;
-extern UINT64 filterId2;
 
 void SendInjectCompleted(
 	void* context,
@@ -113,7 +111,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 
 		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
-		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		ConvertBytesArrayToHexString((char *)mdlBuffer, netBuffer->CurrentMdl->ByteCount, (char *)outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char*)outputs);
 
 
@@ -143,7 +141,7 @@ VOID ModifySendIPPacket(PNET_BUFFER_LIST packet)
 			break;
 		}
 
-		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		ConvertBytesArrayToHexString((char *)mdlBuffer, netBuffer->CurrentMdl->ByteCount, (char *)outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char*)outputs);
 	}
 }
@@ -165,7 +163,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 		/*++++++打印+++++++*/
 		int mdlStringLength = (int)CaculateHexStringLength(netBuffer->CurrentMdl->ByteCount);
 		PVOID outputs = ExAllocatePoolWithTag(NonPagedPool, mdlStringLength, 'op');
-		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		ConvertBytesArrayToHexString((char *)mdlBuffer, netBuffer->CurrentMdl->ByteCount, (char *)outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "CurrentMDL: %s\t\n", (char*)outputs);
 		/*------打印-------*/
 
@@ -224,7 +222,7 @@ VOID ModifyReceiveIPPacket(PNET_BUFFER_LIST packet)
 			break;
 		}
 
-		ConvertBytesArrayToHexString(mdlBuffer, netBuffer->CurrentMdl->ByteCount, outputs, mdlStringLength);
+		ConvertBytesArrayToHexString((char *)mdlBuffer, netBuffer->CurrentMdl->ByteCount, (char *)outputs, mdlStringLength);
 		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "ModifiedMDL: %s\t\n", (char*)outputs);
 	}
 }
@@ -317,7 +315,7 @@ VOID NTAPI ClassifyFn(
 				
 
 				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
+				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, (COMPARTMENT_ID)inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
 
 				//如果注入失败，则令包正常通过。
 				if (!NT_SUCCESS(status))
@@ -379,7 +377,7 @@ VOID NTAPI ClassifyFn(
 				FWPS_INCOMING_VALUE ifIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
 				FWPS_INCOMING_VALUE subIfIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
 				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0,
-					(inMetaValues->currentMetadataValues & FWPS_METADATA_FIELD_COMPARTMENT_ID ? inMetaValues->compartmentId : UNSPECIFIED_COMPARTMENT_ID),
+					(inMetaValues->currentMetadataValues & FWPS_METADATA_FIELD_COMPARTMENT_ID ? (COMPARTMENT_ID)inMetaValues->compartmentId : UNSPECIFIED_COMPARTMENT_ID),
 					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32,
 					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32,
 					clonedPacket, ReceiveInjectCompleted, NULL);

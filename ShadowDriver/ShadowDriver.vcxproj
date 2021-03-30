@@ -38,14 +38,14 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Callouts.c" />
-    <ClCompile Include="Device.c" />
-    <ClCompile Include="Driver.c" />
-    <ClCompile Include="IrpFunctions.c" />
-    <ClCompile Include="Queue.c" />
-    <ClCompile Include="ShadowUtilities.c" />
-    <ClCompile Include="ShaDriHelper.c" />
-    <ClCompile Include="WfpHelper.c" />
+    <ClCompile Include="Callouts.cpp" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="IrpFunctions.cpp" />
+    <ClCompile Include="Queue.cpp" />
+    <ClCompile Include="ShadowUtilities.cpp" />
+    <ClCompile Include="ShaDriHelper.cpp" />
+    <ClCompile Include="WfpHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Callouts.h" />

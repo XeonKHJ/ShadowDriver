@@ -7,6 +7,6 @@ DEFINE_GUID(WFP_SUBLAYER_GUID, 0x86e8c72a, 0xebc, 0x4b60, 0xa4, 0xf6, 0x3d, 0xc4
 
 NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject);
 
-UINT64 filterId;
+extern UINT64 filterId;
 
-UINT64 filterId2;
+extern UINT64 filterId2;

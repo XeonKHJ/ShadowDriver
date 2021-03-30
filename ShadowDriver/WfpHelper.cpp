@@ -6,11 +6,12 @@
 //仅有再调用 NTSTATUS OpenWfpEngine() 成功后才会有值。
 static HANDLE EngineHandler = NULL;
 
+ UINT64 filterId;
+
+ UINT64 filterId2;
 //筛选器标识符。
 //仅有再调用 NTSTATUS AddFileterToWfp(HANDLE engineHandler) 函数后才会有值。
 //目前好像就用来删除和判断filter是否被成功添加到WFP
-extern UINT64 filterId; 
-extern UINT64 filterId2;
 
 VOID UnInitWfp()
 {

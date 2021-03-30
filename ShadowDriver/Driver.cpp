@@ -47,7 +47,7 @@ VOID Unload(PDRIVER_OBJECT DriverObject)
 //    return status;
 //}
 
-NTSTATUS
+extern "C" NTSTATUS
 DriverEntry(
     _In_ PDRIVER_OBJECT  DriverObject,
     _In_ PUNICODE_STRING RegistryPath

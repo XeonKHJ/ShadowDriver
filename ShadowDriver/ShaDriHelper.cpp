@@ -221,11 +221,11 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 			if (dataBuffer != NULL)
 			{
 				size_t outputLength = CaculateHexStringLength(dataLength);
-				outputs = ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+				outputs = (PCHAR)ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
 
 				if (outputs != NULL)
 				{
-					ConvertBytesArrayToHexString(dataBuffer, dataLength, outputs, outputLength);
+					ConvertBytesArrayToHexString((char *)dataBuffer, dataLength, outputs, outputLength);
 					
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, level, "%s\t\n", outputs);
 					ExFreePoolWithTag(outputs, 'op');
