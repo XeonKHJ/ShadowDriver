@@ -42,7 +42,9 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="IrpFunctions.cpp" />
+    <ClCompile Include="NetFilteringCondition.cpp" />
     <ClCompile Include="Queue.cpp" />
+    <ClCompile Include="ShadowFilter.cpp" />
     <ClCompile Include="ShadowUtilities.cpp" />
     <ClCompile Include="ShaDriHelper.cpp" />
     <ClCompile Include="WfpHelper.cpp" />
@@ -52,12 +54,15 @@
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="IrpFunctions.h" />
+    <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
+    <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="ShadowUtilities.h" />
     <ClInclude Include="ShaDriHelper.h" />
     <ClInclude Include="Trace.h" />
     <ClInclude Include="WfpHelper.h" />
+    <ClInclude Include="WinSpecific.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf" />

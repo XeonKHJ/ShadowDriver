@@ -7,7 +7,6 @@
 static HANDLE EngineHandler = NULL;
 
  UINT64 filterId;
-
  UINT64 filterId2;
 //筛选器标识符。
 //仅有再调用 NTSTATUS AddFileterToWfp(HANDLE engineHandler) 函数后才会有值。

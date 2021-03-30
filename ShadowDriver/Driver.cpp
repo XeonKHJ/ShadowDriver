@@ -18,6 +18,7 @@ Environment:
 #include "driver.tmh"
 #include <windowsx.h>
 #include "IrpFunctions.h"
+#include "ShadowFilter.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -82,7 +83,6 @@ Return Value:
     NTSTATUS status;
     WDF_OBJECT_ATTRIBUTES attributes;
     WDFDRIVER wdfDriver;
-
     //
     // Initialize WPP Tracing
     //
