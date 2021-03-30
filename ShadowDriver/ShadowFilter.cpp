@@ -16,11 +16,17 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 	//status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, pEngineHandler);;
 }
 
-NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, NetFilteringCondition * conditions)
+NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context)
 {
+	NTSTATUS status = STATUS_SUCCESS;
 	if (conditions != nullptr)
 	{
-
+		FWPS_CALLOUT0 sendCallout = { 0 };
+		sendCallout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+		sendCallout.flags = 0;
+		sendCallout.classifyFn = ClassifyFn;
+		sendCallout.notifyFn = NotifyFn;
+		sendCallout.flowDeleteFn = FlowDeleteFn;
 	}
 	
 }
