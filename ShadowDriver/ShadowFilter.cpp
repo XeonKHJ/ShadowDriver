@@ -1,13 +1,13 @@
 #include "ShadowFilter.h"
-#include <fwpmk.h>
-#include <fwpsk.h>
-#include "WinSpecific.h"
 #include "ShadowCommon.h"
+#include "WinSpecific.h"
 
 HANDLE EngineHandler = NULL;
 
 NTSTATUS InitializeWfpEngine(ShadowFilterContext *context)
 {
+	NTSTATUS status = STATUS_SUCCESS;
+
 	auto pSession = &(context->WfpSession);
 	FWPM_SESSION0 session;
 	FWPM_PROVIDER0 provider;
@@ -15,6 +15,8 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext *context)
 	session.displayData.name = L"ShadowDriver Session";
 	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;
 	//status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, pEngineHandler);;
+
+	return status;
 }
 
 NTSTATUS RegisterCalloutFuntions(ShadowFilterContext *context, NetFilteringCondition *conditions)
@@ -74,6 +76,8 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition *conditions, int leng
 			FWP_V4_ADDR_AND_MASK AddrandMask = {0};
 		}
 	}
+
+	return 0;
 }
 
 int ShadowFilter::StartFiltering()
@@ -82,7 +86,7 @@ int ShadowFilter::StartFiltering()
 	ShadowFilterContext *shadowFilterContext = (ShadowFilterContext *)_context;
 	if (!NT_SUCCESS(status))
 	{
-		status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &(shadowFilterContext->WfpSession), &(shadowFilterContext->WfpEngineHandle));
+		//status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &(shadowFilterContext->WfpSession), &(shadowFilterContext->WfpEngineHandle));
 		;
 	}
 
