@@ -57,6 +57,7 @@
     <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
+    <ClInclude Include="ShadowCommon.h" />
     <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="ShadowUtilities.h" />
     <ClInclude Include="ShaDriHelper.h" />
