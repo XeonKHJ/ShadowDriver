@@ -1,6 +1,6 @@
 #include "ShadowFilter.h"
 #include "ShadowCommon.h"
-#include "WinSpecific.h"
+#include "ShadowFilterWindowsSpecific.h"
 
 HANDLE EngineHandler = NULL;
 
@@ -47,7 +47,10 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition *conditions, int leng
 	{
 		NTSTATUS status = STATUS_SUCCESS;
 		FWPM_FILTER_CONDITION0 *wpmConditions = (FWPM_FILTER_CONDITION0 *)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * length, 'nfcs');
-		memset(wpmConditions, 0, sizeof(FWPM_FILTER_CONDITION0) * length);
+		if (wpmConditions != 0)
+		{
+			memset(wpmConditions, 0, sizeof(FWPM_FILTER_CONDITION0) * length);
+		
 		FWPM_FILTER0 sendFilter = {0};
 		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
 		{

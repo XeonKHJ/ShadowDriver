@@ -1,5 +1,5 @@
 #pragma once
-#include <wdm.h>
+#include <fwpmk.h>
 
 typedef struct ShadowFilterContext
 {

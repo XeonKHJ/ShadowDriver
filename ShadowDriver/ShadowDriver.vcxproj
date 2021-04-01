@@ -63,7 +63,7 @@
     <ClInclude Include="ShaDriHelper.h" />
     <ClInclude Include="Trace.h" />
     <ClInclude Include="WfpHelper.h" />
-    <ClInclude Include="WinSpecific.h" />
+    <ClInclude Include="ShadowFilterWindowsSpecific.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf" />

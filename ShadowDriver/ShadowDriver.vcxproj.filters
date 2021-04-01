@@ -63,7 +63,7 @@
     <ClInclude Include="NetFilteringCondition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WinSpecific.h">
+    <ClInclude Include="ShadowFilterWindowsSpecific.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShadowCommon.h">
