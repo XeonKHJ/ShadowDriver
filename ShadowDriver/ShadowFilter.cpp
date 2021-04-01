@@ -38,6 +38,7 @@ ShadowFilter::ShadowFilter(void *enviromentContexts)
 	else
 	{
 		//取消构造
+
 	}
 }
 
