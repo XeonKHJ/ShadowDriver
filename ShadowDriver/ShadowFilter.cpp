@@ -66,7 +66,6 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				FWP_CONDITION_VALUE0 conditionValue;
 				NetFilteringCondition * currentCondition = &conditions[currentIndex];
 				
-
 				switch (currentCondition->FilterLayer)
 				{
 				case NetLayer::LinkLayer:
