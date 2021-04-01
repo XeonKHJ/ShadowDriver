@@ -130,7 +130,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				wpmConditions[currentIndex].conditionValue = conditionValue;
 			}
 
-			//整理过滤条件
+			//整理过滤条件，尽量将多数条件放在一个FWPM_FILTER内
 			
 			
 			FWPM_FILTER_CONDITION0 condition[1] = { 0 };
