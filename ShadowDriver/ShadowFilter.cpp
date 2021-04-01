@@ -42,45 +42,47 @@ ShadowFilter::ShadowFilter(void *enviromentContexts)
 	}
 }
 
-int ShadowFilter::AddFilterCondition(NetFilteringCondition *conditions, int length)
+int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
 {
 	if (conditions != nullptr)
 	{
 		NTSTATUS status = STATUS_SUCCESS;
-		FWPM_FILTER_CONDITION0 *wpmConditions = (FWPM_FILTER_CONDITION0 *)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * length, 'nfcs');
+		FWPM_FILTER_CONDITION0* wpmConditions = (FWPM_FILTER_CONDITION0*)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * length, 'nfcs');
 		if (wpmConditions != 0)
 		{
 			memset(wpmConditions, 0, sizeof(FWPM_FILTER_CONDITION0) * length);
-		
-		FWPM_FILTER0 sendFilter = {0};
-		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
-		{
-			FWPM_FILTER0 wpmFilter = {0};
-			FWP_V4_ADDR_AND_MASK addrandMask = {0};
-			addrandMask.addr = conditions[currentIndex].IPv4;
-			switch (conditions[currentIndex].FilterLayer)
-			{
-			case NetLayer::LinkLayer:
 
-				break;
-			case NetLayer::NetworkLayer:
+			FWPM_FILTER0 sendFilter = { 0 };
+			for (int currentIndex = 0; currentIndex < length; ++currentIndex)
 			{
-				switch (conditions[currentIndex].IPAddressType)
+				FWPM_FILTER0 wpmFilter = { 0 };
+				FWP_V4_ADDR_AND_MASK addrandMask = { 0 };
+				addrandMask.addr = conditions[currentIndex].IPv4;
+				switch (conditions[currentIndex].FilterLayer)
 				{
-				case IpAddrFamily::IPv4:
-					break;
-				case IpAddrFamily::IPv6:
-					break;
-				}
-			}
-			break;
-			}
-			FWPM_FILTER0 sendFilter = {0};
-			FWPM_FILTER_CONDITION0 condition[1] = {0};
-			FWP_V4_ADDR_AND_MASK AddrandMask = {0};
-		}
-	}
+				case NetLayer::LinkLayer:
 
+					break;
+				case NetLayer::NetworkLayer:
+				{
+					switch (conditions[currentIndex].IPAddressType)
+					{
+					case IpAddrFamily::IPv4:
+						break;
+					case IpAddrFamily::IPv6:
+						break;
+					}
+				}
+				break;
+				}
+				FWPM_FILTER0 sendFilter = { 0 };
+				FWPM_FILTER_CONDITION0 condition[1] = { 0 };
+				FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
+			}
+		}
+
+		
+	}
 	return 0;
 }
 
