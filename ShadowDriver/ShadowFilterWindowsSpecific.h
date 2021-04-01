@@ -11,6 +11,7 @@ typedef struct ShadowFilterContext
 	UINT32 WpsReceiveCalloutId;
 	//初始化WFP用的
 	FWPM_SESSION0 WfpSession;
+	UINT64* FilterIds;
 }ShadowFilterContext;
 
 ShadowFilterContext * InitializeShadowFilterContext()
