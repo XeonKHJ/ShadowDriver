@@ -42,30 +42,111 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	}
 }
 
+/*-------------------------------------------------------------------------------------------------------*/
+struct NetFilteringConditionAndCode
+{
+	NetFilteringCondition* CurrentCondition;
+	int Code;
+	int Index;
+};
+
+/// <summary>
+/// 总共有8种；2个层（网络层链路层）*2个方向（进和出）。
+/// 0代表网络层，1代表链路层。接着0代表进，1代表出。
+/// 这样就有00为网络层进，01为网络层出。如果是网络层，接下来那一位代表IPv4（0）或IPv6（1）
+/// 10为链路层进，11为链路层出。
+/// </summary>
+inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition)
+{
+	UINT8 filterLayerAndPathCode = 0;
+	switch (currentCondition->FilterLayer)
+	{
+	case NetLayer::LinkLayer:
+	{
+		filterLayerAndPathCode = 1;
+	}
+	break;
+	case NetLayer::NetworkLayer:
+	{
+		filterLayerAndPathCode = 0;
+		switch (currentCondition->IPAddressType)
+		{
+		case IpAddrFamily::IPv4:
+		{
+			filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 0;
+		}
+		break;
+		case IpAddrFamily::IPv6:
+		{
+			filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 1;
+		}
+		break;
+		}
+	}
+	break;
+	}
+	switch (currentCondition->FilterPath)
+	{
+	case NetPacketDirection::In:
+		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 0;
+		break;
+	case NetPacketDirection::Out:
+		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 1;
+		break;
+	}
+
+	return filterLayerAndPathCode;
+}
+
 int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* context = (ShadowFilterContext*)_context;
-	
-	if (conditions != nullptr)
+
+	if (conditions != nullptr && length != 0)
 	{
-		UINT64 filterId;
-		FWPM_FILTER_CONDITION0* wpmConditions = (FWPM_FILTER_CONDITION0*)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * length, 'nfcs');
-		if (wpmConditions != 0)
+		int conditionCounts[8] = { 0 };
+		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[8] = { 0 };
+		NetFilteringConditionAndCode* wpmConditionAndCodes = (NetFilteringConditionAndCode*)ExAllocatePoolWithTag(NonPagedPool, sizeof(NetFilteringConditionAndCode) * length, 'nfcc');
+		memset(wpmConditionAndCodes, 0, sizeof(NetFilteringConditionAndCode) * length);
+		FWPM_FILTER0 filter = { 0 };
+		//计算每个类型的过滤器条件的数量
+		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
 		{
-			memset(wpmConditions, 0, sizeof(FWPM_FILTER_CONDITION0) * length);
-			FWPM_FILTER0 filter = { 0 };
-			for (int currentIndex = 0; currentIndex < length; ++currentIndex)
+			NetFilteringCondition* currentCondition = &conditions[currentIndex];
+			UINT8 filterLayerAndPathCode = CalculateFilterLayerAndPathCode(currentCondition);
+			wpmConditionAndCodes[currentIndex].CurrentCondition = currentCondition;
+			wpmConditionAndCodes[currentIndex].Code = filterLayerAndPathCode;
+			wpmConditionAndCodes[currentIndex].Index = conditionCounts[filterLayerAndPathCode];
+			conditionCounts[filterLayerAndPathCode]++;
+		}
+
+		//分配内存
+		for (int i = 0; i < 8; ++i)
+		{
+			if (conditionCounts[i] != 0)
 			{
-				GUID layerKey = { 0 };
-				GUID conditionFieldKey = { 0 };
-				FWPM_FILTER0 wpmFilter = { 0 };
-				FWP_MATCH_TYPE matchType;
-				FWP_V4_ADDR_AND_MASK addrandMask = { 0 };
-				addrandMask.addr = conditions[currentIndex].IPv4;
-				FWP_CONDITION_VALUE0 conditionValue;
-				NetFilteringCondition * currentCondition = &conditions[currentIndex];
-				
+				wpmConditonsGroupByFilterLayer[i] = (FWPM_FILTER_CONDITION0*)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[i], 'nfcs');
+				if (wpmConditonsGroupByFilterLayer[i] != NULL)
+				{
+					memset(wpmConditonsGroupByFilterLayer[i], 0, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[i]);
+				}
+				//如果内存分配错误则将状态置为错误并且跳出循环
+				else
+				{
+					status = STATUS_ERROR_PROCESS_NOT_IN_JOB;
+					break;
+				}
+			}
+		}
+		if (!NT_SUCCESS(status))
+		{
+			//添加条件
+			for (int currentNo = 0; currentNo < length; currentNo++)
+			{
+				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
+				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
+				FWPM_FILTER_CONDITION0* currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
 				switch (currentCondition->FilterLayer)
 				{
 				case NetLayer::LinkLayer:
@@ -85,58 +166,92 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 					switch (currentCondition->AddrLocation)
 					{
 					case AddressLocation::Local:
-						conditionFieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS;
+						currentWpmCondition->fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS;
 						break;
 					case AddressLocation::Remote:
-						conditionFieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+						currentWpmCondition->fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
 						break;
 					}
 					switch (currentCondition->IPAddressType)
 					{
 					case IpAddrFamily::IPv4:
 					{
-						conditionValue.type = FWP_V4_ADDR_MASK;
-						switch (currentCondition->FilterPath)
-						{
-						case NetPacketDirection::In:
-							layerKey = FWPM_LAYER_INBOUND_IPPACKET_V4;
-							break;
-						case NetPacketDirection::Out:
-							layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
-							break;
-						}
+						(currentWpmCondition->conditionValue).type = FWP_V4_ADDR_MASK;
 					}
 					break;
 					case IpAddrFamily::IPv6:
 					{
-						conditionValue.type = FWP_V6_ADDR_MASK;
-						switch (currentCondition->FilterPath)
-						{
-						case NetPacketDirection::In:
-							layerKey = FWPM_LAYER_INBOUND_IPPACKET_V6;
-							break;
-						case NetPacketDirection::Out:
-							layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
-							break;
-						}
+						(currentWpmCondition->conditionValue).type = FWP_V6_ADDR_MASK;
 					}
 					break;
 					}
 				}
 				break;
 				}
-				wpmConditions[currentIndex].fieldKey = conditionFieldKey;
-				wpmConditions[currentIndex].matchType = matchType;
-				wpmConditions[currentIndex].conditionValue = conditionValue;
+				switch (currentCondition->MatchType)
+				{
+				case FilterMatchType::Equal:
+					currentWpmCondition->matchType = FWP_MATCH_EQUAL;
+					break;
+				default:
+					//还未实现
+					status = STATUS_NULL_LM_PASSWORD;
+				}
+
+
 			}
 
-			//整理过滤条件，尽量将多数条件放在一个FWPM_FILTER内
-			
-			
-			FWPM_FILTER_CONDITION0 condition[1] = { 0 };
-			FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
+			//注册过滤器
+			for (int currentCode = 0; currentCode < 8; ++currentCode)
+			{
+				if (conditionCounts[currentCode] != 0)
+				{
+					FWPM_FILTER0 wpmFilter = { 0 };
+					wpmFilter.displayData.name = L"ShadowDriverFilter";
+					wpmFilter.displayData.description = L"ShadowDriver's filter";
+					wpmFilter.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
+					wpmFilter.weight.type = FWP_EMPTY;
+					wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+					//这个要根据实际情况来，还没写。
+					wpmFilter.action.calloutKey = SHADOWDRIVER_WFP_SEND_ESTABLISHED_CALLOUT_GUID;
+				}
+
+				FWP_MATCH_TYPE matchType;
+				FWP_V4_ADDR_AND_MASK addrandMask = { 0 };
+				addrandMask.addr = conditions[currentIndex].IPv4;
+
+				NetFilteringCondition* currentCondition = &conditions[currentIndex];
+
+				if (NT_SUCCESS(status))
+				{
+					FWPM_FILTER_CONDITION0* matchedConditons = wpmConditonsGroupByFilterLayer[filterLayerAndPathCode];
+					wpmFilter.numFilterConditions = length;
+					wpmFilter.filterCondition = wpmConditions;
+					wpmConditions[currentIndex].fieldKey = conditionFieldKey;
+					wpmConditions[currentIndex].matchType = matchType;
+					wpmConditions[currentIndex].conditionValue = conditionValue;
+					status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
+				}
+			}
+		}
+
+		if (NT_SUCCESS(status))
+		{
+			FWPM_FILTER_CONDITION0* matchedConditons = wpmConditonsGroupByFilterLayer[filterLayerAndPathCode];
+			wpmFilter.numFilterConditions = length;
+			wpmFilter.filterCondition = wpmConditions;
+			wpmConditions[currentIndex].fieldKey = conditionFieldKey;
+			wpmConditions[currentIndex].matchType = matchType;
+			wpmConditions[currentIndex].conditionValue = conditionValue;
 			status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
 		}
+
+
+		//整理过滤条件，尽量将多数条件放在一个FWPM_FILTER内
+
+		FWPM_FILTER_CONDITION0 condition[1] = { 0 };
+		FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
+		status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
 	}
 	else
 	{
@@ -144,6 +259,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 	}
 	return (int)status;
 }
+/*--------------------------------------------------------------------------------------------------------*/
 
 int ShadowFilter::StartFiltering()
 {
