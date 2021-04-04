@@ -99,6 +99,41 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 	return filterLayerAndPathCode;
 }
 
+inline GUID GetFilterCalloutGuid(UINT8 code)
+{
+	GUID guid = { 0 };
+	switch (code)
+	{
+	case 0:
+		guid = SHADOWDRIVER_WFP_NETWORK_IPV4_SEND_ESTABLISHED_CALLOUT_GUID;
+		break;
+	case 1:
+		//链路层出口过滤
+		break;
+	case 2:
+		//网络层IPv4接收过滤
+		guid = SHADOWDRIVER_WFP_NETWORK_IPV4_RECEIVE_ESTABLISHED_CALLOUT_GUID;
+		break;
+	case 3:
+		//链路层接收过滤
+		break;
+	case 4:
+		//网络层IPv6发送过滤
+		guid = SHADOWDRIVER_WFP_NETWORK_IPV6_SEND_ESTABLISHED_CALLOUT_GUID;
+		break;
+	case 5:
+		//无意义
+		break;
+	case 6:
+		//网络层IPv6接收过滤
+		guid = SHADOWDRIVER_WFP_NETWORK_IPV6_RECEIVE_ESTABLISHED_CALLOUT_GUID;
+		break;
+	case 7:
+		break;
+	}
+	return guid;
+}
+
 int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -148,12 +183,22 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 			{
 				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
 				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
-				FWPM_FILTER_CONDITION0* currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
+				FWPM_FILTER_CONDITION0* currentWpmCondition;
+				if (wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code] != NULL)
+				{
+					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
+				}
+				else 
+				{
+					status = STATUS_ABANDONED;
+				}
+				
 				switch (currentCondition->FilterLayer)
 				{
 				case NetLayer::LinkLayer:
 				{
 					//还未实现
+					status = STATUS_ABANDONED;
 					switch (currentCondition->FilterPath)
 					{
 					case NetPacketDirection::In:
@@ -205,7 +250,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//注册过滤器
-		for (int currentCode = 0; currentCode < FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
+		for (UINT8 currentCode = 0; currentCode < FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
 		{
 			if (conditionCounts[currentCode] != 0)
 			{
@@ -215,13 +260,11 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				wpmFilter.subLayerKey = WFP_SUBLAYER_GUID;
 				wpmFilter.weight.type = FWP_EMPTY;
 				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-				//这个要根据实际情况来，还没写。
-				wpmFilter.action.calloutKey = SHADOWDRIVER_WFP_NETWORK_IPV4_SEND_ESTABLISHED_CALLOUT_GUID;
+				wpmFilter.action.calloutKey = GetFilterCalloutGuid(currentCode);
 				wpmFilter.numFilterConditions = conditionCounts[currentCode];
 				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
 				status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &(filterIds[currentCode]));
 			}
-
 			else
 			{
 				break;
