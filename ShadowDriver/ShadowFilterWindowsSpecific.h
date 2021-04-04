@@ -2,6 +2,8 @@
 #include <fwpsk.h>
 #include <fwpmk.h>
 
+//#define STATUS_FUNCTION_NOT_IMPLMENTED STATUS_SEVERITY_ERROR<<30 + 1<<29
+
 extern const int FilterIdMaxNumber = 8;
 
 typedef struct ShadowFilterContext
@@ -15,6 +17,7 @@ typedef struct ShadowFilterContext
 	//初始化WFP用的
 	FWPM_SESSION0 WfpSession;
 	UINT64 FilterIds[FilterIdMaxNumber];
+	UINT32 CalloutIds[FilterIdMaxNumber];
 }ShadowFilterContext;
 
 ShadowFilterContext * InitializeShadowFilterContext()

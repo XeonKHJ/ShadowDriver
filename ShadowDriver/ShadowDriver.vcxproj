@@ -44,6 +44,7 @@
     <ClCompile Include="IrpFunctions.cpp" />
     <ClCompile Include="NetFilteringCondition.cpp" />
     <ClCompile Include="Queue.cpp" />
+    <ClCompile Include="ShadowCallouts.cpp" />
     <ClCompile Include="ShadowFilter.cpp" />
     <ClCompile Include="ShadowUtilities.cpp" />
     <ClCompile Include="ShaDriHelper.cpp" />
@@ -57,6 +58,7 @@
     <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
+    <ClInclude Include="ShadowCallouts.h" />
     <ClInclude Include="ShadowCommon.h" />
     <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="ShadowUtilities.h" />

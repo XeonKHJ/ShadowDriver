@@ -2,6 +2,7 @@
 #include "ShadowFilterWindowsSpecific.h"
 #include "ShadowCommon.h"
 #include "ShadowFilter.h"
+#include "ShadowCallouts.h"
 
 NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 {
@@ -14,12 +15,6 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 	session.displayData.name = L"ShadowDriver Session";
 	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;
 	status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, &(context->WfpEngineHandle));;
-	return status;
-}
-
-NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, NetFilteringCondition* conditions)
-{
-	NTSTATUS status = STATUS_SUCCESS;
 	return status;
 }
 
@@ -36,7 +31,6 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	else
 	{
 		//取消构造
-
 	}
 }
 
@@ -131,6 +125,23 @@ inline GUID GetFilterCalloutGuid(UINT8 code)
 	return guid;
 }
 
+NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, NetFilteringCondition* conditions)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	for (UINT8 currentCode = 0; currentCode < FilterIdMaxNumber; ++currentCode)
+	{
+		FWPS_CALLOUT0 callout = { 0 };
+		UINT32 calloutId;
+		callout.calloutKey = GetFilterCalloutGuid(currentCode);
+		callout.flags = 0;
+		//callout.classifyFn = ClassifyFn;
+		//callout.notifyFn = NotifyFn;
+		//callout.flowDeleteFn = FlowDeleteFn;
+		status = FwpsCalloutRegister0(context->DeviceObject, &callout, &(context->CalloutIds[currentCode]));
+	}
+	return status;
+}
+
 int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -180,7 +191,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 			{
 				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
 				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
-				FWPM_FILTER_CONDITION0* currentWpmCondition;
+				FWPM_FILTER_CONDITION0* currentWpmCondition = NULL;
 				if (wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code] != NULL)
 				{
 					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
