@@ -18,6 +18,7 @@ typedef struct ShadowFilterContext
 	FWPM_SESSION0 WfpSession;
 	UINT64 FilterIds[FilterIdMaxNumber];
 	UINT32 CalloutIds[FilterIdMaxNumber];
+	BOOL IsModificationEnable;
 }ShadowFilterContext;
 
 ShadowFilterContext * InitializeShadowFilterContext()

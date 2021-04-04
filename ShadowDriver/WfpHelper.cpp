@@ -51,6 +51,7 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
 	return FwpmSubLayerAdd0(engineHandler, &sublayer, NULL);
 }
 
+int abcd = 5;
 /// <summary>
 /// 为指定的WFP引擎添加过滤器
 /// </summary>
@@ -59,7 +60,6 @@ NTSTATUS AddSublayerToWfp(HANDLE engineHandler)
 NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 {
 	NTSTATUS status;
-
 	FWPM_FILTER0 sendFilter = { 0 };
 	FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
@@ -76,6 +76,10 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 	sendFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
 	sendFilter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
 	sendFilter.filterCondition = condition;
+	int* abcdpoint = &abcd;
+	sendFilter.rawContext = (UINT64)abcdpoint;
+	UINT64 cad = (UINT64)abcdpoint;
+	sendFilter.flags = FWPM_FILTER_FLAG_NONE;
 
 	condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
 	condition[0].matchType = FWP_MATCH_EQUAL;

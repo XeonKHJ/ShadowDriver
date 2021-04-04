@@ -256,6 +256,7 @@ VOID NTAPI ClassifyFn(
 	BOOL hasNextNB = FALSE;
 	if (packet)
 	{
+		
 		if (NET_BUFFER_LIST_NEXT_NBL(packet))
 		{
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer list link to another list. \n");
@@ -273,6 +274,13 @@ VOID NTAPI ClassifyFn(
 	{
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
+		if (filter->context)
+		{
+			UINT64 a = filter->context;
+			int askdfjlsdf = *((int*)a);
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer list link to another list. \n");
+		}
+
 		//如果捕获的数据包是主动
 		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
@@ -283,8 +291,6 @@ VOID NTAPI ClassifyFn(
 		//该数据包不是被手动注入的数据包
 		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
 		{
-
-
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			if (NT_SUCCESS(status))
@@ -397,24 +403,6 @@ VOID NTAPI ClassifyFn(
 			}
 		}
 	}
-}
-
-VOID NTAPI ReceiveClassifyFn(
-	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
-	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
-	_Inout_opt_ void* layerData,
-	_In_ const FWPS_FILTER0* filter,
-	_In_ UINT64 flowContext,
-	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
-)
-{
-	UINT32 ipHeaderSize = inMetaValues->ipHeaderSize;
-	NDIS_TCP_IP_CHECKSUM_PACKET_INFO checkSum = { 0 };
-	if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
-	{
-	}
-
-	checkSum.Value = (ULONG)(ULONG_PTR)NET_BUFFER_LIST_INFO((NET_BUFFER_LIST*)layerData, TcpIpChecksumNetBufferListInfo);
 }
 
 NTSTATUS NTAPI NotifyFn(
