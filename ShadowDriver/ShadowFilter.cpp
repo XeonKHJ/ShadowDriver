@@ -22,6 +22,7 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 {
 	_context = enviromentContexts;
 	ShadowFilterContext* shadowFilterContext = NULL;
+	NetPacketFilteringCallout = NULL;
 	NTSTATUS status;
 	if (_context)
 	{
