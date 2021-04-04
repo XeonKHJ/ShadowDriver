@@ -3,8 +3,6 @@
 #include "ShadowCommon.h"
 #include "ShadowFilter.h"
 
-HANDLE EngineHandler = NULL;
-
 NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -15,8 +13,7 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 	memset(&session, 0, sizeof(session));
 	session.displayData.name = L"ShadowDriver Session";
 	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;
-	//status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, pEngineHandler);;
-
+	status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, &(context->WfpEngineHandle));;
 	return status;
 }
 
@@ -43,7 +40,7 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	}
 }
 
-/*-------------------------------------------------------------------------------------------------------*/
+/*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
 struct NetFilteringConditionAndCode
 {
 	NetFilteringCondition* CurrentCondition;
@@ -277,7 +274,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 	}
 	return (int)status;
 }
-/*--------------------------------------------------------------------------------------------------------*/
+/*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
 
 int ShadowFilter::StartFiltering()
 {

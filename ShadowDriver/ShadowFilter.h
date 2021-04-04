@@ -9,7 +9,6 @@ public:
 	int StartFiltering();
 	void EnablePacketModification();
 	void DisablePacketModification();
-
 private:
 	bool _isModificationEnabled = false;
 	void* _context;
