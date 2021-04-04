@@ -102,7 +102,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* context = (ShadowFilterContext*)_context;
-
+	UINT64 filterIds[8] = {0};
 	if (conditions != nullptr && length != 0)
 	{
 		int conditionCounts[8] = { 0 };
@@ -200,58 +200,31 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 
 
 			}
+		}
 
-			//注册过滤器
-			for (int currentCode = 0; currentCode < 8; ++currentCode)
+		//注册过滤器
+		for (int currentCode = 0; currentCode < 8 && NT_SUCCESS(status); ++currentCode)
+		{
+			if (conditionCounts[currentCode] != 0)
 			{
-				if (conditionCounts[currentCode] != 0)
-				{
-					FWPM_FILTER0 wpmFilter = { 0 };
-					wpmFilter.displayData.name = L"ShadowDriverFilter";
-					wpmFilter.displayData.description = L"ShadowDriver's filter";
-					wpmFilter.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
-					wpmFilter.weight.type = FWP_EMPTY;
-					wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-					//这个要根据实际情况来，还没写。
-					wpmFilter.action.calloutKey = SHADOWDRIVER_WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-				}
+				FWPM_FILTER0 wpmFilter = { 0 };
+				wpmFilter.displayData.name = L"ShadowDriverFilter";
+				wpmFilter.displayData.description = L"ShadowDriver's filter";
+				wpmFilter.subLayerKey = WFP_SUBLAYER_GUID;
+				wpmFilter.weight.type = FWP_EMPTY;
+				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
+				//这个要根据实际情况来，还没写。
+				wpmFilter.action.calloutKey = SHADOWDRIVER_WFP_NETWORK_IPV4_SEND_ESTABLISHED_CALLOUT_GUID;
+				wpmFilter.numFilterConditions = conditionCounts[currentCode];
+				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
+				status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &(filterIds[currentCode]));
+			}
 
-				FWP_MATCH_TYPE matchType;
-				FWP_V4_ADDR_AND_MASK addrandMask = { 0 };
-				addrandMask.addr = conditions[currentIndex].IPv4;
-
-				NetFilteringCondition* currentCondition = &conditions[currentIndex];
-
-				if (NT_SUCCESS(status))
-				{
-					FWPM_FILTER_CONDITION0* matchedConditons = wpmConditonsGroupByFilterLayer[filterLayerAndPathCode];
-					wpmFilter.numFilterConditions = length;
-					wpmFilter.filterCondition = wpmConditions;
-					wpmConditions[currentIndex].fieldKey = conditionFieldKey;
-					wpmConditions[currentIndex].matchType = matchType;
-					wpmConditions[currentIndex].conditionValue = conditionValue;
-					status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
-				}
+			else
+			{
+				break;
 			}
 		}
-
-		if (NT_SUCCESS(status))
-		{
-			FWPM_FILTER_CONDITION0* matchedConditons = wpmConditonsGroupByFilterLayer[filterLayerAndPathCode];
-			wpmFilter.numFilterConditions = length;
-			wpmFilter.filterCondition = wpmConditions;
-			wpmConditions[currentIndex].fieldKey = conditionFieldKey;
-			wpmConditions[currentIndex].matchType = matchType;
-			wpmConditions[currentIndex].conditionValue = conditionValue;
-			status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
-		}
-
-
-		//整理过滤条件，尽量将多数条件放在一个FWPM_FILTER内
-
-		FWPM_FILTER_CONDITION0 condition[1] = { 0 };
-		FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
-		status = FwpmFilterAdd0(context->WfpEngineHandle, &filter, NULL, &filterId);
 	}
 	else
 	{
