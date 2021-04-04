@@ -1,4 +1,5 @@
 #pragma once
+#include <fwpsk.h>
 #include <fwpmk.h>
 
 extern const int FilterIdMaxNumber = 8;

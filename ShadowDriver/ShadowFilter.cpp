@@ -1,6 +1,7 @@
-#include "ShadowFilter.h"
-#include "ShadowCommon.h"
+//shadowcommon这玩意放在shadowfilter.h就没事
 #include "ShadowFilterWindowsSpecific.h"
+#include "ShadowCommon.h"
+#include "ShadowFilter.h"
 
 HANDLE EngineHandler = NULL;
 
@@ -102,11 +103,12 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* context = (ShadowFilterContext*)_context;
-	UINT64 filterIds[8] = {0};
+	UINT64 filterIds[FilterIdMaxNumber] = {0};
+	GUID* filterCalloutGuid[FilterIdMaxNumber];
 	if (conditions != nullptr && length != 0)
 	{
-		int conditionCounts[8] = { 0 };
-		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[8] = { 0 };
+		int conditionCounts[FilterIdMaxNumber] = { 0 };
+		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[FilterIdMaxNumber] = { 0 };
 		NetFilteringConditionAndCode* wpmConditionAndCodes = (NetFilteringConditionAndCode*)ExAllocatePoolWithTag(NonPagedPool, sizeof(NetFilteringConditionAndCode) * length, 'nfcc');
 		memset(wpmConditionAndCodes, 0, sizeof(NetFilteringConditionAndCode) * length);
 		FWPM_FILTER0 filter = { 0 };
@@ -122,7 +124,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//分配内存
-		for (int i = 0; i < 8; ++i)
+		for (int i = 0; i < FilterIdMaxNumber; ++i)
 		{
 			if (conditionCounts[i] != 0)
 			{
@@ -203,7 +205,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//注册过滤器
-		for (int currentCode = 0; currentCode < 8 && NT_SUCCESS(status); ++currentCode)
+		for (int currentCode = 0; currentCode < FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
 		{
 			if (conditionCounts[currentCode] != 0)
 			{
