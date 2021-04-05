@@ -372,6 +372,8 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				wpmFilter.action.calloutKey = GetFilterCalloutGuid(currentCode);
 				wpmFilter.numFilterConditions = conditionCounts[currentCode];
 				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
+
+				//一下这个status需要被验证
 				status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(filterIds[currentCode]));
 			}
 		}
