@@ -18,22 +18,77 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 	return status;
 }
 
+NTSTATUS InitializeSublayer(ShadowFilterContext* context)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	FWPM_SUBLAYER0 sublayer = { 0 };
+	sublayer.displayData.name = L"ShadowDriverFilterSublayer";
+	sublayer.displayData.description = L"ShadowDriver Sublayer";
+	sublayer.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
+	sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
+	status = FwpmSubLayerAdd0(context->WfpEngineHandle, &sublayer, NULL);
+	return status;
+}
+
 ShadowFilter::ShadowFilter(void* enviromentContexts)
 {
 	_context = enviromentContexts;
 	ShadowFilterContext* shadowFilterContext = NULL;
 	NetPacketFilteringCallout = NULL;
-	NTSTATUS status;
+	NTSTATUS status = STATUS_SUCCESS;
 	if (_context)
 	{
 		shadowFilterContext = (ShadowFilterContext*)_context;
-		InitializeWfpEngine(shadowFilterContext);
+
+		if (NT_SUCCESS(status))
+		{
+			status = InitializeWfpEngine(shadowFilterContext);
+		}
+		
+		if (NT_SUCCESS(status))
+		{
+			status = InitializeSublayer(shadowFilterContext);
+		}
+		
 	}
 	else
 	{
-		//取消构造
+		status = STATUS_ABANDONED;
+	}
+	if (!NT_SUCCESS(status))
+	{
+		this->~ShadowFilter();
 	}
 }
+
+//ShadowFilter::~ShadowFilter()
+//{
+//	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
+//	
+//	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
+//	{
+//		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+//		{
+//			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->CalloutIds)[currentCode]);
+//		}
+//
+//		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+//		{
+//			FwpsCalloutUnregisterById0((shadowFilterContext->CalloutIds)[currentCode]);
+//		}
+//
+//		if ((shadowFilterContext->FilterIds)[currentCode] != 0)
+//		{
+//			FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->FilterIds)[currentCode]);
+//		}
+//	}
+//
+//	FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
+//
+//	FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+//
+//	ShadowFilterContext::DeleteShadowFilterContext(shadowFilterContext);
+//}
 
 /*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
 struct NetFilteringConditionAndCode
@@ -189,6 +244,8 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 			//添加条件
 			for (int currentNo = 0; currentNo < length; currentNo++)
 			{
+				FWP_V4_ADDR_AND_MASK v4AddrAndMask = { 0 };
+				FWP_V6_ADDR_AND_MASK v6AddrAndMask = { 0 };
 				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
 				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
 				FWPM_FILTER_CONDITION0* currentWpmCondition = NULL;
@@ -232,6 +289,9 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 					case IpAddrFamily::IPv4:
 					{
 						(currentWpmCondition->conditionValue).type = FWP_V4_ADDR_MASK;
+						v4AddrAndMask.addr = currentCondition->IPv4;
+						v4AddrAndMask.mask = currentCondition->IPv4Mask;
+						currentWpmCondition->conditionValue.v4AddrMask = &v4AddrAndMask;
 					}
 					break;
 					case IpAddrFamily::IPv6:
@@ -265,7 +325,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				FWPM_FILTER0 wpmFilter = { 0 };
 				wpmFilter.displayData.name = L"ShadowDriverFilter";
 				wpmFilter.displayData.description = L"ShadowDriver's filter";
-				wpmFilter.subLayerKey = WFP_SUBLAYER_GUID;
+				wpmFilter.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
 				wpmFilter.weight.type = FWP_EMPTY;
 				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
 				wpmFilter.flags = FWPM_FILTER_FLAG_NONE;

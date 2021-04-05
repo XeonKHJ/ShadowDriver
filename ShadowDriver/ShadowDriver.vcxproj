@@ -38,7 +38,6 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Callouts.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="IrpFunctions.cpp" />
@@ -52,7 +51,6 @@
     <ClCompile Include="WfpHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Callouts.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="IrpFunctions.h" />

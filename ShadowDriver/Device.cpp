@@ -16,13 +16,14 @@ Environment:
 
 #include "driver.h"
 #include "device.tmh"
-#include "Callouts.h"
 #include "WfpHelper.h"
 #include "IrpFunctions.h"
+#include "ShadowFilter.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
 #endif
+#include "ShadowFilterWindowsSpecific.h"
 
 typedef struct _INVERTED_DEVICE_CONTEXT {
     WDFQUEUE    NotificationQueue;

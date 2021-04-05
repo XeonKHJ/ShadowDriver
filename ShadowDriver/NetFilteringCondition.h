@@ -41,6 +41,11 @@ public:
 		unsigned int IPv4;
 		unsigned long long IPv6Addr;
 	};
+	union
+	{
+		unsigned int IPv4Mask;
+		unsigned long long IPv6Mask;
+	};
 	AddressLocation AddrLocation;
 	FilterMatchType MatchType;
 };

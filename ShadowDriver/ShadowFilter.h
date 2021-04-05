@@ -5,6 +5,7 @@ class ShadowFilter
 {
 public:
 	ShadowFilter(void* enviromentContexts);
+	//~ShadowFilter();
 	int AddFilterCondition(NetFilteringCondition * conditions, int length);
 	int StartFiltering();
 	void EnablePacketModification();

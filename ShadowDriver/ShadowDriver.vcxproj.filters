@@ -42,9 +42,6 @@
     <ClInclude Include="Trace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Callouts.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WfpHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -81,9 +78,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Queue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Callouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WfpHelper.cpp">
