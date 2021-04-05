@@ -246,7 +246,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 	{
 		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
-		NetFilteringConditionAndCode* wpmConditionAndCodes = (NetFilteringConditionAndCode*)ExAllocatePoolWithTag(NonPagedPool, sizeof(NetFilteringConditionAndCode) * length, 'nfcc');
+		NetFilteringConditionAndCode* wpmConditionAndCodes = new NetFilteringConditionAndCode[length];
 		memset(wpmConditionAndCodes, 0, sizeof(NetFilteringConditionAndCode) * length);
 		//计算每个类型的过滤器条件的数量
 		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
@@ -264,7 +264,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		{
 			if (conditionCounts[i] != 0)
 			{
-				wpmConditonsGroupByFilterLayer[i] = (FWPM_FILTER_CONDITION0*)ExAllocatePoolWithTag(NonPagedPool, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[i], 'nfcs');
+				wpmConditonsGroupByFilterLayer[i] = new FWPM_FILTER_CONDITION0[conditionCounts[i]];
 				if (wpmConditonsGroupByFilterLayer[i] != NULL)
 				{
 					memset(wpmConditonsGroupByFilterLayer[i], 0, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[i]);
@@ -374,9 +374,15 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
 				status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(filterIds[currentCode]));
 			}
-			else
+		}
+
+		//清理动态分配的变量
+		delete []wpmConditionAndCodes;
+		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
+		{
+			if (conditionCounts[i] != 0)
 			{
-				break;
+				delete[]wpmConditonsGroupByFilterLayer[i];
 			}
 		}
 	}
