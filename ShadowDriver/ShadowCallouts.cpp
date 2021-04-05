@@ -1,7 +1,6 @@
 #include "ShadowCallouts.h"
-#include "ShadowUtilities.h"
-#include "ShaDriHelper.h"
 #include "ShadowFilterWindowsSpecific.h"
+//#include "NetFilteringCondition.h"
 
 VOID NTAPI NetworkOutV4ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
@@ -24,21 +23,22 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
-	PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	if (packet)
 	{
 		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-		
 
+		//将数据包包装成自己的形式以便进行处理
+
+		if (context->NetPacketFilteringCallout != NULL)
+		{
+			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, NULL, 0);
+		}
 		if (context->IsModificationEnable)
 		{
-			//搞注入
-		}
-		else
-		{
-
+			//还未实现
 		}
 	}
 }

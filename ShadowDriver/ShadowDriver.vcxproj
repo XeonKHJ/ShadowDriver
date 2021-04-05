@@ -46,6 +46,7 @@
     <ClCompile Include="Queue.cpp" />
     <ClCompile Include="ShadowCallouts.cpp" />
     <ClCompile Include="ShadowFilter.cpp" />
+    <ClCompile Include="ShadowFilterWindowsSpecific.cpp" />
     <ClCompile Include="ShadowUtilities.cpp" />
     <ClCompile Include="ShaDriHelper.cpp" />
     <ClCompile Include="WfpHelper.cpp" />

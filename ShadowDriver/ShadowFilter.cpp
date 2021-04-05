@@ -129,7 +129,7 @@ inline GUID GetFilterCalloutGuid(UINT8 code)
 NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, NetFilteringCondition* conditions)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	for (UINT8 currentCode = 0; currentCode < FilterIdMaxNumber; ++currentCode)
+	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
 	{
 		FWPS_CALLOUT0 callout = { 0 };
 		UINT32 calloutId;
@@ -147,12 +147,12 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* context = (ShadowFilterContext*)_context;
-	UINT64 filterIds[FilterIdMaxNumber] = {0};
-	GUID* filterCalloutGuid[FilterIdMaxNumber];
+	UINT64 filterIds[ShadowFilterContext::FilterIdMaxNumber] = {0};
+	GUID* filterCalloutGuid[ShadowFilterContext::FilterIdMaxNumber];
 	if (conditions != nullptr && length != 0)
 	{
-		int conditionCounts[FilterIdMaxNumber] = { 0 };
-		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[FilterIdMaxNumber] = { 0 };
+		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
+		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		NetFilteringConditionAndCode* wpmConditionAndCodes = (NetFilteringConditionAndCode*)ExAllocatePoolWithTag(NonPagedPool, sizeof(NetFilteringConditionAndCode) * length, 'nfcc');
 		memset(wpmConditionAndCodes, 0, sizeof(NetFilteringConditionAndCode) * length);
 		//计算每个类型的过滤器条件的数量
@@ -167,7 +167,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//分配内存
-		for (int i = 0; i < FilterIdMaxNumber; ++i)
+		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
 		{
 			if (conditionCounts[i] != 0)
 			{
@@ -258,7 +258,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//注册过滤器
-		for (UINT8 currentCode = 0; currentCode < FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
+		for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
 		{
 			if (conditionCounts[currentCode] != 0)
 			{

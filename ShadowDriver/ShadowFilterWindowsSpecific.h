@@ -1,13 +1,14 @@
 #pragma once
 #include <fwpsk.h>
 #include <fwpmk.h>
+#include "NetFilteringCondition.h"
 
 //#define STATUS_FUNCTION_NOT_IMPLMENTED STATUS_SEVERITY_ERROR<<30 + 1<<29
 
-extern const int FilterIdMaxNumber = 8;
-
 typedef struct ShadowFilterContext
 {
+public:
+	static const int FilterIdMaxNumber = 8;
 	PDEVICE_OBJECT DeviceObject;
 	HANDLE WfpEngineHandle;
 	HANDLE SendInjectHandle;
@@ -19,15 +20,9 @@ typedef struct ShadowFilterContext
 	UINT64 FilterIds[FilterIdMaxNumber];
 	UINT32 CalloutIds[FilterIdMaxNumber];
 	BOOL IsModificationEnable;
+
+	void (*NetPacketFilteringCallout)(NetLayer, NetPacketDirection, void*, unsigned long long);
+
+	static ShadowFilterContext* InitializeShadowFilterContext();
+	static void DeleteShadowFilterContext(ShadowFilterContext* pContext);
 }ShadowFilterContext;
-
-ShadowFilterContext * InitializeShadowFilterContext()
-{
-	auto context = (ShadowFilterContext*)ExAllocatePoolWithTag(NonPagedPool, sizeof(ShadowFilterContext), 'sfci');
-	return context;
-}
-
-void DeleteShadowFilterContext(ShadowFilterContext* pContext)
-{
-	ExFreePoolWithTag(pContext, 'sfci');
-}
