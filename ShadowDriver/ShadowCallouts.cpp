@@ -11,7 +11,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	NTSTATUS status = 0;
+	NTSTATUS status = STATUS_SUCCESS;
 	NET_BUFFER_LIST* packet;
 	FWPS_STREAM_DATA* streamData;
 	SIZE_T dataLength = 0;
@@ -34,7 +34,9 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 		{
 			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-
+			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+			//PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
 
 			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, NULL, 0);
 		}
