@@ -7,12 +7,18 @@ void* operator new(size_t size)
 
 void operator delete(void* toFreeObject) noexcept
 {
-	ExFreePoolWithTag(toFreeObject, 'oon');
+	if (toFreeObject != nullptr)
+	{
+		ExFreePoolWithTag(toFreeObject, 'oon');
+	}
 }
 
 void operator delete(void* toFreeObject, size_t size)
 {
-	ExFreePoolWithTag(toFreeObject, 'oon');
+	if (toFreeObject != nullptr)
+	{
+		ExFreePoolWithTag(toFreeObject, 'oon');
+	}
 }
 
 void* operator new[](size_t size)
@@ -22,10 +28,16 @@ void* operator new[](size_t size)
 
 void operator delete[](void* toFreeObject)
 {
-	ExFreePoolWithTag(toFreeObject, 'oona');
+	if (toFreeObject != nullptr)
+	{
+		ExFreePoolWithTag(toFreeObject, 'oona');
+	}
 }
 
 void operator delete[](void* toFreeObject, size_t)
 {
-	ExFreePoolWithTag(toFreeObject, 'oona');
+	if (toFreeObject != nullptr)
+	{
+		ExFreePoolWithTag(toFreeObject, 'oona');
+	}
 }

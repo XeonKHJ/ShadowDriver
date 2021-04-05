@@ -29,6 +29,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 	if (NT_SUCCESS(status))
 	{
 		_sfContext = new ShadowFilterContext();
+		_sfContext->DeviceObject = deviceObject;
 		_shadowFilter = new ShadowFilter(_sfContext);
 	}
 
@@ -39,7 +40,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 		condition.FilterLayer = NetLayer::NetworkLayer;
 		condition.FilterPath = NetPacketDirection::Out;
 		condition.IPAddressType = IpAddrFamily::IPv4;
-		condition.IPv4 = 0xC0A80166;
+		condition.IPv4 = 0xC0A80167;
 		condition.IPv4Mask = 0xFFFFFFFF;
 		condition.MatchType = FilterMatchType::Equal;
 		_shadowFilter->AddFilterCondition(&condition, 1);
@@ -47,7 +48,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 
 	if (NT_SUCCESS(status))
 	{
-		//_shadowFilter.StartFiltering();
+		_shadowFilter->StartFiltering();
 	}
 
 	return status;

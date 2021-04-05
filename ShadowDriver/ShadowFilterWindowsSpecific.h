@@ -15,14 +15,12 @@ public:
 	HANDLE ReceiveInjectHandle;
 	UINT32 WpsSendCalloutId;
 	UINT32 WpsReceiveCalloutId;
-	//初始化WFP用的
-	FWPM_SESSION0 WfpSession;
 	UINT64 FilterIds[FilterIdMaxNumber];
-	UINT32 CalloutIds[FilterIdMaxNumber];
+	UINT32 WpsCalloutIds[FilterIdMaxNumber];
+	UINT32 WpmCalloutIds[FilterIdMaxNumber];
 	BOOL IsModificationEnable;
-
 	void (*NetPacketFilteringCallout)(NetLayer, NetPacketDirection, void*, unsigned long long);
-
+	void* CustomContext;
 }ShadowFilterContext;
 
 void* operator new(size_t);

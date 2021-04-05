@@ -8,7 +8,6 @@ NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 
-	auto pSession = &(context->WfpSession);
 	FWPM_SESSION0 session;
 	FWPM_PROVIDER0 provider;
 	memset(&session, 0, sizeof(session));
@@ -35,26 +34,12 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	_context = enviromentContexts;
 	ShadowFilterContext* shadowFilterContext = NULL;
 	NetPacketFilteringCallout = NULL;
+	_conditionCount = 0;
+	_filteringConditions = nullptr;
 	NTSTATUS status = STATUS_SUCCESS;
 	if (_context)
 	{
 		shadowFilterContext = (ShadowFilterContext*)_context;
-
-		if (NT_SUCCESS(status))
-		{
-			status = InitializeWfpEngine(shadowFilterContext);
-		}
-		
-		if (NT_SUCCESS(status))
-		{
-			status = InitializeSublayer(shadowFilterContext);
-		}
-
-		if (NT_SUCCESS(status))
-		{
-			//status = RegisterCalloutFuntions(shadowFilterContext, );
-		}
-		
 	}
 	else
 	{
@@ -69,17 +54,17 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 ShadowFilter::~ShadowFilter()
 {
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
-	
+
 	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
 	{
-		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+		if ((shadowFilterContext->WpsCalloutIds)[currentCode] != 0)
 		{
-			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->CalloutIds)[currentCode]);
+			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpsCalloutIds)[currentCode]);
 		}
 
-		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+		if ((shadowFilterContext->WpsCalloutIds)[currentCode] != 0)
 		{
-			FwpsCalloutUnregisterById0((shadowFilterContext->CalloutIds)[currentCode]);
+			FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
 		}
 
 		if ((shadowFilterContext->FilterIds)[currentCode] != 0)
@@ -219,30 +204,73 @@ inline GUID GetLayerKeyByCode(UINT8 code)
 	return guid;
 }
 
-NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, GUID calloutKey)
+inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
+{
+	switch (code)
+	{
+	case 0:
+		callout->classifyFn = NetworkOutV4ClassifyFn;
+		break;
+	case 1:
+		//链路层出口过滤
+		break;
+	case 2:
+		//网络层IPv4接收过滤
+		callout->classifyFn = NetworkInV4ClassifyFn;
+		break;
+	case 3:
+		//链路层接收过滤
+		break;
+	case 4:
+		//网络层IPv6发送过滤
+		callout->classifyFn = NetworkOutV6ClassifyFn;
+		break;
+	case 5:
+		//无意义
+		break;
+	case 6:
+		//网络层IPv6接收过滤
+		callout->classifyFn = NetworkInV6ClassifyFn;
+		break;
+	case 7:
+		break;
+	}
+}
+
+NTSTATUS RegisterCalloutFuntionsAccrodingToCode(ShadowFilterContext* context, UINT8 currentCode)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
-	{
-		FWPS_CALLOUT0 callout = { 0 };
-		UINT32 calloutId;
-		callout.calloutKey = GetFilterCalloutGuid(currentCode);
-		callout.flags = 0;
-		//callout.classifyFn = ClassifyFn;
-		//callout.notifyFn = NotifyFn;
-		//callout.flowDeleteFn = FlowDeleteFn;
-		status = FwpsCalloutRegister0(context->DeviceObject, &callout, &(context->CalloutIds[currentCode]));
-	}
+
+	FWPS_CALLOUT0 wpsCallout = { 0 };
+	UINT32 calloutId;
+	wpsCallout.calloutKey = GetFilterCalloutGuid(currentCode);
+	wpsCallout.flags = 0;
+	wpsCallout.notifyFn = PacketNotify;
+	wpsCallout.flowDeleteFn = PacketFlowDeleteNotfy;
+	AddCalloutsAccrodingToCode(&wpsCallout, currentCode);
+	status = FwpsCalloutRegister0(context->DeviceObject, &wpsCallout, &(context->WpsCalloutIds[currentCode]));
 	return status;
 }
 
-int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
+NTSTATUS AddCalloutToWfpAcrrodingToCode(ShadowFilterContext* context, UINT8 currentCode)
+{
+	NTSTATUS status;
+	FWPM_CALLOUT0 wpmCallout = { 0 };
+	wpmCallout.flags = 0;
+	wpmCallout.displayData.description = L"I think you know what it is.";
+	wpmCallout.displayData.name = L"ShadowSendCallouts";
+	wpmCallout.calloutKey = GetFilterCalloutGuid(currentCode);
+	wpmCallout.applicableLayer = GetLayerKeyByCode(currentCode);
+	status = FwpmCalloutAdd0(context->WfpEngineHandle, &wpmCallout, NULL, &(context->WpmCalloutIds[currentCode]));
+	return status;
+}
+
+NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	ShadowFilterContext* context = (ShadowFilterContext*)_context;
-	UINT64 filterIds[ShadowFilterContext::FilterIdMaxNumber] = {0};
+	UINT64 filterIds[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 	GUID* filterCalloutGuid[ShadowFilterContext::FilterIdMaxNumber];
-	if (conditions != nullptr && length != 0)
+	if (conditions != nullptr && length != 0 && context != nullptr)
 	{
 		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
@@ -260,14 +288,14 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//分配内存
-		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
+		for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
 		{
-			if (conditionCounts[i] != 0)
+			if (conditionCounts[currentCode] != 0)
 			{
-				wpmConditonsGroupByFilterLayer[i] = new FWPM_FILTER_CONDITION0[conditionCounts[i]];
-				if (wpmConditonsGroupByFilterLayer[i] != NULL)
+				wpmConditonsGroupByFilterLayer[currentCode] = new FWPM_FILTER_CONDITION0[conditionCounts[currentCode]];
+				if (wpmConditonsGroupByFilterLayer[currentCode] != NULL)
 				{
-					memset(wpmConditonsGroupByFilterLayer[i], 0, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[i]);
+					memset(wpmConditonsGroupByFilterLayer[currentCode], 0, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[currentCode]);
 				}
 				//如果内存分配错误则将状态置为错误并且跳出循环
 				else
@@ -275,6 +303,9 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 					status = STATUS_ERROR_PROCESS_NOT_IN_JOB;
 					break;
 				}
+
+				RegisterCalloutFuntionsAccrodingToCode(context, currentCode);
+				AddCalloutToWfpAcrrodingToCode(context, currentCode);
 			}
 		}
 		if (NT_SUCCESS(status))
@@ -291,11 +322,11 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				{
 					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
 				}
-				else 
+				else
 				{
 					status = STATUS_ABANDONED;
 				}
-				
+
 				switch (currentCondition->FilterLayer)
 				{
 				case NetLayer::LinkLayer:
@@ -379,7 +410,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 		}
 
 		//清理动态分配的变量
-		delete []wpmConditionAndCodes;
+		delete[]wpmConditionAndCodes;
 		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
 		{
 			if (conditionCounts[i] != 0)
@@ -396,19 +427,58 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 }
 /*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
 
+int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
+{
+	int statusCode = 0;
+	if (conditions != nullptr && length != 0)
+	{
+		NetFilteringCondition* newConditions = new NetFilteringCondition[_conditionCount + length];
+		NetFilteringCondition* oldConditions = _filteringConditions;
+		for (int i = 0; i < _conditionCount; ++i)
+		{
+			newConditions[i] = oldConditions[i];
+		}
+		for (int i = 0; i < length; ++i)
+		{
+			newConditions[_conditionCount + i] = conditions[i];
+		}
+
+		_conditionCount += length;
+		_filteringConditions = newConditions;
+
+		if (oldConditions != nullptr)
+		{
+			delete[] oldConditions;
+		}
+	}
+	else
+	{
+		statusCode = -1;
+	}
+	return statusCode;
+}
+
 int ShadowFilter::StartFiltering()
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
-	if (!NT_SUCCESS(status))
+
+	if (NT_SUCCESS(status))
 	{
-		//status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &(shadowFilterContext->WfpSession), &(shadowFilterContext->WfpEngineHandle));
-		;
+		status = InitializeWfpEngine(shadowFilterContext);
 	}
 
-	if (!NT_SUCCESS(status))
+	if (NT_SUCCESS(status))
 	{
-		//status = RegisterCalloutFuntions(shadowFilterContext, NULL);
+		status = InitializeSublayer(shadowFilterContext);
+	}
+
+	if (NT_SUCCESS(status))
+	{
+		if (_conditionCount != 0 && _filteringConditions != nullptr)
+		{
+			status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
+		}
 	}
 	return status;
 }
