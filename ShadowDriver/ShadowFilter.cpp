@@ -61,34 +61,34 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	}
 }
 
-//ShadowFilter::~ShadowFilter()
-//{
-//	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
-//	
-//	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
-//	{
-//		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
-//		{
-//			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->CalloutIds)[currentCode]);
-//		}
-//
-//		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
-//		{
-//			FwpsCalloutUnregisterById0((shadowFilterContext->CalloutIds)[currentCode]);
-//		}
-//
-//		if ((shadowFilterContext->FilterIds)[currentCode] != 0)
-//		{
-//			FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->FilterIds)[currentCode]);
-//		}
-//	}
-//
-//	FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
-//
-//	FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
-//
-//	ShadowFilterContext::DeleteShadowFilterContext(shadowFilterContext);
-//}
+ShadowFilter::~ShadowFilter()
+{
+	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
+	
+	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
+	{
+		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+		{
+			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->CalloutIds)[currentCode]);
+		}
+
+		if ((shadowFilterContext->CalloutIds)[currentCode] != 0)
+		{
+			FwpsCalloutUnregisterById0((shadowFilterContext->CalloutIds)[currentCode]);
+		}
+
+		if ((shadowFilterContext->FilterIds)[currentCode] != 0)
+		{
+			FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->FilterIds)[currentCode]);
+		}
+	}
+
+	FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
+
+	FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+
+	ShadowFilterContext::DeleteShadowFilterContext(shadowFilterContext);
+}
 
 /*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
 struct NetFilteringConditionAndCode

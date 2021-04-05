@@ -26,3 +26,7 @@ public:
 	static ShadowFilterContext* InitializeShadowFilterContext();
 	static void DeleteShadowFilterContext(ShadowFilterContext* pContext);
 }ShadowFilterContext;
+
+void* operator new(size_t);
+void operator delete(void *) noexcept;
+void operator delete(void*, unsigned __int64);
