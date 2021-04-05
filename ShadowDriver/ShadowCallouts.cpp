@@ -30,16 +30,21 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 	{
 		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
 
-		//将数据包包装成自己的形式以便进行处理
-
 		if (context->NetPacketFilteringCallout != NULL)
 		{
+			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
+			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+
+
 			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, NULL, 0);
 		}
 		if (context->IsModificationEnable)
 		{
 			//还未实现
 		}
+
+		//删除分配的缓冲区
+
 	}
 }
 
