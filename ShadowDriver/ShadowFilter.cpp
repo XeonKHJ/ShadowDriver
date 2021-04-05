@@ -49,6 +49,11 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 		{
 			status = InitializeSublayer(shadowFilterContext);
 		}
+
+		if (NT_SUCCESS(status))
+		{
+			//status = RegisterCalloutFuntions(shadowFilterContext, );
+		}
 		
 	}
 	else
@@ -86,8 +91,6 @@ ShadowFilter::~ShadowFilter()
 	FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
 
 	FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
-
-	ShadowFilterContext::DeleteShadowFilterContext(shadowFilterContext);
 }
 
 /*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
@@ -135,10 +138,10 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 	}
 	switch (currentCondition->FilterPath)
 	{
-	case NetPacketDirection::In:
+	case NetPacketDirection::Out:
 		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 0;
 		break;
-	case NetPacketDirection::Out:
+	case NetPacketDirection::In:
 		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 1;
 		break;
 	}
@@ -181,7 +184,42 @@ inline GUID GetFilterCalloutGuid(UINT8 code)
 	return guid;
 }
 
-NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, NetFilteringCondition* conditions)
+inline GUID GetLayerKeyByCode(UINT8 code)
+{
+	GUID guid = { 0 };
+	switch (code)
+	{
+	case 0:
+		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+		break;
+	case 1:
+		//链路层出口过滤
+		break;
+	case 2:
+		//网络层IPv4接收过滤
+		guid = FWPM_LAYER_INBOUND_IPPACKET_V4;
+		break;
+	case 3:
+		//链路层接收过滤
+		break;
+	case 4:
+		//网络层IPv6发送过滤
+		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
+		break;
+	case 5:
+		//无意义
+		break;
+	case 6:
+		//网络层IPv6接收过滤
+		guid = FWPM_LAYER_INBOUND_IPPACKET_V6;
+		break;
+	case 7:
+		break;
+	}
+	return guid;
+}
+
+NTSTATUS RegisterCalloutFuntions(ShadowFilterContext* context, GUID calloutKey)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
@@ -239,7 +277,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				}
 			}
 		}
-		if (!NT_SUCCESS(status))
+		if (NT_SUCCESS(status))
 		{
 			//添加条件
 			for (int currentNo = 0; currentNo < length; currentNo++)
@@ -326,6 +364,7 @@ int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int leng
 				wpmFilter.displayData.name = L"ShadowDriverFilter";
 				wpmFilter.displayData.description = L"ShadowDriver's filter";
 				wpmFilter.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
+				wpmFilter.layerKey = GetLayerKeyByCode(currentCode);
 				wpmFilter.weight.type = FWP_EMPTY;
 				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
 				wpmFilter.flags = FWPM_FILTER_FLAG_NONE;
@@ -361,7 +400,7 @@ int ShadowFilter::StartFiltering()
 
 	if (!NT_SUCCESS(status))
 	{
-		status = RegisterCalloutFuntions(shadowFilterContext, NULL);
+		//status = RegisterCalloutFuntions(shadowFilterContext, NULL);
 	}
 	return status;
 }

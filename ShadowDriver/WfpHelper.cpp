@@ -28,8 +28,8 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 	NTSTATUS status = STATUS_SUCCESS;
 	if (NT_SUCCESS(status))
 	{
-		_sfContext = ShadowFilterContext::InitializeShadowFilterContext();
-		_shadowFilter = &ShadowFilter(_sfContext);
+		_sfContext = new ShadowFilterContext();
+		_shadowFilter = new ShadowFilter(_sfContext);
 	}
 
 	if (NT_SUCCESS(status))
@@ -42,7 +42,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 		condition.IPv4 = 0xC0A80166;
 		condition.IPv4Mask = 0xFFFFFFFF;
 		condition.MatchType = FilterMatchType::Equal;
-		//_shadowFilter.AddFilterCondition(&condition, 1);
+		_shadowFilter->AddFilterCondition(&condition, 1);
 	}
 
 	if (NT_SUCCESS(status))
