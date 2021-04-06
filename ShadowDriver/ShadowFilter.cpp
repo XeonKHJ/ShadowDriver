@@ -55,27 +55,10 @@ ShadowFilter::~ShadowFilter()
 {
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
 
-	for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
-	{
-		if ((shadowFilterContext->WpsCalloutIds)[currentCode] != 0)
-		{
-			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpsCalloutIds)[currentCode]);
-		}
+	StopFiltering();
 
-		if ((shadowFilterContext->WpsCalloutIds)[currentCode] != 0)
-		{
-			FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
-		}
-
-		if ((shadowFilterContext->FilterIds)[currentCode] != 0)
-		{
-			FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->FilterIds)[currentCode]);
-		}
-	}
-
-	FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
-
-	FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+	//删除动态分配的内存区域
+	delete[] _filteringConditions;
 }
 
 /*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
@@ -480,6 +463,35 @@ int ShadowFilter::StartFiltering()
 			status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
 		}
 	}
+	return status;
+}
+
+/// <summary>
+/// 用于停止过滤。
+/// STATUS值待处理。
+/// </summary>
+/// <returns></returns>
+int ShadowFilter::StopFiltering()
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
+
+	//反注册回调函数
+	for (UINT8 currentCode = 0; currentCode <= shadowFilterContext->FilterIdMaxNumber; ++currentCode)
+	{
+		if (shadowFilterContext->FilterIds[currentCode] != NULL)
+		{
+			//这个状态要检查
+			status = FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
+			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
+			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
+			status = FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
+			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
+		}
+	}
+	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
+	status = FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+
 	return status;
 }
 
