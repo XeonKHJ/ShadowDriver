@@ -60,9 +60,6 @@
     <ClInclude Include="ShadowFilterWindowsSpecific.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShadowCommon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ShadowCallouts.h">
       <Filter>Header Files</Filter>
     </ClInclude>

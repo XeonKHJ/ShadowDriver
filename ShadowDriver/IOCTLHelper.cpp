@@ -1,5 +1,5 @@
 #include "IOCTLHelper.h"
-#include "ShadowCommon.h"
+#include "public.h"
 #include "ShadowFilterWindowsSpecific.h"
 #include "CancelSafeQueueCallouts.h"
 
@@ -34,6 +34,11 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		ULONG ioControlCode = pIoStackIrp->Parameters.DeviceIoControl.IoControlCode;
 		switch (ioControlCode)
 		{
+		case IOCTL_SHADOWDRIVER_APP_REGISTER:
+#ifdef DBG
+			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
+#endif
+			
 		case IOCTL_SHADOWDRIVER_START_WFP:
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
 			//IoctlStartWpf(Irp);

@@ -62,7 +62,6 @@
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="ShadowCallouts.h" />
-    <ClInclude Include="ShadowCommon.h" />
     <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="ShadowUtilities.h" />
     <ClInclude Include="ShaDriHelper.h" />
