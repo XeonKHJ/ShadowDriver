@@ -2,13 +2,13 @@
 #pragma once
 #include <wdm.h>
 
-IRP_LINK_ENTRY * InitializeIrpLinkEntry();
+//IRP_LINK_ENTRY * InitializeIrpLinkEntry();
 
 NTSTATUS
 CsqInsertIrpEx(
-    _In_ struct _IO_CSQ* Csq,
-    _In_ PIRP              Irp,
-    _In_ PVOID             InsertContext
+    _In_ struct _IO_CSQ*    Csq,
+    _In_ PIRP               Irp,
+    _In_ PVOID              InsertContext
 );
 
 VOID

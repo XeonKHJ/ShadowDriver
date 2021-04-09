@@ -10,6 +10,17 @@ IOCTLHelper::IOCTLHelper(_In_ PDRIVER_OBJECT driverObject)
 	InitializeIrpLinkEntry();
 }
 
+IRP_LINK_ENTRY* IOCTLHelper::InitializeIrpLinkEntry()
+{
+	IRP_LINK_ENTRY* newEntry = new IRP_LINK_ENTRY();
+	if (newEntry)
+	{
+		memset(newEntry, 0, sizeof(IRP_LINK_ENTRY));
+	}
+	return newEntry;
+}
+
+
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
 {
 	driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriverIrpIoControl;

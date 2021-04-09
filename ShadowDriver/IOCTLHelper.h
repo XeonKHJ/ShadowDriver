@@ -5,6 +5,7 @@ class IOCTLHelper
 {
 public:
 	IOCTLHelper(_In_ PDRIVER_OBJECT);
+	IRP_LINK_ENTRY* InitializeIrpLinkEntry();
 	static void InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject);
 private:
 	static IOCTLHelper* _helpers;

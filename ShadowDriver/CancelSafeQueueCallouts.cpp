@@ -2,16 +2,6 @@
 #include "ShadowFilterWindowsSpecific.h"
 #include "IOCTLHelperContext.h"
 
-IRP_LINK_ENTRY * InitializeIrpLinkEntry()
-{
-    IRP_LINK_ENTRY * newEntry = new IRP_LINK_ENTRY();
-    if (newEntry)
-    {
-        memset(newEntry, 0, sizeof(IRP_LINK_ENTRY));
-    }
-    return newEntry;
-}
-
 void DeleteIrpLinkEntry(IRP_LINK_ENTRY * linkEntry)
 {
     delete linkEntry;
@@ -19,7 +9,7 @@ void DeleteIrpLinkEntry(IRP_LINK_ENTRY * linkEntry)
 
 NTSTATUS
 CsqInsertIrpEx(
-    _In_ struct _IO_CSQ* Csq,
+    _In_ struct _IO_CSQ*   Csq,
     _In_ PIRP              Irp,
     _In_ PVOID             InsertContext
 )
@@ -27,7 +17,7 @@ CsqInsertIrpEx(
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqInsertIrpEx\n");
     IOCTLHelperContext* context = CONTAINING_RECORD(Csq, IOCTLHelperContext, IoCsq);
     NTSTATUS status = STATUS_FAIL_CHECK;
-    IRP_LINK_ENTRY * newEntry = InitializeIrpLinkEntry();
+    IRP_LINK_ENTRY * newEntry = new IRP_LINK_ENTRY();
     newEntry->Irp = Irp;
     if (newEntry)
     {
