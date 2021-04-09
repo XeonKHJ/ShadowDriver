@@ -53,11 +53,17 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			//IoctlRequirePacketInfo(Irp);
 			break;
 		case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_SHIT:
+#if DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_WTF\n");
-			Irp->IoStatus.Status = status;
-			Irp->IoStatus.Information = dwDataWritten;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			//TestDequeueIOCTL();
+#endif
+			{
+				AppRegisterContext appContext = GetAppContextFromIoctl(Irp, pIoStackIrp);
+				Irp->IoStatus.Status = status;
+				Irp->IoStatus.Information = dwDataWritten;
+				IoCompleteRequest(Irp, IO_NO_INCREMENT);
+				IOCTLHelper* helper = GetHelperByAppId(appContext.AppId);
+				NotifyUserByDequeuingIoctl(&helper->_context);
+			}
 			break;
 		case IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION:
 #ifdef DBG
