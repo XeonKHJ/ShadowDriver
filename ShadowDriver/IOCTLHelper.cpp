@@ -1,5 +1,4 @@
 #include "IOCTLHelper.h"
-#include "public.h"
 #include "ShadowFilterWindowsSpecific.h"
 #include "CancelSafeQueueCallouts.h"
 
@@ -38,7 +37,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 #ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
 #endif
-			
+			RegisterAppForIOCTLCalls(Irp, pIoStackIrp);
 		case IOCTL_SHADOWDRIVER_START_WFP:
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
 			//IoctlStartWpf(Irp);
@@ -81,5 +80,25 @@ NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
 		InitializeListHead(&(_context.IrpLinkHeadEntry.ListEntry));
 	}
 
+	return status;
+}
+
+NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+	AppRegisterContext * context = new AppRegisterContext();
+	int dataReadSize = sizeof(AppRegisterContext);
+	if (ioStackLocation->Parameters.DeviceIoControl.InputBufferLength >= (ULONG)dataReadSize)
+	{
+		RtlCopyMemory(context, inputBuffer, dataReadSize);
+		irp->IoStatus.Status = status;
+	}
+	else
+	{
+		status = STATUS_BUFFER_TOO_SMALL;
+	}
+
+	IoCompleteRequest(irp, IO_NO_INCREMENT);
 	return status;
 }
