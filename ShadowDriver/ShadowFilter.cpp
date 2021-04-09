@@ -258,7 +258,6 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		NetFilteringConditionAndCode* wpmConditionAndCodes = new NetFilteringConditionAndCode[length];
-		memset(wpmConditionAndCodes, 0, sizeof(NetFilteringConditionAndCode) * length);
 		//计算每个类型的过滤器条件的数量
 		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
 		{
@@ -276,12 +275,8 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 			if (conditionCounts[currentCode] != 0)
 			{
 				wpmConditonsGroupByFilterLayer[currentCode] = new FWPM_FILTER_CONDITION0[conditionCounts[currentCode]];
-				if (wpmConditonsGroupByFilterLayer[currentCode] != NULL)
-				{
-					memset(wpmConditonsGroupByFilterLayer[currentCode], 0, sizeof(FWPM_FILTER_CONDITION0) * conditionCounts[currentCode]);
-				}
 				//如果内存分配错误则将状态置为错误并且跳出循环
-				else
+				if(wpmConditonsGroupByFilterLayer[currentCode] == nullptr)
 				{
 					status = STATUS_ERROR_PROCESS_NOT_IN_JOB;
 					break;

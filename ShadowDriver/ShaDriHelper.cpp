@@ -4,7 +4,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 {
 
 	//为ShadowTcpRawPacket分配内存空间。
-	*tcpRawPacketPoint = (ShadowTcpRawPacket*)ExAllocatePoolWithTag(NonPagedPool, sizeof(ShadowTcpRawPacket), 'strp');
+	*tcpRawPacketPoint = (ShadowTcpRawPacket*)ExAllocatePool2(NonPagedPool, sizeof(ShadowTcpRawPacket), 'strp');
 
 	if (*tcpRawPacketPoint)
 	{
@@ -103,7 +103,7 @@ void ConvertNetBufferListToTcpRawPacket(_Out_ ShadowTcpRawPacket** tcpRawPacketP
 					if (isHeaderParsed)
 					{
 						//这个记得换
-						*dataPos = (PacketDataBuffer*)ExAllocatePoolWithTag(NonPagedPool, sizeof(PacketDataBuffer), 'pdb');
+						*dataPos = (PacketDataBuffer*)ExAllocatePool2(NonPagedPool, sizeof(PacketDataBuffer), 'pdb');
 						PacketDataBuffer* currentDataBuffer = *dataPos;
 						currentDataBuffer->Bytes = currentRemainBytes;
 						currentDataBuffer->CurrentBuffer = mdlAddr;
@@ -209,7 +209,7 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 			//NdisRetreatNetBufferDataStart(netBuffer, 0, 0, NULL);
 			ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 
-			copiedDataBuffer = ExAllocatePoolWithTag(NonPagedPool, dataLength, 'cpk');
+			copiedDataBuffer = ExAllocatePool2(NonPagedPool, dataLength, 'cpk');
 
 			while (dataBuffer == NULL)
 			{
@@ -221,7 +221,7 @@ void PrintNetBufferList(PNET_BUFFER_LIST packet, ULONG level)
 			if (dataBuffer != NULL)
 			{
 				size_t outputLength = CaculateHexStringLength(dataLength);
-				outputs = (PCHAR)ExAllocatePoolWithTag(NonPagedPool, outputLength, 'op');
+				outputs = (PCHAR)ExAllocatePool2(NonPagedPool, outputLength, 'op');
 
 				if (outputs != NULL)
 				{
