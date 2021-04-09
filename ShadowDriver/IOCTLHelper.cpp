@@ -2,23 +2,29 @@
 #include "ShadowFilterWindowsSpecific.h"
 #include "CancelSafeQueueCallouts.h"
 
-IOCTLHelper::IOCTLHelper(_In_ PDRIVER_OBJECT driverObject)
+int IOCTLHelper::_helperCount = 0;
+IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
+IOCTLHelper::IOCTLHelper(IOCTLHelperContext context)
 {
-	_context;
-	//初始化队列
-	InitializeIrpLinkEntry();
+	_context = context;
+	InitializeIRPNotificationSystem();
 }
-
-IRP_LINK_ENTRY* IOCTLHelper::InitializeIrpLinkEntry()
-{
-	IRP_LINK_ENTRY* newEntry = new IRP_LINK_ENTRY();
-	return newEntry;
-}
-
 
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
 {
 	driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriverIrpIoControl;
+	InitializeListHead(&(_helperListHeader.ListEntry));
+}
+
+void IOCTLHelper::AddHelper(IOCTLHelper* helper)
+{
+	IOCTLHelper::_helperCount++;
+	IOCTLHelperLinkEntry* newEntry = new IOCTLHelperLinkEntry();
+	newEntry->Helper = helper;
+	InsertTailList(&(_helperListHeader.ListEntry), &(newEntry->ListEntry));
+#if DBG
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "AddHelper_end\n");
+#endif
 }
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
@@ -54,8 +60,22 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			//TestDequeueIOCTL();
 			break;
 		case IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION:
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
-			//status = IoCsqInsertIrpEx(&_csq, Irp, NULL, NULL);
+#endif
+			{
+				AppRegisterContext appContext = GetAppContextFromIoctl(Irp, pIoStackIrp);
+				IOCTLHelper* helper = GetHelperByAppId(appContext.AppId);
+				if (helper != nullptr)
+				{
+					status = IoCsqInsertIrpEx(&(helper->_context.IoCsq), Irp, NULL, NULL);
+				}
+				else
+				{
+					Irp->IoStatus.Status = STATUS_BUFFER_ALL_ZEROS;
+					IoCompleteRequest(Irp, IO_NO_INCREMENT);
+				}
+			}
 			break;
 		case IOCTL_SHADOWDRIVER_GET_DRIVER_VERSION:
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
@@ -66,6 +86,57 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		}
 	}
 	return status;
+}
+
+AppRegisterContext IOCTLHelper::GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+	AppRegisterContext context{};
+	int dataReadSize = sizeof(AppRegisterContext);
+	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+	if (inputBufferLength <= (ULONG)dataReadSize)
+	{
+		context.AppId = *((int*)(inputBuffer));
+		auto nameLength = inputBufferLength - sizeof(int);
+		void* nameBuffer = (void*)((char*)inputBuffer + sizeof(int));
+		RtlCopyMemory(context.AppName, nameBuffer, nameLength);
+	}
+	return context;
+}
+
+IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
+{
+	IOCTLHelper* result = nullptr;
+	IOCTLHelperLinkEntry * currentEntry = &_helperListHeader;
+	do
+	{
+		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
+		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
+
+		if (currentEntry->Helper->_context.AppContext.AppId == id)
+		{
+			result = currentEntry->Helper;
+			break;
+		}
+
+	} while (currentEntry != &_helperListHeader);
+	return result;
+}
+
+void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context)
+{
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "NotifyUserByDequeuingIoctl\n");
+	PIRP dequeuedIrp = IoCsqRemoveNextIrp(&(context->IoCsq), NULL);
+	if (dequeuedIrp != NULL)
+	{
+		PIO_STACK_LOCATION dispatchedStackIrp = IoGetCurrentIrpStackLocation(dequeuedIrp);
+		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION)
+		{
+			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Dequeue a irp\n");
+		}
+
+		IoCompleteRequest(dequeuedIrp, IO_NO_INCREMENT);
+	}
 }
 
 NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
@@ -86,23 +157,19 @@ NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
 NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
-	AppRegisterContext * context = new AppRegisterContext();
-	int dataReadSize = sizeof(AppRegisterContext);
-	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-	if (inputBufferLength <= (ULONG)dataReadSize)
+	IOCTLHelperContext helperContext;
+	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
+
+	if (helperContext.AppContext.AppId != 0)
 	{
-		context->AppId = *((int*)(inputBuffer));
-		auto nameLength = inputBufferLength - sizeof(int);
-		void* nameBuffer = (void *)((char *)inputBuffer + sizeof(int));
-		RtlCopyMemory(context->AppName, nameBuffer, nameLength);
-		irp->IoStatus.Status = status;
+		auto ioctlHelper = new IOCTLHelper(helperContext);
+		AddHelper(ioctlHelper);
 	}
 	else
 	{
-		status = STATUS_BUFFER_TOO_SMALL;
+		status = STATUS_ABANDONED;
 	}
-
+	irp->IoStatus.Status = status;
 	IoCompleteRequest(irp, IO_NO_INCREMENT);
 	return status;
 }

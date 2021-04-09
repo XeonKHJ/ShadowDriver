@@ -2,21 +2,34 @@
 #include <wdm.h>
 #include "IOCTLHelperContext.h"
 #include "Public.h"
+
+struct IOCTLHelperLinkEntry;
+
 class IOCTLHelper
 {
 public:
-	IOCTLHelper(_In_ PDRIVER_OBJECT);
+	IOCTLHelper(IOCTLHelperContext context);
 	IRP_LINK_ENTRY* InitializeIrpLinkEntry();
 	static void InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject);
-private:
+	static int _helperCount;
 	
-	static IOCTLHelper* _helpers;
-	IOCTLHelperContext _context;
-	static NTSTATUS ShadowDriverIrpIoControl(
-		_In_ struct _DEVICE_OBJECT* DeviceObject,
-		_Inout_ struct _IRP* Irp
-	);
-	NTSTATUS InitializeIRPNotificationSystem();
+private:
+	static void AddHelper(IOCTLHelper * helper);
+	static NTSTATUS ShadowDriverIrpIoControl(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
 	static NTSTATUS RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static IOCTLHelperLinkEntry _helperListHeader;
+	static AppRegisterContext GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static IOCTLHelper* GetHelperByAppId(int id);
+	static void NotifyUserByDequeuingIoctl(IOCTLHelperContext * context);
+	NTSTATUS InitializeIRPNotificationSystem();
+	IOCTLHelperContext _context;
 };
+
+struct IOCTLHelperLinkEntry
+{
+	LIST_ENTRY ListEntry;
+	IOCTLHelper* Helper;
+};
+
+
 
