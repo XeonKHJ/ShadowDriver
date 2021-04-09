@@ -2,7 +2,7 @@
 
 void* operator new(size_t size)
 {
-	return ExAllocatePool2(NonPagedPool, size, 'oon');
+	return ExAllocatePool2(POOL_FLAG_NON_PAGED, size, 'oon');
 }
 
 void operator delete(void* toFreeObject) noexcept
@@ -23,7 +23,7 @@ void operator delete(void* toFreeObject, size_t size)
 
 void* operator new[](size_t size)
 {
-	return ExAllocatePool2(NonPagedPool, size, 'oona');
+	return ExAllocatePool2(POOL_FLAG_NON_PAGED, size, 'oona');
 }
 
 void operator delete[](void* toFreeObject)
