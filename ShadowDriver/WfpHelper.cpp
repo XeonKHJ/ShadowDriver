@@ -29,6 +29,7 @@ NTSTATUS InitializeWfp(PDEVICE_OBJECT deviceObject)
 	if (NT_SUCCESS(status))
 	{
 		_sfContext = new ShadowFilterContext();
+		ShadowFilterContext* sfContext = _sfContext;
 		_sfContext->DeviceObject = deviceObject;
 		_shadowFilter = new ShadowFilter(_sfContext);
 	}

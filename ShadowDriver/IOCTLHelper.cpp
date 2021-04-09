@@ -89,9 +89,13 @@ NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioSt
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
 	AppRegisterContext * context = new AppRegisterContext();
 	int dataReadSize = sizeof(AppRegisterContext);
-	if (ioStackLocation->Parameters.DeviceIoControl.InputBufferLength >= (ULONG)dataReadSize)
+	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+	if (inputBufferLength <= (ULONG)dataReadSize)
 	{
-		RtlCopyMemory(context, inputBuffer, dataReadSize);
+		context->AppId = *((int*)(inputBuffer));
+		auto nameLength = inputBufferLength - sizeof(int);
+		void* nameBuffer = (void *)((char *)inputBuffer + sizeof(int));
+		RtlCopyMemory(context->AppName, nameBuffer, nameLength);
 		irp->IoStatus.Status = status;
 	}
 	else
