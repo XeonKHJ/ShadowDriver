@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf">
@@ -51,9 +52,6 @@
     <ClInclude Include="ShaDriHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IrpFunctions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ShadowFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -69,7 +67,16 @@
     <ClInclude Include="ShadowCallouts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CommunicationManager.h">
+    <ClInclude Include="IOCTLHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CancelSafeQueueCallouts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IrpLinkEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCTLHelperContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,9 +99,6 @@
     <ClCompile Include="ShaDriHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IrpFunctions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ShadowFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -107,7 +111,10 @@
     <ClCompile Include="ShadowFilterWindowsSpecific.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CommunicationManager.cpp">
+    <ClCompile Include="IOCTLHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CancelSafeQueueCallouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

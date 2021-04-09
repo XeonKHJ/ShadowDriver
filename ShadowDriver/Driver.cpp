@@ -17,8 +17,8 @@ Environment:
 #include "driver.h"
 #include "driver.tmh"
 #include <windowsx.h>
-#include "IrpFunctions.h"
 #include "ShadowFilter.h"
+#include "IOCTLHelper.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -112,20 +112,13 @@ Return Value:
                              &wdfDriver
                              );
 
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriver_IRP_IoControl;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = ShadowDriver_IRP_Create;
-    
-    //DriverObject->MajorFunction[IRP_MJ_CLOSE] = ShadowDriver_IRP_Close;
-    //DriverObject->MajorFunction[IRP_MJ_CLEANUP] = ShadowDriver_IRP_CLEANUP;
-    //DriverObject->MajorFunction[IRP_MJ_WRITE] = 
+    IOCTLHelper::InitializeDriverObjectForIOCTL(DriverObject);
 
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
         WPP_CLEANUP(DriverObject);
         return status;
     }
-
-    status = InitializeIRPHandlings();
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Driver Installing.\n");
 

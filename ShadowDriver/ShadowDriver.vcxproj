@@ -35,13 +35,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CommunicationManager.cpp" />
+    <ClCompile Include="CancelSafeQueueCallouts.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Driver.cpp" />
-    <ClCompile Include="IrpFunctions.cpp" />
+    <ClCompile Include="IOCTLHelper.cpp" />
     <ClCompile Include="NetFilteringCondition.cpp" />
     <ClCompile Include="Queue.cpp" />
     <ClCompile Include="ShadowCallouts.cpp" />
@@ -52,10 +53,12 @@
     <ClCompile Include="WfpHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CommunicationManager.h" />
+    <ClInclude Include="CancelSafeQueueCallouts.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
-    <ClInclude Include="IrpFunctions.h" />
+    <ClInclude Include="IOCTLHelper.h" />
+    <ClInclude Include="IOCTLHelperContext.h" />
+    <ClInclude Include="IrpLinkEntry.h" />
     <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />

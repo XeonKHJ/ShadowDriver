@@ -17,7 +17,6 @@ Environment:
 #include "driver.h"
 #include "device.tmh"
 #include "WfpHelper.h"
-#include "IrpFunctions.h"
 #include "ShadowFilter.h"
 
 #ifdef ALLOC_PRAGMA
@@ -30,33 +29,6 @@ typedef struct _INVERTED_DEVICE_CONTEXT {
     LONG       Sequence;
 } INVERTED_DEVICE_CONTEXT, * PINVERTED_DEVICE_CONTEXT;
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(INVERTED_DEVICE_CONTEXT, InvertedGetContextFromDevice)
-
-/// <summary>
-/// 初始化IO队列
-/// </summary>
-/// <returns></returns>
-NTSTATUS InitiateWdfIOQueue(WDFDEVICE device)
-{
-    WDF_IO_QUEUE_CONFIG queueConfig;
-    WDFQUEUE queueFunc;
-    NTSTATUS status;
-    //添加IOCTL的队列信息
-    WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchParallel);
-    queueConfig.EvtIoDeviceControl = InvertedEvtIoDeviceControl;
-    queueConfig.PowerManaged = WdfFalse;
-    status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
-    if (!NT_SUCCESS(status))
-    {
-        return status;
-    }
-
-    WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
-    //queueConfig.EvtIoCanceledOnQueue = InvertedEvtIoDeviceControl;
-    queueConfig.PowerManaged = WdfFalse;
-
-    status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &queueFunc);
-    return status;
-}
 
 NTSTATUS
 ShadowDriverCreateDevice(
