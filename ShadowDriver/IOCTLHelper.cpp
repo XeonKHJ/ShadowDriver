@@ -119,12 +119,14 @@ IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
 		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
 
-		if (currentEntry->Helper->_context.AppContext.AppId == id)
+		if (currentEntry->Helper != nullptr)
 		{
-			result = currentEntry->Helper;
-			break;
+			if (currentEntry->Helper->_context.AppContext.AppId == id)
+			{
+				result = currentEntry->Helper;
+				break;
+			}
 		}
-
 	} while (currentEntry != &_helperListHeader);
 	return result;
 }
@@ -165,11 +167,19 @@ NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioSt
 	NTSTATUS status = STATUS_SUCCESS;
 	IOCTLHelperContext helperContext;
 	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
-
+	
 	if (helperContext.AppContext.AppId != 0)
 	{
-		auto ioctlHelper = new IOCTLHelper(helperContext);
-		AddHelper(ioctlHelper);
+		IOCTLHelper * checkHelper = GetHelperByAppId(helperContext.AppContext.AppId);
+		if (checkHelper == nullptr)
+		{
+			auto ioctlHelper = new IOCTLHelper(helperContext);
+			AddHelper(ioctlHelper);
+		}
+		else
+		{
+			status = STATUS_ABANDONED;
+		}
 	}
 	else
 	{
