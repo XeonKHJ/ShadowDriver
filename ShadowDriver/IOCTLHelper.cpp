@@ -52,7 +52,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO\n");
 			//IoctlRequirePacketInfo(Irp);
 			break;
-		case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_SHIT:
+		case IOCTL_SHADOWDRIVER_DEQUEUE_NOTIFICATION:
 #if DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_WTF\n");
 #endif
@@ -65,9 +65,9 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 				NotifyUserByDequeuingIoctl(&helper->_context);
 			}
 			break;
-		case IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION:
+		case IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION:
 #ifdef DBG
-			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
+			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION\n");
 #endif
 			{
 				AppRegisterContext appContext = GetAppContextFromIoctl(Irp, pIoStackIrp);
@@ -84,7 +84,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			}
 			break;
 		case IOCTL_SHADOWDRIVER_GET_DRIVER_VERSION:
-			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION\n");
+			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION\n");
 			//IoctlGetDriverVersion(Irp, pIoStackIrp);
 			break;
 		default:
@@ -138,7 +138,7 @@ void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context)
 	if (dequeuedIrp != NULL)
 	{
 		PIO_STACK_LOCATION dispatchedStackIrp = IoGetCurrentIrpStackLocation(dequeuedIrp);
-		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_INVERT_NOTIFICATION)
+		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION)
 		{
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Dequeue a irp\n");
 		}
