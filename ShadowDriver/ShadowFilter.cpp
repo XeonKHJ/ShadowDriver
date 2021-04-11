@@ -40,6 +40,7 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	if (_context)
 	{
 		shadowFilterContext = (ShadowFilterContext*)_context;
+		NetPacketFilteringCallout = shadowFilterContext->NetPacketFilteringCallout;
 	}
 	else
 	{
@@ -441,22 +442,31 @@ int ShadowFilter::StartFiltering()
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
 
-	if (NT_SUCCESS(status))
+	if (!shadowFilterContext->IsFilteringStarted)
 	{
-		status = InitializeWfpEngine(shadowFilterContext);
-	}
-
-	if (NT_SUCCESS(status))
-	{
-		status = InitializeSublayer(shadowFilterContext);
-	}
-
-	if (NT_SUCCESS(status))
-	{
-		if (_conditionCount != 0 && _filteringConditions != nullptr)
+		if (NT_SUCCESS(status))
 		{
-			status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
+			status = InitializeWfpEngine(shadowFilterContext);
 		}
+
+		if (NT_SUCCESS(status))
+		{
+			status = InitializeSublayer(shadowFilterContext);
+		}
+
+		if (NT_SUCCESS(status))
+		{
+			if (_conditionCount != 0 && _filteringConditions != nullptr)
+			{
+				status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
+			}
+		}
+
+		if (NT_SUCCESS(status))
+		{
+			shadowFilterContext->IsFilteringStarted = TRUE;
+		}
+		
 	}
 	return status;
 }
@@ -486,7 +496,7 @@ int ShadowFilter::StopFiltering()
 	}
 	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
 	status = FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
-
+	shadowFilterContext->IsFilteringStarted = false;
 	return status;
 }
 

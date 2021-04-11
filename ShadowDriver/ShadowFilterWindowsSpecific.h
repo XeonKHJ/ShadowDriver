@@ -18,7 +18,8 @@ public:
 	UINT64 FilterIds[FilterIdMaxNumber];
 	UINT32 WpsCalloutIds[FilterIdMaxNumber];
 	UINT32 WpmCalloutIds[FilterIdMaxNumber];
-	BOOL IsModificationEnable;
+	bool IsModificationEnable;
+	bool IsFilteringStarted;
 	void (*NetPacketFilteringCallout)(NetLayer, NetPacketDirection, void*, unsigned long long);
 	void* CustomContext;
 }ShadowFilterContext;

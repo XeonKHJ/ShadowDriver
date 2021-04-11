@@ -1,6 +1,7 @@
 #include "ShadowCallouts.h"
 #include "ShadowFilterWindowsSpecific.h"
 //#include "NetFilteringCondition.h"
+#include "IOCTLHelper.h"
 
 VOID NTAPI NetworkOutV4ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
@@ -35,10 +36,10 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			//PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
+			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
 
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, NULL, 0);
+			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer));
 		}
 		if (context->IsModificationEnable)
 		{

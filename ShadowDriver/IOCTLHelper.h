@@ -2,6 +2,7 @@
 #include <wdm.h>
 #include "IOCTLHelperContext.h"
 #include "Public.h"
+#include "ShadowFilter.h"
 
 struct IOCTLHelperLinkEntry;
 
@@ -9,9 +10,11 @@ class IOCTLHelper
 {
 public:
 	IOCTLHelper(IOCTLHelperContext context);
-	IRP_LINK_ENTRY* InitializeIrpLinkEntry();
+	~IOCTLHelper();
 	static void InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject);
 	static int _helperCount;
+	static ShadowFilter* Filter;
+	static NTSTATUS NotifyUserApp(void* buffer, size_t size);
 private:
 	static void AddHelper(IOCTLHelper * helper);
 	static void RemoveHelper(IOCTLHelper* helper);
@@ -20,9 +23,10 @@ private:
 	static IOCTLHelperLinkEntry _helperListHeader;
 	static AppRegisterContext GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static IOCTLHelper* GetHelperByAppId(int id);
-	static void NotifyUserByDequeuingIoctl(IOCTLHelperContext * context);
+	static void NotifyUserByDequeuingIoctl(IOCTLHelperContext* context, void* outputBuffer, size_t outputLength);
 	static NTSTATUS DeregisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static NTSTATUS IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	NTSTATUS InitializeIRPNotificationSystem();
 	IOCTLHelperContext _context;
 };

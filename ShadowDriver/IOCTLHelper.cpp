@@ -4,16 +4,41 @@
 
 int IOCTLHelper::_helperCount = 0;
 IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
+ShadowFilter* IOCTLHelper::Filter;
 IOCTLHelper::IOCTLHelper(IOCTLHelperContext context)
 {
 	_context = context;
 	InitializeIRPNotificationSystem();
 }
 
+IOCTLHelper::~IOCTLHelper()
+{
+	
+}
+
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
 {
 	driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriverIrpIoControl;
 	InitializeListHead(&(_helperListHeader.ListEntry));
+}
+
+NTSTATUS IOCTLHelper::NotifyUserApp(void* buffer, size_t size)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	
+	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
+	do
+	{
+		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
+		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
+		
+		if (currentEntry->Helper != nullptr)
+		{
+			NotifyUserByDequeuingIoctl(&currentEntry->Helper->_context, buffer, size);
+		}
+	} while (currentEntry != &_helperListHeader);
+
+	return status;
 }
 
 void IOCTLHelper::AddHelper(IOCTLHelper* helper)
@@ -69,9 +94,11 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			Irp->IoStatus.Status = DeregisterAppForIOCTLCalls(Irp, pIoStackIrp);
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
-		case IOCTL_SHADOWDRIVER_START_WFP:
+		case IOCTL_SHADOWDRIVER_START_FILTERING:
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
-			//IoctlStartWpf(Irp);
+			IoctlStartFiltering(Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 		case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO:
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO\n");
@@ -87,7 +114,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 				Irp->IoStatus.Information = dwDataWritten;
 				IoCompleteRequest(Irp, IO_NO_INCREMENT);
 				IOCTLHelper* helper = GetHelperByAppId(appContext.AppId);
-				NotifyUserByDequeuingIoctl(&helper->_context);
+				NotifyUserByDequeuingIoctl(&helper->_context, NULL, 0);
 			}
 			break;
 		case IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION:
@@ -162,18 +189,26 @@ IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 	return result;
 }
 
-void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context)
+void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context, void * outputBuffer, size_t outputLength)
 {
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "NotifyUserByDequeuingIoctl\n");
 	PIRP dequeuedIrp = IoCsqRemoveNextIrp(&(context->IoCsq), NULL);
 	if (dequeuedIrp != NULL)
 	{
 		PIO_STACK_LOCATION dispatchedStackIrp = IoGetCurrentIrpStackLocation(dequeuedIrp);
+		auto outputBufferLength = dispatchedStackIrp->Parameters.DeviceIoControl.OutputBufferLength;
 		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION)
 		{
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Dequeue a irp\n");
 		}
-
+		if (outputBuffer != nullptr && outputLength > 0 && outputBufferLength >= outputLength)
+		{
+			void* systemBuffer = dequeuedIrp->AssociatedIrp.SystemBuffer;
+			RtlCopyMemory(systemBuffer, outputBuffer, outputLength);
+			dequeuedIrp->IoStatus.Information = outputLength;
+		}
+		
+		dequeuedIrp->IoStatus.Status = STATUS_SUCCESS;
 		IoCompleteRequest(dequeuedIrp, IO_NO_INCREMENT);
 	}
 }
@@ -241,6 +276,32 @@ NTSTATUS IOCTLHelper::GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLo
 	{
 		RtlCopyMemory(outputBuffer, &count, sizeof(int));
 		irp->IoStatus.Information = sizeof(int);
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	if (Filter != nullptr)
+	{
+		if (NT_SUCCESS(status))
+		{
+			NetFilteringCondition condition = NetFilteringCondition();
+			condition.AddrLocation = AddressLocation::Remote;
+			condition.FilterLayer = NetLayer::NetworkLayer;
+			condition.FilterPath = NetPacketDirection::Out;
+			condition.IPAddressType = IpAddrFamily::IPv4;
+			condition.IPv4 = 0xC0A80168;
+			condition.IPv4Mask = 0xFFFFFFFF;
+			condition.MatchType = FilterMatchType::Equal;
+			Filter->AddFilterCondition(&condition, 1);
+		}
+
+		if (NT_SUCCESS(status))
+		{
+			Filter->StartFiltering();
+		}
 	}
 	return status;
 }
