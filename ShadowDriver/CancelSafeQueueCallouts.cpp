@@ -2,11 +2,6 @@
 #include "ShadowFilterWindowsSpecific.h"
 #include "IOCTLHelperContext.h"
 
-void DeleteIrpLinkEntry(IRP_LINK_ENTRY * linkEntry)
-{
-    delete linkEntry;
-}
-
 NTSTATUS
 CsqInsertIrpEx(
     _In_ struct _IO_CSQ*   Csq,
@@ -50,7 +45,7 @@ CsqRemoveIrp(
         if (matchedIRPLiskEntry != NULL && matchedIRPLiskEntry != &context->IrpLinkHeadEntry)
         {
             RemoveEntryList(&(matchedIRPLiskEntry->ListEntry));
-            DeleteIrpLinkEntry(matchedIRPLiskEntry);
+            delete matchedIRPLiskEntry;
         }
     }
 }
