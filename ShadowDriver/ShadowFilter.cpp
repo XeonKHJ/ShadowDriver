@@ -162,24 +162,30 @@ inline GUID GetLayerKeyByCode(UINT8 code)
 		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
 		break;
 	case 1:
-		//链路层出口过滤
+		// 链路层出口过滤
+		// Untested
+		guid = FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
 		guid = FWPM_LAYER_INBOUND_IPPACKET_V4;
 		break;
 	case 3:
-		//链路层接收过滤
+		// 链路层接收过滤
+		// Untested
+		guid = FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET;
 		break;
 	case 4:
-		//网络层IPv6发送过滤
+		// 网络层IPv6发送过滤
+		// Untested
 		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
 		break;
 	case 5:
-		//无意义
+		// 无意义
 		break;
 	case 6:
-		//网络层IPv6接收过滤
+		// 网络层IPv6接收过滤
+		// Untested
 		guid = FWPM_LAYER_INBOUND_IPPACKET_V6;
 		break;
 	case 7:
@@ -207,6 +213,7 @@ inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 		break;
 	case 4:
 		//网络层IPv6发送过滤
+		// Untested
 		callout->classifyFn = NetworkOutV6ClassifyFn;
 		break;
 	case 5:
@@ -214,6 +221,7 @@ inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 		break;
 	case 6:
 		//网络层IPv6接收过滤
+		// Untested
 		callout->classifyFn = NetworkInV6ClassifyFn;
 		break;
 	case 7:
@@ -294,6 +302,8 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 			{
 				FWP_V4_ADDR_AND_MASK v4AddrAndMask = { 0 };
 				FWP_V6_ADDR_AND_MASK v6AddrAndMask = { 0 };
+				FWP_BYTE_ARRAY6 macAddress = { 0 };
+
 				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
 				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
 				FWPM_FILTER_CONDITION0* currentWpmCondition = NULL;
@@ -310,15 +320,21 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				{
 				case NetLayer::LinkLayer:
 				{
-					//还未实现
+					// Untested
 					status = STATUS_ABANDONED;
-					switch (currentCondition->FilterPath)
+					switch (currentCondition->AddrLocation)
 					{
-					case NetPacketDirection::In:
+					case AddressLocation::Local:
+						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_LOCAL_ADDRESS;
 						break;
-					case NetPacketDirection::Out:
+					case AddressLocation::Remote:
+						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_DESTINATION_ADDRESS;
 						break;
 					}
+					currentWpmCondition->conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
+					
+					//currentWpmCondition->conditionValue.byteArray6
+					
 				}
 				break;
 				case NetLayer::NetworkLayer:
