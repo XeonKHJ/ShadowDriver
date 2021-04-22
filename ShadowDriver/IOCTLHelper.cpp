@@ -307,8 +307,8 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 			condition.IPv6Addr;
 			condition.MatchType = FilterMatchType::Equal;
 			condition.MacAddress[0] = 0x00;
-			condition.MacAddress[1] = 0x5D;
-			condition.MacAddress[2] = 0x00;
+			condition.MacAddress[1] = 0x15;
+			condition.MacAddress[2] = 0x5D;
 			condition.MacAddress[3] = 0x00;
 			condition.MacAddress[4] = 0x65;
 			condition.MacAddress[5] = 0x06;

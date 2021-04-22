@@ -128,6 +128,7 @@ inline GUID GetFilterCalloutGuid(UINT8 code)
 		break;
 	case 1:
 		//链路层出口过滤
+		guid = SHADOWDRIVER_WFP_LINK_SEND_ESTABLISHED_CALLOUT_GUID;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
@@ -203,6 +204,7 @@ inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 		break;
 	case 1:
 		//链路层出口过滤
+		callout->classifyFn = LinkOutClassifyFn;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
