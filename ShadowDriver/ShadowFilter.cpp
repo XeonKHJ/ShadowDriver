@@ -93,12 +93,12 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 		{
 		case IpAddrFamily::IPv4:
 		{
-			filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 0;
+			filterLayerAndPathCode = filterLayerAndPathCode + (0 << 1);
 		}
 		break;
 		case IpAddrFamily::IPv6:
 		{
-			filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 1;
+			filterLayerAndPathCode = filterLayerAndPathCode + (1 << 1);
 		}
 		break;
 		}
@@ -108,10 +108,10 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 	switch (currentCondition->FilterPath)
 	{
 	case NetPacketDirection::Out:
-		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 0;
+		filterLayerAndPathCode = filterLayerAndPathCode + (0 << 1);
 		break;
 	case NetPacketDirection::In:
-		filterLayerAndPathCode = (filterLayerAndPathCode << 1) + 1;
+		filterLayerAndPathCode = filterLayerAndPathCode + (1 << 1);
 		break;
 	}
 
@@ -321,7 +321,6 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				case NetLayer::LinkLayer:
 				{
 					// Untested
-					status = STATUS_ABANDONED;
 					switch (currentCondition->AddrLocation)
 					{
 					case AddressLocation::Local:
@@ -332,9 +331,11 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 						break;
 					}
 					currentWpmCondition->conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
-					
-					//currentWpmCondition->conditionValue.byteArray6
-					
+					for (int macAddressIndex = 0; macAddressIndex < 6; ++macAddressIndex)
+					{
+						macAddress.byteArray6[macAddressIndex] = currentCondition->MacAddress[macAddressIndex];
+					}
+					currentWpmCondition->conditionValue.byteArray6 = &macAddress;
 				}
 				break;
 				case NetLayer::NetworkLayer:
