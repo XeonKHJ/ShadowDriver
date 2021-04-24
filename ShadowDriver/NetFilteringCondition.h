@@ -2,32 +2,32 @@
 
 enum NetLayer
 {
-	NetworkLayer,
-	LinkLayer
+	NetworkLayer = 0,
+	LinkLayer = 1
 };
 enum NetPacketDirection
 {
-	In,
-	Out
+	Out = 0,
+	In = 1,
 };
 enum IpAddrFamily
 {
-	IPv4,
-	IPv6
+	IPv4 = 0,
+	IPv6 = 1
 };
 enum AddressLocation
 {
-	Local,
-	Remote
+	Local = 0,
+	Remote = 1
 };
 enum FilterMatchType
 {
-	Equal,
-	Greater,
-	Less,
-	GreaterOrEqual,
-	LessOrEqual,
-	NotEqual
+	Equal = 0,
+	Greater = 1,
+	Less = 2,
+	GreaterOrEqual = 3,
+	LessOrEqual = 4,
+	NotEqual = 5
 };
 
 class NetFilteringCondition

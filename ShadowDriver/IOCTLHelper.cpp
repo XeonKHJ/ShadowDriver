@@ -145,6 +145,12 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 		}
 			break;
+		case IOCTL_SHADOWDRIVER_ADD_CONDITION:
+		{
+			Irp->IoStatus.Status = IoctlAddCondition(Irp, pIoStackIrp);
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+		}
+			break;
 		default:
 			break;
 		}
@@ -312,13 +318,75 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 			condition.MacAddress[3] = 0x00;
 			condition.MacAddress[4] = 0x65;
 			condition.MacAddress[5] = 0x06;
-			Filter->AddFilterCondition(&condition, 1);
+			Filter->AddFilterConditions(&condition, 1);
 		}
 
 		if (NT_SUCCESS(status))
 		{
 			Filter->StartFiltering();
 		}
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	IOCTLHelperContext helperContext;
+	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
+
+	if (helperContext.AppContext.AppId != 0)
+	{
+		IOCTLHelper* selectedHelper = GetHelperByAppId(helperContext.AppContext.AppId);
+		if (selectedHelper != nullptr)
+		{
+			PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+			AppRegisterContext context{};
+			int dataReadSize = sizeof(AppRegisterContext);
+			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+			if (inputBufferLength <= (ULONG)dataReadSize)
+			{
+				int beginIndex = sizeof(int) + 50;
+				NetFilteringCondition condition;
+				condition.FilterLayer = (NetLayer)(*((PCHAR)inputBuffer + beginIndex));
+				condition.MatchType = (FilterMatchType)(*((PCHAR)inputBuffer + beginIndex + sizeof(int)));
+				condition.AddrLocation = (AddressLocation)(*((PCHAR)inputBuffer + beginIndex + 2*sizeof(int)));
+				switch (condition.FilterLayer)
+				{
+				case NetLayer::NetworkLayer:
+					condition.IPAddressType = (IpAddrFamily)(*((PCHAR)inputBuffer + beginIndex + 3 * sizeof(int)));
+					switch (condition.IPAddressType)
+					{
+					case IpAddrFamily::IPv4:
+						// Unimplemented
+						break;
+					case IpAddrFamily::IPv6:
+						// Unimplemented
+						break;
+					}
+					break;
+				case NetLayer::LinkLayer:
+					// Untested
+					for (int i = 0; i < 6; ++i)
+					{
+						int currentIndex = beginIndex + 2 * sizeof(int) + i;
+						condition.MacAddress[i] = ((PCHAR)inputBuffer)[currentIndex];
+					}
+					break;
+				default:
+					break;
+				}
+				Filter->AddFilterConditions(&condition, 1);
+			}
+		}
+		else
+		{
+			status = STATUS_ABANDONED;
+		}
+	}
+	else
+	{
+		status = STATUS_ABANDONED;
 	}
 	return status;
 }

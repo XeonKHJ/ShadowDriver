@@ -27,6 +27,7 @@ private:
 	static NTSTATUS DeregisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static NTSTATUS IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	NTSTATUS InitializeIRPNotificationSystem();
 	IOCTLHelperContext _context;
 };

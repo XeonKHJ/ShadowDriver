@@ -425,7 +425,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 }
 /*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
 
-int ShadowFilter::AddFilterCondition(NetFilteringCondition* conditions, int length)
+int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
 {
 	int statusCode = 0;
 	if (conditions != nullptr && length != 0)
@@ -485,7 +485,6 @@ int ShadowFilter::StartFiltering()
 		{
 			shadowFilterContext->IsFilteringStarted = TRUE;
 		}
-		
 	}
 	return status;
 }
