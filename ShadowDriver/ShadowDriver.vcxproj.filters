@@ -43,7 +43,7 @@
     <ClInclude Include="Trace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WfpHelper.h">
+    <ClInclude Include="PacketHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShadowUtilities.h">
@@ -87,7 +87,7 @@
     <ClCompile Include="Queue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WfpHelper.cpp">
+    <ClCompile Include="PacketHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ShadowUtilities.cpp">

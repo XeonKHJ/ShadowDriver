@@ -13,8 +13,8 @@ public:
 	~IOCTLHelper();
 	static void InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject);
 	static int _helperCount;
-	static ShadowFilter* Filter;
 	static NTSTATUS NotifyUserApp(void* buffer, size_t size);
+	static void SetDeviceObject(PDEVICE_OBJECT deviceObject);
 private:
 	static void AddHelper(IOCTLHelper * helper);
 	static void RemoveHelper(IOCTLHelper* helper);
@@ -28,6 +28,7 @@ private:
 	static NTSTATUS GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static PDEVICE_OBJECT _deviceObject;
 	NTSTATUS InitializeIRPNotificationSystem();
 	IOCTLHelperContext _context;
 };

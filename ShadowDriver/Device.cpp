@@ -16,8 +16,8 @@ Environment:
 
 #include "driver.h"
 #include "device.tmh"
-#include "WfpHelper.h"
 #include "ShadowFilter.h"
+#include "IOCTLHelper.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
@@ -119,7 +119,8 @@ Return Value:
         PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
 
         //初始化Windows筛选平台
-        status = InitializeWfp(deviceObject);
+        IOCTLHelper::SetDeviceObject(deviceObject);
+        //status = InitializeWfp(deviceObject);
     }
 
     return status;

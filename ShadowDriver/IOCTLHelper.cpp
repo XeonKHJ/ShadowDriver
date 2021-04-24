@@ -1,10 +1,12 @@
 #include "IOCTLHelper.h"
 #include "ShadowFilterWindowsSpecific.h"
 #include "CancelSafeQueueCallouts.h"
+#include "PacketHelper.h"
 
 int IOCTLHelper::_helperCount = 0;
 IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
-ShadowFilter* IOCTLHelper::Filter;
+PDEVICE_OBJECT IOCTLHelper::_deviceObject;
+
 IOCTLHelper::IOCTLHelper(IOCTLHelperContext context)
 {
 	_context = context;
@@ -39,6 +41,11 @@ NTSTATUS IOCTLHelper::NotifyUserApp(void* buffer, size_t size)
 	} while (currentEntry != &_helperListHeader);
 
 	return status;
+}
+
+void IOCTLHelper::SetDeviceObject(PDEVICE_OBJECT deviceObject)
+{
+	IOCTLHelper::_deviceObject = deviceObject;
 }
 
 void IOCTLHelper::AddHelper(IOCTLHelper* helper)
@@ -289,7 +296,10 @@ NTSTATUS IOCTLHelper::GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLo
 NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	if (Filter != nullptr)
+	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
+	IOCTLHelper* helper = GetHelperByAppId(context.AppId);
+	auto filter = helper->_context.Filter;
+	if (filter != nullptr)
 	{
 		if (NT_SUCCESS(status))
 		{
@@ -318,12 +328,12 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 			condition.MacAddress[3] = 0x00;
 			condition.MacAddress[4] = 0x65;
 			condition.MacAddress[5] = 0x06;
-			Filter->AddFilterConditions(&condition, 1);
+			filter->AddFilterConditions(&condition, 1);
 		}
 
 		if (NT_SUCCESS(status))
 		{
-			Filter->StartFiltering();
+			filter->StartFiltering();
 		}
 	}
 	return status;
@@ -338,6 +348,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 	if (helperContext.AppContext.AppId != 0)
 	{
 		IOCTLHelper* selectedHelper = GetHelperByAppId(helperContext.AppContext.AppId);
+		auto filter = selectedHelper->_context.Filter;
 		if (selectedHelper != nullptr)
 		{
 			PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
@@ -376,7 +387,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				default:
 					break;
 				}
-				Filter->AddFilterConditions(&condition, 1);
+				filter->AddFilterConditions(&condition, 1);
 			}
 		}
 		else
@@ -399,10 +410,15 @@ NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioSt
 	
 	if (helperContext.AppContext.AppId != 0)
 	{
+		//检查该应用是否已经注册过
 		IOCTLHelper * checkHelper = GetHelperByAppId(helperContext.AppContext.AppId);
 		if (checkHelper == nullptr)
 		{
 			auto ioctlHelper = new IOCTLHelper(helperContext);
+			ShadowFilterContext* sfContext = new ShadowFilterContext();
+			sfContext->DeviceObject = _deviceObject;
+			sfContext->NetPacketFilteringCallout = FilterFunc;
+			auto shadowFilter = new ShadowFilter(sfContext);
 			AddHelper(ioctlHelper);
 		}
 		else
