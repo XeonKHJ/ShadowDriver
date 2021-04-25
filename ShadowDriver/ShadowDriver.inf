@@ -10,6 +10,9 @@ Provider=%ManufacturerName%
 CatalogFile=ShadowDriver.cat
 DriverVer= ; TODO: set DriverVer in stampinf property pages
 
+;To shut up the annoying 1324 warning.
+PnpLockdown=1
+
 [DestinationDirs]
 DefaultDestDir = 12
 ShadowDriver_Device_CoInstaller_CopyFiles = 11
