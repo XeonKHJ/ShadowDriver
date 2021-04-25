@@ -38,13 +38,13 @@ public:
 	IpAddrFamily IPAddressType;
 	union
 	{
-		unsigned int IPv4;
-		unsigned long long IPv6Addr;
+		unsigned int IPv4Address;
+		unsigned char IPv6Address[16];
 	};
 	union
 	{
 		unsigned int IPv4Mask;
-		unsigned long long IPv6Mask;
+		unsigned char IPv6Mask[16];
 	};
 	char MacAddress[6];
 	AddressLocation AddrLocation;

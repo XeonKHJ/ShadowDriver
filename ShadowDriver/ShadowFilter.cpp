@@ -54,11 +54,13 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 
 ShadowFilter::~ShadowFilter()
 {
-	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
+	auto context = (ShadowFilterContext*)_context;
+	if (context->IsFilteringStarted)
+	{
+		StopFiltering();
+	}
 
-	StopFiltering();
-
-	//删除动态分配的内存区域
+	// Delete filtering conditions.
 	delete[] _filteringConditions;
 }
 
@@ -226,8 +228,6 @@ NTSTATUS AddCalloutToWfpAcrrodingToCode(ShadowFilterContext* context, UINT8 curr
 NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	UINT64 filterIds[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
-	GUID* filterCalloutGuid[ShadowFilterContext::FilterIdMaxNumber];
 	if (conditions != nullptr && length != 0 && context != nullptr)
 	{
 		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
@@ -320,7 +320,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 					case IpAddrFamily::IPv4:
 					{
 						(currentWpmCondition->conditionValue).type = FWP_V4_ADDR_MASK;
-						v4AddrAndMask.addr = currentCondition->IPv4;
+						v4AddrAndMask.addr = currentCondition->IPv4Address;
 						v4AddrAndMask.mask = currentCondition->IPv4Mask;
 						currentWpmCondition->conditionValue.v4AddrMask = &v4AddrAndMask;
 					}
@@ -367,7 +367,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
 
 				//一下这个status需要被验证
-				status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(filterIds[currentCode]));
+				status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(context->FilterIds[currentCode]));
 			}
 		}
 
@@ -427,27 +427,33 @@ int ShadowFilter::StartFiltering()
 
 	if (!shadowFilterContext->IsFilteringStarted)
 	{
-		if (NT_SUCCESS(status))
+		if (_conditionCount != 0 && _filteringConditions != nullptr)
 		{
-			status = InitializeWfpEngine(shadowFilterContext);
-		}
-
-		if (NT_SUCCESS(status))
-		{
-			status = InitializeSublayer(shadowFilterContext);
-		}
-
-		if (NT_SUCCESS(status))
-		{
-			if (_conditionCount != 0 && _filteringConditions != nullptr)
+			if (NT_SUCCESS(status))
 			{
+				status = InitializeWfpEngine(shadowFilterContext);
+			}
+
+			if (NT_SUCCESS(status))
+			{
+				status = InitializeSublayer(shadowFilterContext);
+			}
+
+			if (NT_SUCCESS(status))
+			{
+
 				status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
+
+			}
+
+			if (NT_SUCCESS(status))
+			{
+				shadowFilterContext->IsFilteringStarted = TRUE;
 			}
 		}
-
-		if (NT_SUCCESS(status))
+		else
 		{
-			shadowFilterContext->IsFilteringStarted = TRUE;
+			status = STATUS_BUFFER_TOO_SMALL;
 		}
 	}
 	return status;
@@ -468,16 +474,26 @@ int ShadowFilter::StopFiltering()
 	{
 		if (shadowFilterContext->FilterIds[currentCode] != NULL)
 		{
-			//这个状态要检查
+			//Delete FWPM_FILTERs.
 			status = FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
+
+			//Delete FWPM_CALLOUTs.
 			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
 			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
+
+			//Delete FWPS_CALLOUTs.
 			status = FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
 			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
 		}
 	}
+
+	// Delete FWPM_SUBLAYER.
 	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &(shadowFilterContext->SublayerGuid));
+
+	// Close FWPM_ENGINE session.
 	status = FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+	shadowFilterContext->WfpEngineHandle = NULL;
+
 	shadowFilterContext->IsFilteringStarted = false;
 	return status;
 }

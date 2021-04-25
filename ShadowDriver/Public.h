@@ -38,8 +38,8 @@ DEFINE_GUID (GUID_DEVINTERFACE_ShadowDriver,
 #define IOCTL_SHADOWDRIVER_GET_DRIVER_VERSION           CTL_CODE(FILE_DEVICE_NETWORK, 0x922, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_SHADOWDRIVER_ADD_CONDITION                CTL_CODE(FILE_DEVICE_NETWORK, 0x924, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-const static int AppRegisterContextMaxSize = sizeof(int) + sizeof(WCHAR) * 20;
 const static int StatusSize = sizeof(int);
+const static int AppRegisterContextMaxSize = StatusSize + sizeof(WCHAR) * 20;
 struct AppRegisterContext
 {
     int AppId;

@@ -15,7 +15,7 @@ IOCTLHelper::IOCTLHelper(IOCTLHelperContext context)
 
 IOCTLHelper::~IOCTLHelper()
 {
-	// Delete context;
+	CancelAllPendingNotifyIoctls();
 }
 
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
@@ -68,10 +68,16 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
 		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
 
+		// Delete IOCTLHelper instance.
 		if (currentEntry->Helper == helper)
 		{
-			RemoveEntryList(listEntry);
+			// Delete helper instance.
 			delete helper;
+
+			// Remove helper instance from list.
+			RemoveEntryList(listEntry);
+
+			// Delete link list entry that containts deleted helper instance.
 			delete currentEntry;
 			break;
 		}
@@ -195,7 +201,7 @@ AppRegisterContext IOCTLHelper::GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCAT
 	if (inputBufferLength >= (ULONG)dataReadSize)
 	{
 		context.AppId = *((int*)(inputBuffer));
-		auto nameLength = inputBufferLength - sizeof(int);
+		auto nameLength = AppRegisterContextMaxSize - StatusSize;
 		void* nameBuffer = (void*)((char*)inputBuffer + sizeof(int));
 		RtlCopyMemory(context.AppName, nameBuffer, nameLength);
 	}
@@ -208,7 +214,7 @@ int IOCTLHelper::GetAppIdFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
 	int dataReadSize = sizeof(int);
 	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-	if (inputBufferLength <= (ULONG)dataReadSize)
+	if (inputBufferLength >= (ULONG)dataReadSize)
 	{
 		result = *((int*)(inputBuffer));
 	}
@@ -275,6 +281,20 @@ NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
 	return status;
 }
 
+void IOCTLHelper::CancelAllPendingNotifyIoctls()
+{
+	// Initialize spin lock was define as a value not a reference, no need to delete it on purpose.
+	// Csq is also the same.
+	// But link list for queueing IOCTL needs to be deleted manually.
+	auto currentEntry = _context.IrpLinkHeadEntry.ListEntry.Flink;
+	while(!IsListEmpty(&(_context.IrpLinkHeadEntry.ListEntry)))
+	{
+		IRP_LINK_ENTRY* irpEntry = CONTAINING_RECORD(currentEntry, IRP_LINK_ENTRY, ListEntry);
+		auto cancelResult = IoCancelIrp(irpEntry->Irp);
+		currentEntry = currentEntry->Flink;
+	}
+}
+
 NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -285,7 +305,17 @@ NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 		IOCTLHelper* selectedHelper = GetHelperByAppId(appId);
 		if (selectedHelper != nullptr)
 		{
+			auto filter = selectedHelper->_context.Filter;
+			auto filterContext = selectedHelper->_context.FilterContext;
+
+			// Delete helper.
 			RemoveHelper(selectedHelper);
+
+			//Delete ShadowFilter instance;
+			delete selectedHelper->_context.Filter;
+
+			//Delete ShadowFilterContext instance.
+			delete selectedHelper->_context.FilterContext;
 		}
 		else
 		{
@@ -303,8 +333,8 @@ NTSTATUS IOCTLHelper::IoctlGetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioSt
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	int count = 0;;
-	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
-	IOCTLHelper* helper = GetHelperByAppId(context.AppId);
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+	IOCTLHelper* helper = GetHelperByAppId(appId);
 	if (helper != nullptr)
 	{
 		IRP_LINK_ENTRY* linkHeadEntry = &(helper->_context.IrpLinkHeadEntry);
@@ -324,45 +354,50 @@ NTSTATUS IOCTLHelper::IoctlGetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioSt
 NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
-	IOCTLHelper* helper = GetHelperByAppId(context.AppId);
-	auto filter = helper->_context.Filter;
-	if (filter != nullptr)
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+	IOCTLHelper* helper = GetHelperByAppId(appId);
+	if (helper != nullptr)
 	{
-		if (NT_SUCCESS(status))
+		auto filter = helper->_context.Filter;
+		if (filter != nullptr)
 		{
-			//NetFilteringCondition condition = NetFilteringCondition();
-			//condition.AddrLocation = AddressLocation::Remote;
-			//condition.FilterLayer = NetLayer::NetworkLayer;
-			//condition.FilterPath = NetPacketDirection::Out;
-			//condition.IPAddressType = IpAddrFamily::IPv4;
-			//condition.IPv4 = 0xC0A80168;
-			//condition.IPv4Mask = 0xFFFFFFFF;
-			//condition.MatchType = FilterMatchType::Equal;
-			//Filter->AddFilterCondition(&condition, 1);
+			if (NT_SUCCESS(status))
+			{
+				//NetFilteringCondition condition = NetFilteringCondition();
+				//condition.AddrLocation = AddressLocation::Remote;
+				//condition.FilterLayer = NetLayer::NetworkLayer;
+				//condition.FilterPath = NetPacketDirection::Out;
+				//condition.IPAddressType = IpAddrFamily::IPv4;
+				//condition.IPv4 = 0xC0A80168;
+				//condition.IPv4Mask = 0xFFFFFFFF;
+				//condition.MatchType = FilterMatchType::Equal;
+				//Filter->AddFilterCondition(&condition, 1);
 
-			NetFilteringCondition condition = NetFilteringCondition();
-			condition.AddrLocation = AddressLocation::Local;
-			condition.FilterLayer = NetLayer::LinkLayer;
-			condition.FilterPath = NetPacketDirection::Out;
-			//condition.IPAddressType = IpAddrFamily::;
-			//condition.IPv4 = 0xC0A80168;
-			//condition.IPv4Mask = 0xFFFFFFFF;
-			condition.IPv6Addr;
-			condition.MatchType = FilterMatchType::Equal;
-			condition.MacAddress[0] = 0x00;
-			condition.MacAddress[1] = 0x15;
-			condition.MacAddress[2] = 0x5D;
-			condition.MacAddress[3] = 0x00;
-			condition.MacAddress[4] = 0x65;
-			condition.MacAddress[5] = 0x06;
-			filter->AddFilterConditions(&condition, 1);
-		}
+				//NetFilteringCondition condition = NetFilteringCondition();
+				//condition.AddrLocation = AddressLocation::Local;
+				//condition.FilterLayer = NetLayer::LinkLayer;
+				//condition.FilterPath = NetPacketDirection::Out;
+				//condition.MatchType = FilterMatchType::Equal;
+				//condition.MacAddress[0] = 0x00;
+				//condition.MacAddress[1] = 0x15;
+				//condition.MacAddress[2] = 0x5D;
+				//condition.MacAddress[3] = 0x00;
+				//condition.MacAddress[4] = 0x65;
+				//condition.MacAddress[5] = 0x06;
+				
+				//filter->AddFilterConditions(&condition, 1);
+			}
 
-		if (NT_SUCCESS(status))
-		{
-			filter->StartFiltering();
+			if (NT_SUCCESS(status))
+			{
+				filter->StartFiltering();
+			}
 		}
+	}
+	else
+	{
+		//Unregsitered app trying to start filtering.
+		status = STATUS_BAD_DATA;
 	}
 	return status;
 }
@@ -370,13 +405,16 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 NTSTATUS IOCTLHelper::IoctlStopFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
-	IOCTLHelper * helper = GetHelperByAppId(context.AppId);
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+	IOCTLHelper * helper = GetHelperByAppId(appId);
 	ShadowFilter * filter = helper->_context.Filter;
 	if (filter != nullptr)
 	{
 		if (NT_SUCCESS(status))
 		{
+			// Cancel all pending notification IOCTLs.
+			helper->CancelAllPendingNotifyIoctls();
+
 			filter->StopFiltering();
 		}
 	}
@@ -386,47 +424,60 @@ NTSTATUS IOCTLHelper::IoctlStopFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	IOCTLHelperContext helperContext;
-	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
 
-	if (helperContext.AppContext.AppId != 0)
+	if (appId != 0)
 	{
-		IOCTLHelper* selectedHelper = GetHelperByAppId(helperContext.AppContext.AppId);
-		auto filter = selectedHelper->_context.Filter;
+		IOCTLHelper* selectedHelper = GetHelperByAppId(appId);
+		
 		if (selectedHelper != nullptr)
 		{
+			auto filter = selectedHelper->_context.Filter;
 			PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
 			AppRegisterContext context{};
-			int dataReadSize = sizeof(AppRegisterContext);
+			const int i = sizeof(unsigned long long);
+			//最长的情况是16位的IPv6 + 16位的IPv6掩码
+			int dataReadSize = 6 * sizeof(int) + 16 + 16;
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-			if (inputBufferLength <= (ULONG)dataReadSize)
+			if (inputBufferLength >= (ULONG)dataReadSize)
 			{
-				int beginIndex = sizeof(int) + 50;
 				NetFilteringCondition condition;
-				condition.FilterLayer = (NetLayer)(*((PCHAR)inputBuffer + beginIndex));
-				condition.MatchType = (FilterMatchType)(*((PCHAR)inputBuffer + beginIndex + sizeof(int)));
-				condition.AddrLocation = (AddressLocation)(*((PCHAR)inputBuffer + beginIndex + 2 * sizeof(int)));
+				PCHAR inputBufferBytes = (PCHAR)inputBuffer;
+				int currentIndex = StatusSize;
+				inputBufferBytes += currentIndex;
+				condition.FilterLayer = (NetLayer)(*(int*)inputBufferBytes);
+				inputBufferBytes += sizeof(int);
+				condition.MatchType = (FilterMatchType)(*(int*)inputBufferBytes);
+				inputBufferBytes += sizeof(int);
+				condition.AddrLocation = (AddressLocation)(*(int *)inputBufferBytes);
+				inputBufferBytes += sizeof(int);
+				condition.FilterPath = (NetPacketDirection)(*(int*)inputBufferBytes);
+				inputBufferBytes += sizeof(int);
+				condition.IPAddressType = (IpAddrFamily)(*(int*)inputBufferBytes);
+				inputBufferBytes += sizeof(int);
 				switch (condition.FilterLayer)
 				{
 				case NetLayer::NetworkLayer:
-					condition.IPAddressType = (IpAddrFamily)(*((PCHAR)inputBuffer + beginIndex + 3 * sizeof(int)));
 					switch (condition.IPAddressType)
 					{
 					case IpAddrFamily::IPv4:
-						// Unimplemented
+						condition.IPv4Address = *((unsigned int*)(inputBufferBytes));
+						inputBufferBytes += sizeof(unsigned int);
+						condition.IPv4Mask = *((unsigned int*)(inputBufferBytes));
+						inputBufferBytes += sizeof(unsigned int);
 						break;
 					case IpAddrFamily::IPv6:
-						// Unimplemented
+						RtlCopyMemory(condition.IPv6Address, inputBufferBytes, 16);
+						inputBufferBytes += 16;
+						RtlCopyMemory(condition.IPv6Mask, inputBufferBytes, 16);
+						inputBufferBytes += 16;
 						break;
 					}
 					break;
 				case NetLayer::LinkLayer:
 					// Untested
-					for (int i = 0; i < 6; ++i)
-					{
-						int currentIndex = beginIndex + 2 * sizeof(int) + i;
-						condition.MacAddress[i] = ((PCHAR)inputBuffer)[currentIndex];
-					}
+					RtlCopyMemory(condition.MacAddress, inputBufferBytes, 6);
+					inputBufferBytes += 6;
 					break;
 				default:
 					break;
@@ -471,17 +522,18 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			{
 				auto beginIndex = sizeof(int) + 40;
 
-				sfContext->SublayerGuid = *((PGUID)((PCHAR)inputBuffer)[beginIndex]);
+				sfContext->SublayerGuid = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex]));
 				beginIndex += 16;
-				sfContext->CalloutGuids[0] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 0]);
-				sfContext->CalloutGuids[1] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16]);
-				sfContext->CalloutGuids[2] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 2]);
-				sfContext->CalloutGuids[3] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 3]);
-				sfContext->CalloutGuids[4] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 4]);
-				sfContext->CalloutGuids[6] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 5]);
+				sfContext->CalloutGuids[0] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 0]));
+				sfContext->CalloutGuids[1] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 16]));
+				sfContext->CalloutGuids[2] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 16 * 2]));
+				sfContext->CalloutGuids[3] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 16 * 3]));
+				sfContext->CalloutGuids[4] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 16 * 4]));
+				sfContext->CalloutGuids[6] = *((PGUID)(&((PCHAR)inputBuffer)[beginIndex + 16 * 5]));
 			}
 			auto shadowFilter = new ShadowFilter(sfContext);
 			helperContext.Filter = shadowFilter;
+			helperContext.FilterContext = sfContext;
 			auto ioctlHelper = new IOCTLHelper(helperContext);
 			AddHelper(ioctlHelper);
 		}

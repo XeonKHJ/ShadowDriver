@@ -59,6 +59,7 @@ private:
 
 	static PDEVICE_OBJECT _deviceObject;
 	NTSTATUS InitializeIRPNotificationSystem();
+	void CancelAllPendingNotifyIoctls();
 	IOCTLHelperContext _context;
 };
 
