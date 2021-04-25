@@ -15,7 +15,7 @@ IOCTLHelper::IOCTLHelper(IOCTLHelperContext context)
 
 IOCTLHelper::~IOCTLHelper()
 {
-	
+	// Delete context;
 }
 
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
@@ -27,13 +27,13 @@ void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObjec
 NTSTATUS IOCTLHelper::NotifyUserApp(void* buffer, size_t size)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	
+
 	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
 	do
 	{
 		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
 		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
-		
+
 		if (currentEntry->Helper != nullptr)
 		{
 			NotifyUserByDequeuingIoctl(&currentEntry->Helper->_context, buffer, size);
@@ -82,11 +82,11 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 {
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "ShadowDriver_IRP_IoControl\n");
 	NTSTATUS status = STATUS_SUCCESS;
-	unsigned int dwDataWritten = 0;
 	//取出IRP
 	PIO_STACK_LOCATION pIoStackIrp = IoGetCurrentIrpStackLocation(Irp);
 	if (pIoStackIrp)
 	{
+		Irp->IoStatus.Information = 0;
 		ULONG ioControlCode = pIoStackIrp->Parameters.DeviceIoControl.IoControlCode;
 		switch (ioControlCode)
 		{
@@ -94,16 +94,23 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 #ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
 #endif
-			Irp->IoStatus.Status = RegisterAppForIOCTLCalls(Irp, pIoStackIrp);
+			status = IoctlRegisterApp(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 		case IOCTL_SHADOWDRIVER_APP_DEREGISTER:
-			Irp->IoStatus.Status = DeregisterAppForIOCTLCalls(Irp, pIoStackIrp);
+			status = IoctlDeregisterApp(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 		case IOCTL_SHADOWDRIVER_START_FILTERING:
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
-			IoctlStartFiltering(Irp, pIoStackIrp);
+#endif
+			status = IoctlStartFiltering(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
@@ -116,11 +123,14 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO_WTF\n");
 #endif
 			{
-				AppRegisterContext appContext = GetAppContextFromIoctl(Irp, pIoStackIrp);
+				//Complete manually dequeue request IOCTL.
+				int appId = GetAppIdFromIoctl(Irp, pIoStackIrp);
+				WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 				Irp->IoStatus.Status = status;
-				Irp->IoStatus.Information = dwDataWritten;
 				IoCompleteRequest(Irp, IO_NO_INCREMENT);
-				IOCTLHelper* helper = GetHelperByAppId(appContext.AppId);
+
+				//Dequeue an notificaton IOCTL.
+				IOCTLHelper* helper = GetHelperByAppId(appId);
 				NotifyUserByDequeuingIoctl(&helper->_context, NULL, 0);
 			}
 			break;
@@ -129,15 +139,17 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION\n");
 #endif
 			{
-				AppRegisterContext appContext = GetAppContextFromIoctl(Irp, pIoStackIrp);
-				IOCTLHelper* helper = GetHelperByAppId(appContext.AppId);
+				int appId = GetAppIdFromIoctl(Irp, pIoStackIrp);
+				IOCTLHelper* helper = GetHelperByAppId(appId);
 				if (helper != nullptr)
 				{
 					status = IoCsqInsertIrpEx(&(helper->_context.IoCsq), Irp, NULL, NULL);
 				}
 				else
 				{
-					Irp->IoStatus.Status = STATUS_BUFFER_ALL_ZEROS;
+					status = STATUS_BUFFER_ALL_ZEROS;
+					WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+					Irp->IoStatus.Status = status;
 					IoCompleteRequest(Irp, IO_NO_INCREMENT);
 				}
 			}
@@ -148,15 +160,24 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			break;
 		case IOCTL_SHADOWDRIVER_GET_QUEUE_INFO:
 		{
-			Irp->IoStatus.Status = GetQueuedIoctlCount(Irp, pIoStackIrp);
+			status = IoctlGetQueuedIoctlCount(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 		}
-			break;
+		break;
 		case IOCTL_SHADOWDRIVER_ADD_CONDITION:
 		{
-			Irp->IoStatus.Status = IoctlAddCondition(Irp, pIoStackIrp);
+			status = IoctlAddCondition(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 		}
+		break;
+		case IOCTL_SHADOWDRIVER_STOP_FILTERING:
+			status = IoctlStopFiltering(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
 			break;
 		default:
 			break;
@@ -169,9 +190,9 @@ AppRegisterContext IOCTLHelper::GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCAT
 {
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
 	AppRegisterContext context{};
-	int dataReadSize = sizeof(AppRegisterContext);
+	int dataReadSize = AppRegisterContextMaxSize;
 	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-	if (inputBufferLength <= (ULONG)dataReadSize)
+	if (inputBufferLength >= (ULONG)dataReadSize)
 	{
 		context.AppId = *((int*)(inputBuffer));
 		auto nameLength = inputBufferLength - sizeof(int);
@@ -181,10 +202,23 @@ AppRegisterContext IOCTLHelper::GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCAT
 	return context;
 }
 
+int IOCTLHelper::GetAppIdFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	int result = 0;
+	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+	int dataReadSize = sizeof(int);
+	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+	if (inputBufferLength <= (ULONG)dataReadSize)
+	{
+		result = *((int*)(inputBuffer));
+	}
+	return result;
+}
+
 IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 {
 	IOCTLHelper* result = nullptr;
-	IOCTLHelperLinkEntry * currentEntry = &_helperListHeader;
+	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
 	do
 	{
 		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
@@ -202,8 +236,9 @@ IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 	return result;
 }
 
-void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context, void * outputBuffer, size_t outputLength)
+void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext* context, void* outputBuffer, size_t outputLength)
 {
+	NTSTATUS status = STATUS_SUCCESS;
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "NotifyUserByDequeuingIoctl\n");
 	PIRP dequeuedIrp = IoCsqRemoveNextIrp(&(context->IoCsq), NULL);
 	if (dequeuedIrp != NULL)
@@ -212,16 +247,14 @@ void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context, void 
 		auto outputBufferLength = dispatchedStackIrp->Parameters.DeviceIoControl.OutputBufferLength;
 		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION)
 		{
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Dequeue a irp\n");
+#endif
 		}
-		if (outputBuffer != nullptr && outputLength > 0 && outputBufferLength >= outputLength)
-		{
-			void* systemBuffer = dequeuedIrp->AssociatedIrp.SystemBuffer;
-			RtlCopyMemory(systemBuffer, outputBuffer, outputLength);
-			dequeuedIrp->IoStatus.Information = outputLength;
-		}
-		
-		dequeuedIrp->IoStatus.Status = STATUS_SUCCESS;
+		status = WriteDataToIrpOutputBuffer(outputBuffer, outputLength, dequeuedIrp, dispatchedStackIrp);
+		WriteStatusToOutputBuffer(&status, dequeuedIrp, dispatchedStackIrp);
+
+		dequeuedIrp->IoStatus.Status = status;
 		IoCompleteRequest(dequeuedIrp, IO_NO_INCREMENT);
 	}
 }
@@ -229,7 +262,8 @@ void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext * context, void 
 NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	//初始化自旋锁，用来给IRP队列上锁
+
+	// Initialize spin lock. This lock will be used on cancel-safe queue that manages the notification ioctls.
 	KeInitializeSpinLock(&(_context.SpinLock));
 	//初始化IRP取消安全队列数据结构
 	status = IoCsqInitializeEx(&(_context.IoCsq), CsqInsertIrpEx, CsqRemoveIrp, CsqPeekNextIrp, CsqAcquireLock, CsqReleaseLock, CsqCompleteCanceledIrp);
@@ -241,15 +275,14 @@ NTSTATUS IOCTLHelper::InitializeIRPNotificationSystem()
 	return status;
 }
 
-NTSTATUS IOCTLHelper::DeregisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	IOCTLHelperContext helperContext;
-	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
+	auto appId = GetAppIdFromIoctl(irp, ioStackLocation);
 
-	if (helperContext.AppContext.AppId != 0)
+	if (appId != 0)
 	{
-		IOCTLHelper* selectedHelper = GetHelperByAppId(helperContext.AppContext.AppId);
+		IOCTLHelper* selectedHelper = GetHelperByAppId(appId);
 		if (selectedHelper != nullptr)
 		{
 			RemoveHelper(selectedHelper);
@@ -266,12 +299,12 @@ NTSTATUS IOCTLHelper::DeregisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION io
 	return status;
 }
 
-NTSTATUS IOCTLHelper::GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+NTSTATUS IOCTLHelper::IoctlGetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	int count = 0;;
 	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
-	IOCTLHelper * helper = GetHelperByAppId(context.AppId);
+	IOCTLHelper* helper = GetHelperByAppId(context.AppId);
 	if (helper != nullptr)
 	{
 		IRP_LINK_ENTRY* linkHeadEntry = &(helper->_context.IrpLinkHeadEntry);
@@ -280,16 +313,11 @@ NTSTATUS IOCTLHelper::GetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioStackLo
 		{
 			++count;
 			currentEntry = currentEntry->Flink;
-		} 
+		}
 	}
-	
-	PVOID outputBuffer = irp->AssociatedIrp.SystemBuffer;
-	auto outputBufferLength = ioStackLocation->Parameters.DeviceIoControl.OutputBufferLength;
-	if (outputBufferLength >= sizeof(int))
-	{
-		RtlCopyMemory(outputBuffer, &count, sizeof(int));
-		irp->IoStatus.Information = sizeof(int);
-	}
+
+	status = WriteDataToIrpOutputBuffer(&count, sizeof(count), irp, ioStackLocation);
+
 	return status;
 }
 
@@ -339,6 +367,22 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 	return status;
 }
 
+NTSTATUS IOCTLHelper::IoctlStopFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	AppRegisterContext context = GetAppContextFromIoctl(irp, ioStackLocation);
+	IOCTLHelper * helper = GetHelperByAppId(context.AppId);
+	ShadowFilter * filter = helper->_context.Filter;
+	if (filter != nullptr)
+	{
+		if (NT_SUCCESS(status))
+		{
+			filter->StopFiltering();
+		}
+	}
+	return status;
+}
+
 NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -361,7 +405,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				NetFilteringCondition condition;
 				condition.FilterLayer = (NetLayer)(*((PCHAR)inputBuffer + beginIndex));
 				condition.MatchType = (FilterMatchType)(*((PCHAR)inputBuffer + beginIndex + sizeof(int)));
-				condition.AddrLocation = (AddressLocation)(*((PCHAR)inputBuffer + beginIndex + 2*sizeof(int)));
+				condition.AddrLocation = (AddressLocation)(*((PCHAR)inputBuffer + beginIndex + 2 * sizeof(int)));
 				switch (condition.FilterLayer)
 				{
 				case NetLayer::NetworkLayer:
@@ -402,23 +446,43 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 	return status;
 }
 
-NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	IOCTLHelperContext helperContext;
 	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
-	
+	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+
+	// Make sure that app id is not zero and output buffer size is enought for status to fit in.
 	if (helperContext.AppContext.AppId != 0)
 	{
 		//检查该应用是否已经注册过
-		IOCTLHelper * checkHelper = GetHelperByAppId(helperContext.AppContext.AppId);
+		IOCTLHelper* checkHelper = GetHelperByAppId(helperContext.AppContext.AppId);
 		if (checkHelper == nullptr)
 		{
-			auto ioctlHelper = new IOCTLHelper(helperContext);
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
 			sfContext->NetPacketFilteringCallout = FilterFunc;
+			auto guidSize = sizeof(GUID);
+
+			//Set up guids
+			if (inputBufferLength >= sizeof(int) + 40 + 16 + 16 * 5)
+			{
+				auto beginIndex = sizeof(int) + 40;
+
+				sfContext->SublayerGuid = *((PGUID)((PCHAR)inputBuffer)[beginIndex]);
+				beginIndex += 16;
+				sfContext->CalloutGuids[0] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 0]);
+				sfContext->CalloutGuids[1] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16]);
+				sfContext->CalloutGuids[2] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 2]);
+				sfContext->CalloutGuids[3] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 3]);
+				sfContext->CalloutGuids[4] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 4]);
+				sfContext->CalloutGuids[6] = *((PGUID)((PCHAR)inputBuffer)[beginIndex + 16 * 5]);
+			}
 			auto shadowFilter = new ShadowFilter(sfContext);
+			helperContext.Filter = shadowFilter;
+			auto ioctlHelper = new IOCTLHelper(helperContext);
 			AddHelper(ioctlHelper);
 		}
 		else
@@ -430,5 +494,48 @@ NTSTATUS IOCTLHelper::RegisterAppForIOCTLCalls(PIRP irp, PIO_STACK_LOCATION ioSt
 	{
 		status = STATUS_ABANDONED;
 	}
+
 	return status;
+}
+
+NTSTATUS IOCTLHelper::WriteDataToIrpOutputBuffer(PVOID bufferToWrite, SIZE_T bufferSize, PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	auto outputBufferLength = ioStackLocation->Parameters.DeviceIoControl.OutputBufferLength;
+	PVOID outputBuffer = irp->AssociatedIrp.SystemBuffer;
+	if (outputBuffer != nullptr && bufferToWrite != nullptr && bufferSize > 0 && outputBufferLength >= (bufferSize + StatusSize))
+	{
+		void* systemBuffer = irp->AssociatedIrp.SystemBuffer;
+		void* startPosBuffer = (void*)(((char*)systemBuffer) + StatusSize);
+		RtlCopyMemory(startPosBuffer, bufferToWrite, bufferSize);
+		irp->IoStatus.Information += bufferSize;
+	}
+	else
+	{
+		status = STATUS_BUFFER_TOO_SMALL;
+	}
+
+	return status;
+}
+
+void* IOCTLHelper::WriteStatusToOutputBuffer(NTSTATUS* pStatus, PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	void* result = nullptr;
+	auto outputBufferLength = ioStackLocation->Parameters.DeviceIoControl.OutputBufferLength;
+	PVOID outputBuffer = irp->AssociatedIrp.SystemBuffer;
+	auto remainSize = outputBufferLength - irp->IoStatus.Information;
+	int status = *pStatus;
+	if (remainSize >= sizeof(status))
+	{
+		*((int*)outputBuffer) = status;
+		irp->IoStatus.Information += sizeof(status);
+
+		result = (PVOID)(((PCHAR)outputBuffer) + sizeof(status));
+	}
+	else
+	{
+		*pStatus = STATUS_BUFFER_TOO_SMALL;
+	}
+
+	return result;
 }

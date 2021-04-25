@@ -11,7 +11,7 @@ public:
 	static const int FilterIdMaxNumber = 8;
 	PDEVICE_OBJECT DeviceObject;
 	GUID SublayerGuid;
-	GUID CalloutGuid[8];
+	GUID CalloutGuids[8];
 	HANDLE WfpEngineHandle;
 	HANDLE SendInjectHandle;
 	HANDLE ReceiveInjectHandle;

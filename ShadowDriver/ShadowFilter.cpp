@@ -23,7 +23,7 @@ NTSTATUS InitializeSublayer(ShadowFilterContext* context)
 	FWPM_SUBLAYER0 sublayer = { 0 };
 	sublayer.displayData.name = L"ShadowDriverFilterSublayer";
 	sublayer.displayData.description = L"ShadowDriver Sublayer";
-	sublayer.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
+	sublayer.subLayerKey = context->SublayerGuid;
 	sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
 	status = FwpmSubLayerAdd0(context->WfpEngineHandle, &sublayer, NULL);
 	return status;
@@ -118,42 +118,6 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 	return filterLayerAndPathCode;
 }
 
-inline GUID GetFilterCalloutGuid(UINT8 code)
-{
-	GUID guid = { 0 };
-	switch (code)
-	{
-	case 0:
-		guid = SHADOWDRIVER_WFP_NETWORK_IPV4_SEND_ESTABLISHED_CALLOUT_GUID;
-		break;
-	case 1:
-		//链路层出口过滤
-		guid = SHADOWDRIVER_WFP_LINK_SEND_ESTABLISHED_CALLOUT_GUID;
-		break;
-	case 2:
-		//网络层IPv4接收过滤
-		guid = SHADOWDRIVER_WFP_NETWORK_IPV4_RECEIVE_ESTABLISHED_CALLOUT_GUID;
-		break;
-	case 3:
-		//链路层接收过滤
-		break;
-	case 4:
-		//网络层IPv6发送过滤
-		guid = SHADOWDRIVER_WFP_NETWORK_IPV6_SEND_ESTABLISHED_CALLOUT_GUID;
-		break;
-	case 5:
-		//无意义
-		break;
-	case 6:
-		//网络层IPv6接收过滤
-		guid = SHADOWDRIVER_WFP_NETWORK_IPV6_RECEIVE_ESTABLISHED_CALLOUT_GUID;
-		break;
-	case 7:
-		break;
-	}
-	return guid;
-}
-
 inline GUID GetLayerKeyByCode(UINT8 code)
 {
 	GUID guid = { 0 };
@@ -237,7 +201,7 @@ NTSTATUS RegisterCalloutFuntionsAccrodingToCode(ShadowFilterContext* context, UI
 
 	FWPS_CALLOUT0 wpsCallout = { 0 };
 	UINT32 calloutId;
-	wpsCallout.calloutKey = GetFilterCalloutGuid(currentCode);
+	wpsCallout.calloutKey = context->CalloutGuids[currentCode];
 	wpsCallout.flags = 0;
 	wpsCallout.notifyFn = PacketNotify;
 	wpsCallout.flowDeleteFn = PacketFlowDeleteNotfy;
@@ -253,7 +217,7 @@ NTSTATUS AddCalloutToWfpAcrrodingToCode(ShadowFilterContext* context, UINT8 curr
 	wpmCallout.flags = 0;
 	wpmCallout.displayData.description = L"I think you know what it is.";
 	wpmCallout.displayData.name = L"ShadowSendCallouts";
-	wpmCallout.calloutKey = GetFilterCalloutGuid(currentCode);
+	wpmCallout.calloutKey = context->CalloutGuids[currentCode];
 	wpmCallout.applicableLayer = GetLayerKeyByCode(currentCode);
 	status = FwpmCalloutAdd0(context->WfpEngineHandle, &wpmCallout, NULL, &(context->WpmCalloutIds[currentCode]));
 	return status;
@@ -392,13 +356,13 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				FWPM_FILTER0 wpmFilter = { 0 };
 				wpmFilter.displayData.name = L"ShadowDriverFilter";
 				wpmFilter.displayData.description = L"ShadowDriver's filter";
-				wpmFilter.subLayerKey = SHADOWDRIVER_WFP_SUBLAYER_GUID;
+				wpmFilter.subLayerKey = context->SublayerGuid;
 				wpmFilter.layerKey = GetLayerKeyByCode(currentCode);
 				wpmFilter.weight.type = FWP_EMPTY;
 				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
 				wpmFilter.flags = FWPM_FILTER_FLAG_NONE;
 				wpmFilter.rawContext = (UINT64)context;
-				wpmFilter.action.calloutKey = GetFilterCalloutGuid(currentCode);
+				wpmFilter.action.calloutKey = context->CalloutGuids[currentCode];
 				wpmFilter.numFilterConditions = conditionCounts[currentCode];
 				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
 
@@ -512,7 +476,7 @@ int ShadowFilter::StopFiltering()
 			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
 		}
 	}
-	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &SHADOWDRIVER_WFP_SUBLAYER_GUID);
+	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &(shadowFilterContext->SublayerGuid));
 	status = FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
 	shadowFilterContext->IsFilteringStarted = false;
 	return status;
