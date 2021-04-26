@@ -70,7 +70,7 @@ VOID NTAPI NetworkInV4ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 }
 
 
@@ -83,7 +83,7 @@ VOID NTAPI NetworkInV6ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 }
 
 VOID NTAPI NetworkOutV6ClassifyFn(
@@ -95,7 +95,7 @@ VOID NTAPI NetworkOutV6ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 }
 
 VOID NTAPI LinkOutClassifyFn(
