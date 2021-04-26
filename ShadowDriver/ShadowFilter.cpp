@@ -96,12 +96,12 @@ inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondi
 		{
 		case IpAddrFamily::IPv4:
 		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (0 << 1);
+			filterLayerAndPathCode = filterLayerAndPathCode + (0 << 2);
 		}
 		break;
 		case IpAddrFamily::IPv6:
 		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (1 << 1);
+			filterLayerAndPathCode = filterLayerAndPathCode + (1 << 2);
 		}
 		break;
 		}
