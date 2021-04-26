@@ -13,12 +13,14 @@ public:
 	~IOCTLHelper();
 	static void InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject);
 	static int _helperCount;
-	static NTSTATUS NotifyUserApp(void* buffer, size_t size);
+	NTSTATUS NotifyUserApp(void* buffer, size_t size);
 	static void SetDeviceObject(PDEVICE_OBJECT deviceObject);
 private:
 	static void AddHelper(IOCTLHelper * helper);
 	static void RemoveHelper(IOCTLHelper* helper);
 	static NTSTATUS ShadowDriverIrpIoControl(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
+	static NTSTATUS ShadowDriverIrpClose(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
+	static NTSTATUS ShadowDriverIrpCleanUp(_In_ struct _DEVICE_OBJECT* DeviceObject, _Inout_ struct _IRP* Irp);
 	static IOCTLHelperLinkEntry _helperListHeader;
 	static AppRegisterContext GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static IOCTLHelper* GetHelperByAppId(int id);

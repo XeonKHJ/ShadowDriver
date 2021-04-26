@@ -22,8 +22,9 @@ public:
 	UINT32 WpmCalloutIds[FilterIdMaxNumber];
 	bool IsModificationEnable;
 	bool IsFilteringStarted;
-	void (*NetPacketFilteringCallout)(NetLayer, NetPacketDirection, void*, unsigned long long);
+	void (*NetPacketFilteringCallout)(NetLayer layer, NetPacketDirection direction, void * buffer, unsigned long long bufferSize, void * context);
 	void* CustomContext;
+	
 }ShadowFilterContext;
 
 void* operator new(size_t);

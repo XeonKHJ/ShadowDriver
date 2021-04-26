@@ -21,6 +21,8 @@ IOCTLHelper::~IOCTLHelper()
 void IOCTLHelper::InitializeDriverObjectForIOCTL(_In_ PDRIVER_OBJECT driverObject)
 {
 	driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = ShadowDriverIrpIoControl;
+	driverObject->MajorFunction[IRP_MJ_CLEANUP] = ShadowDriverIrpCleanUp;
+	driverObject->MajorFunction[IRP_MJ_CLOSE] = ShadowDriverIrpClose;
 	InitializeListHead(&(_helperListHeader.ListEntry));
 }
 
@@ -28,17 +30,7 @@ NTSTATUS IOCTLHelper::NotifyUserApp(void* buffer, size_t size)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 
-	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
-	do
-	{
-		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
-		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
-
-		if (currentEntry->Helper != nullptr)
-		{
-			NotifyUserByDequeuingIoctl(&currentEntry->Helper->_context, buffer, size);
-		}
-	} while (currentEntry != &_helperListHeader);
+	NotifyUserByDequeuingIoctl(&_context, buffer, size);
 
 	return status;
 }
@@ -86,7 +78,9 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
-	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriver_IRP_IoControl\n");
+#ifdef DBG
+	//DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriver_IRP_IoControl\n");
+#endif
 	NTSTATUS status = STATUS_SUCCESS;
 	//È¡³öIRP
 	PIO_STACK_LOCATION pIoStackIrp = IoGetCurrentIrpStackLocation(Irp);
@@ -197,6 +191,26 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			break;
 		}
 	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_DEVICE_OBJECT* DeviceObject, _IRP* Irp)
+{
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpClose\t\n");
+#endif
+	NTSTATUS status = STATUS_SUCCESS;
+	Irp->IoStatus.Status = status;
+	return status;
+}
+
+NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_DEVICE_OBJECT* DeviceObject, _IRP* Irp)
+{
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpCleanUp\t\n");
+#endif
+	NTSTATUS status = STATUS_SUCCESS;
+	Irp->IoStatus.Status = STATUS_SUCCESS;
 	return status;
 }
 
@@ -527,6 +541,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
 			sfContext->NetPacketFilteringCallout = FilterFunc;
+			
 			auto guidSize = sizeof(GUID);
 
 			//Set up guids
@@ -547,6 +562,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			helperContext.Filter = shadowFilter;
 			helperContext.FilterContext = sfContext;
 			auto ioctlHelper = new IOCTLHelper(helperContext);
+			sfContext->CustomContext = ioctlHelper;
 			AddHelper(ioctlHelper);
 		}
 		else

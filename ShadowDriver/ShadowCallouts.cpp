@@ -42,7 +42,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 	if (packet)
 	{
 		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-
+		
 		if (context->NetPacketFilteringCallout != NULL)
 		{
 			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
@@ -52,7 +52,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 #ifdef DBG
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
 #endif
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer));
+			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
 		}
 		if (context->IsModificationEnable)
 		{
@@ -139,7 +139,7 @@ VOID NTAPI LinkOutClassifyFn(
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
 #endif
 
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer));
+			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
 		}
 		if (context->IsModificationEnable)
 		{
