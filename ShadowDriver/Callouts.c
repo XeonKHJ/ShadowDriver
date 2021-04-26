@@ -31,6 +31,8 @@ UINT32 WpmReceiveCalloutId;
 HANDLE SendInjectHandle = NULL;
 HANDLE ReceiveInjectHandle = NULL;
 
+BOOL IsModificationEnable = FALSE;
+
 extern UINT64 filterId;
 extern UINT64 filterId2;
 
@@ -275,6 +277,7 @@ VOID NTAPI ClassifyFn(
 	{
 		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
 
+		classifyOut->actionType = FWP_ACTION_PERMIT;
 		//如果捕获的数据包是主动
 		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
@@ -283,10 +286,8 @@ VOID NTAPI ClassifyFn(
 			//PrintNetBufferList(packet);
 		}
 		//该数据包不是被手动注入的数据包
-		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
+		else if (injectionState == FWPS_PACKET_NOT_INJECTED && IsModificationEnable)
 		{
-
-
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 
 			if (NT_SUCCESS(status))
@@ -340,7 +341,7 @@ VOID NTAPI ClassifyFn(
 
 		}
 	}
-	else if (ReceiveInjectHandle != NULL && filter->filterId == filterId2)
+	else if (ReceiveInjectHandle != NULL && filter->filterId == filterId2 && IsModificationEnable)
 	{
 		injectionState = FwpsQueryPacketInjectionState0(ReceiveInjectHandle, packet, NULL);
 		//如果捕获的数据包是主动
