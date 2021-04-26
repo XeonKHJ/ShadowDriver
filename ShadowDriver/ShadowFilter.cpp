@@ -179,6 +179,7 @@ inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 		break;
 	case 3:
 		//链路层接收过滤
+		callout->classifyFn = LinkInClassifyFn;
 		break;
 	case 4:
 		//网络层IPv6发送过滤
