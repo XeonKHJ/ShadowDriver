@@ -61,18 +61,23 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     NTSTATUS status;
 
     FWPM_FILTER0 sendFilter = { 0 };
-    FWPM_FILTER_CONDITION0 condition[1] = { 0 };
+    FWPM_FILTER_CONDITION0 condition[2] = { 0 };
 
     FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
+
     AddrandMask.addr = 0xC0A80166;
     AddrandMask.mask = 0xFFFFFFFF;
+
+    FWP_V4_ADDR_AND_MASK AddrandMaskSend2 = { 0 };
+    AddrandMaskSend2.addr = 0x72727272;
+    AddrandMaskSend2.mask = 0xFFFFFFFF;
 
     sendFilter.displayData.name = L"ShadowDriveFilter";
     sendFilter.displayData.description = L"ShadowDriver's filter";
     sendFilter.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
     sendFilter.subLayerKey = WFP_SUBLAYER_GUID;
     sendFilter.weight.type = FWP_EMPTY;
-    sendFilter.numFilterConditions = 1;
+    sendFilter.numFilterConditions = 2;
     sendFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
     sendFilter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
     sendFilter.filterCondition = condition;
@@ -81,6 +86,11 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     condition[0].matchType = FWP_MATCH_EQUAL;
     condition[0].conditionValue.type = FWP_V4_ADDR_MASK;
     condition[0].conditionValue.v4AddrMask = &AddrandMask;
+
+    condition[1].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+    condition[1].matchType = FWP_MATCH_EQUAL;
+    condition[1].conditionValue.type = FWP_V4_ADDR_MASK;
+    condition[1].conditionValue.v4AddrMask = &AddrandMaskSend2;
 
     status = FwpmFilterAdd0(engineHandler, &sendFilter, NULL, &filterId);
     UINT64 abc = filterId;
