@@ -70,6 +70,7 @@ struct NetFilteringConditionAndCode
 	NetFilteringCondition* CurrentCondition;
 	int Code;
 	int Index;
+	void* Address;
 };
 
 /// <summary>
@@ -233,7 +234,8 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
 		NetFilteringConditionAndCode* wpmConditionAndCodes = new NetFilteringConditionAndCode[length];
-		//计算每个类型的过滤器条件的数量
+
+		//计算每个过滤器类型的条件的数量
 		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
 		{
 			NetFilteringCondition* currentCondition = &conditions[currentIndex];
@@ -266,16 +268,18 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 			//添加条件
 			for (int currentNo = 0; currentNo < length; currentNo++)
 			{
-				FWP_V4_ADDR_AND_MASK v4AddrAndMask = { 0 };
-				FWP_V6_ADDR_AND_MASK v6AddrAndMask = { 0 };
-				FWP_BYTE_ARRAY6 macAddress = { 0 };
-
 				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
 				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
 				FWPM_FILTER_CONDITION0* currentWpmCondition = NULL;
 				if (wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code] != NULL)
 				{
 					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
+
+#ifdef DBG
+					auto a = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][0]);
+					auto b = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][1]);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Adding conditions\t\n");
+#endif				
 				}
 				else
 				{
@@ -297,11 +301,13 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 						break;
 					}
 					currentWpmCondition->conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
+					currentConditionAndCodes->Address = new FWP_BYTE_ARRAY6();
+					FWP_BYTE_ARRAY6* macAddress = (FWP_BYTE_ARRAY6*)(currentConditionAndCodes->Address);
 					for (int macAddressIndex = 0; macAddressIndex < 6; ++macAddressIndex)
 					{
-						macAddress.byteArray6[macAddressIndex] = currentCondition->MacAddress[macAddressIndex];
+						macAddress->byteArray6[macAddressIndex] = currentCondition->MacAddress[macAddressIndex];
 					}
-					currentWpmCondition->conditionValue.byteArray6 = &macAddress;
+					currentWpmCondition->conditionValue.byteArray6 = macAddress;
 				}
 				break;
 				case NetLayer::NetworkLayer:
@@ -320,9 +326,11 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 					case IpAddrFamily::IPv4:
 					{
 						(currentWpmCondition->conditionValue).type = FWP_V4_ADDR_MASK;
-						v4AddrAndMask.addr = currentCondition->IPv4Address;
-						v4AddrAndMask.mask = currentCondition->IPv4Mask;
-						currentWpmCondition->conditionValue.v4AddrMask = &v4AddrAndMask;
+						currentConditionAndCodes->Address = new FWP_V4_ADDR_AND_MASK();
+						FWP_V4_ADDR_AND_MASK* v4AddrAndMask = (FWP_V4_ADDR_AND_MASK*)(currentConditionAndCodes->Address);
+						v4AddrAndMask->addr = currentCondition->IPv4Address;
+						v4AddrAndMask->mask = currentCondition->IPv4Mask;
+						currentWpmCondition->conditionValue.v4AddrMask = v4AddrAndMask;
 					}
 					break;
 					case IpAddrFamily::IPv6:
@@ -372,6 +380,10 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 		}
 
 		//清理动态分配的变量
+		for (size_t i = 0; i < length; i++)
+		{
+			delete wpmConditionAndCodes[i].Address;
+		}
 		delete[]wpmConditionAndCodes;
 		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
 		{
