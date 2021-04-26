@@ -274,12 +274,6 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				if (wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code] != NULL)
 				{
 					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
-
-#ifdef DBG
-					auto a = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][0]);
-					auto b = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][1]);
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Adding conditions\t\n");
-#endif				
 				}
 				else
 				{

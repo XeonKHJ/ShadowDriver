@@ -55,7 +55,7 @@ void IOCTLHelper::AddHelper(IOCTLHelper* helper)
 	newEntry->Helper = helper;
 	InsertTailList(&(_helperListHeader.ListEntry), &(newEntry->ListEntry));
 #if DBG
-	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "AddHelper_end\n");
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "AddHelper_end\n");
 #endif
 }
 
@@ -86,7 +86,7 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
-	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "ShadowDriver_IRP_IoControl\n");
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriver_IRP_IoControl\n");
 	NTSTATUS status = STATUS_SUCCESS;
 	//È¡³öIRP
 	PIO_STACK_LOCATION pIoStackIrp = IoGetCurrentIrpStackLocation(Irp);
@@ -121,7 +121,9 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 		case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO:
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO\n");
+#endif
 			//IoctlRequirePacketInfo(Irp);
 			break;
 		case IOCTL_SHADOWDRIVER_DEQUEUE_NOTIFICATION:
@@ -161,7 +163,9 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			}
 			break;
 		case IOCTL_SHADOWDRIVER_GET_DRIVER_VERSION:
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION\n");
+#endif
 			//IoctlGetDriverVersion(Irp, pIoStackIrp);
 			break;
 		case IOCTL_SHADOWDRIVER_GET_QUEUE_INFO:
@@ -186,6 +190,9 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			Irp->IoStatus.Status = status;
 			break;
 		default:
+#ifdef DBG 
+			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");
+#endif
 			break;
 		}
 	}
@@ -245,7 +252,11 @@ IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext* context, void* outputBuffer, size_t outputLength)
 {
 	NTSTATUS status = STATUS_SUCCESS;
+
+#ifdef DBG
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "NotifyUserByDequeuingIoctl\n");
+#endif
+
 	PIRP dequeuedIrp = IoCsqRemoveNextIrp(&(context->IoCsq), NULL);
 	if (dequeuedIrp != NULL)
 	{

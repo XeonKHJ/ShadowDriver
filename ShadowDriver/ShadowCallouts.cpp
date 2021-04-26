@@ -33,8 +33,10 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
 	packet = (NET_BUFFER_LIST*)layerData;
+#ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+#endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	if (packet)
@@ -47,8 +49,9 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
-
+#endif
 			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer));
 		}
 		if (context->IsModificationEnable)
@@ -116,7 +119,6 @@ VOID NTAPI LinkOutClassifyFn(
 	PNET_BUFFER_LIST clonedPacket = NULL;
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
 	packet = (NET_BUFFER_LIST*)layerData;
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
@@ -132,7 +134,10 @@ VOID NTAPI LinkOutClassifyFn(
 			auto dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 			BYTE * packetBuffer = new BYTE[dataLength];
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
+
+#ifdef DBG
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
+#endif
 
 			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer));
 		}
