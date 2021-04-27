@@ -384,6 +384,10 @@ NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 		IOCTLHelper* selectedHelper = GetHelperByAppId(appId);
 		if (selectedHelper != nullptr)
 		{
+#if DBG
+			DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Deregistering app from file object pointer: %p\t\n", (void*)(irp->Tail.Overlay.OriginalFileObject));
+#endif
+
 			auto filter = selectedHelper->_context.Filter;
 			auto filterContext = selectedHelper->_context.FilterContext;
 
@@ -581,7 +585,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
 	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
-	DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Register app from file object pointer: %p\t\n", (void*)(irp->Tail.Overlay.OriginalFileObject));
+	
 	// Make sure that app id is not zero and output buffer size is enought for status to fit in.
 	if (helperContext.AppContext.AppId != 0)
 	{
@@ -589,6 +593,9 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 		IOCTLHelper* checkHelper = GetHelperByAppId(helperContext.AppContext.AppId);
 		if (checkHelper == nullptr)
 		{
+#ifdef DBG
+			DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Registering app from file object pointer: %p\t\n", (void*)(irp->Tail.Overlay.OriginalFileObject));
+#endif
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
 			sfContext->NetPacketFilteringCallout = FilterFunc;
