@@ -6,9 +6,9 @@ class ShadowFilter
 public:
 	ShadowFilter(void* enviromentContexts);
 	~ShadowFilter();
-	int AddFilterConditions(NetFilteringCondition * conditions, int length);
-	int StartFiltering();
-	int StopFiltering();
+	unsigned int AddFilterConditions(NetFilteringCondition * conditions, int length);
+	unsigned int StartFiltering();
+	unsigned int StopFiltering();
 	void EnablePacketModification();
 	void DisablePacketModification();
 	

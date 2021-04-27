@@ -385,23 +385,32 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
-	IOCTLHelper* helper = GetHelperByAppId(appId);
-	if (helper != nullptr)
+
+	if (appId != 0)
 	{
-		auto filter = helper->_context.Filter;
-		if (filter != nullptr)
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
 		{
-			if (NT_SUCCESS(status))
+			auto filter = helper->_context.Filter;
+			if (filter != nullptr)
 			{
-				filter->StartFiltering();
+				if (NT_SUCCESS(status))
+				{
+					status = filter->StartFiltering();
+				}
 			}
+		}
+		else
+		{
+			//Unregsitered app trying to start filtering.
+			status = SHADOW_APP_UNREGISTERED;
 		}
 	}
 	else
 	{
-		//Unregsitered app trying to start filtering.
-		status = SHADOW_APP_UNREGISTERED;
+		status = SHADOW_APP_APPID_INVALID;
 	}
+
 	return status;
 }
 
@@ -409,17 +418,25 @@ NTSTATUS IOCTLHelper::IoctlStopFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
-	IOCTLHelper * helper = GetHelperByAppId(appId);
-	ShadowFilter * filter = helper->_context.Filter;
-	if (filter != nullptr)
+
+	if (appId != 0)
 	{
-		if (NT_SUCCESS(status))
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
 		{
+			ShadowFilter* filter = helper->_context.Filter;
 			// Cancel all pending notification IOCTLs.
 			helper->CancelAllPendingNotifyIoctls();
-
 			filter->StopFiltering();
 		}
+		else
+		{
+			status = SHADOW_APP_UNREGISTERED;
+		}
+	}
+	else
+	{
+		status = SHADOW_APP_APPID_INVALID;
 	}
 	return status;
 }
@@ -444,7 +461,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 			if (inputBufferLength >= (ULONG)dataReadSize)
 			{
-				NetFilteringCondition condition;
+				NetFilteringCondition condition{};
 				PCHAR inputBufferBytes = (PCHAR)inputBuffer;
 				int currentIndex = StatusSize;
 				inputBufferBytes += currentIndex;
@@ -487,6 +504,10 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				}
 				filter->AddFilterConditions(&condition, 1);
 			}
+			else
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
+			}
 		}
 		else
 		{
@@ -495,7 +516,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 	}
 	else
 	{
-		status = SHADOW_APP_NO_CONDITION;
+		status = SHADOW_APP_APPID_INVALID;
 	}
 	return status;
 }
@@ -588,6 +609,9 @@ void* IOCTLHelper::WriteStatusToOutputBuffer(NTSTATUS* pStatus, PIRP irp, PIO_ST
 		irp->IoStatus.Information += sizeof(status);
 
 		result = (PVOID)(((PCHAR)outputBuffer) + sizeof(status));
+
+		// When successfuly writing ntstatus into output buffer, status needs to set to STATUS_SUCCESS so that this IOCTL can be completed.
+		*pStatus = STATUS_SUCCESS;
 	}
 	else
 	{

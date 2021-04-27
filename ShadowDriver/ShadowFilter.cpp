@@ -396,9 +396,9 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 }
 /*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
 
-int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
+unsigned int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
 {
-	int statusCode = 0;
+	NTSTATUS statusCode = 0;
 	if (conditions != nullptr && length != 0)
 	{
 		NetFilteringCondition* newConditions = new NetFilteringCondition[_conditionCount + length];
@@ -422,12 +422,12 @@ int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int len
 	}
 	else
 	{
-		statusCode = -1;
+		statusCode = SHADOW_APP_NO_CONDITION;
 	}
 	return statusCode;
 }
 
-int ShadowFilter::StartFiltering()
+unsigned int ShadowFilter::StartFiltering()
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
@@ -448,9 +448,7 @@ int ShadowFilter::StartFiltering()
 
 			if (NT_SUCCESS(status))
 			{
-
 				status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
-
 			}
 
 			if (NT_SUCCESS(status))
@@ -460,7 +458,7 @@ int ShadowFilter::StartFiltering()
 		}
 		else
 		{
-			status = STATUS_BUFFER_TOO_SMALL;
+			status = SHADOW_FILTER_NO_CONDITION;
 		}
 	}
 	return status;
@@ -471,7 +469,7 @@ int ShadowFilter::StartFiltering()
 /// STATUS值待处理。
 /// </summary>
 /// <returns></returns>
-int ShadowFilter::StopFiltering()
+unsigned int ShadowFilter::StopFiltering()
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;

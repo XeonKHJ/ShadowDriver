@@ -78,3 +78,10 @@ Language=ChineseSimplified
 该功能还未实现。
 .
 
+MessageId=0x0040 Facility=Filter Severity=Error SymbolicName=SHADOW_FILTER_NOT_READY
+Language=English
+The filter is not ready.
+.
+Language=ChineseSimplified
+过滤器还未准备好。
+.
