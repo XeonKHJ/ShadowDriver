@@ -188,6 +188,8 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 #ifdef DBG 
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");
 #endif
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 		}
 	}
@@ -528,6 +530,9 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
 	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
+
+	// Thread that sends the file, can be used as a identifier.
+	void * thread = irp->Tail.Overlay.Thread;
 
 	// Make sure that app id is not zero and output buffer size is enought for status to fit in.
 	if (helperContext.AppContext.AppId != 0)
