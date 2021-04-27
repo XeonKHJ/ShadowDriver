@@ -52,7 +52,7 @@
     <ClInclude Include="NetFilteringCondition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShadowFilterWindowsSpecific.h">
+    <ClInclude Include="ShadowFilterContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShadowCallouts.h">
@@ -93,7 +93,7 @@
     <ClCompile Include="ShadowCallouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ShadowFilterWindowsSpecific.cpp">
+    <ClCompile Include="ShadowFilterContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="IOCTLHelper.cpp">

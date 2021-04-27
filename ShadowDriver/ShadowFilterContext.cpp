@@ -1,4 +1,4 @@
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 
 void* operator new(size_t size)
 {

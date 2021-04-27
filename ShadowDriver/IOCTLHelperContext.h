@@ -2,7 +2,7 @@
 #include "Public.h"
 #include "IrpLinkEntry.h"
 #include "ShadowFilter.h"
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 
 struct IOCTLHelperContext
 {

@@ -1,5 +1,5 @@
 #include "IOCTLHelper.h"
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 #include "CancelSafeQueueCallouts.h"
 #include "PacketHelper.h"
 
@@ -194,7 +194,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 	return status;
 }
 
-NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_DEVICE_OBJECT* DeviceObject, _IRP* Irp)
+NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpClose\t\n");
@@ -204,7 +204,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_DEVICE_OBJECT* DeviceObject, _IRP* I
 	return status;
 }
 
-NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_DEVICE_OBJECT* DeviceObject, _IRP* Irp)
+NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpCleanUp\t\n");

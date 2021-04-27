@@ -47,7 +47,7 @@
     <ClCompile Include="Queue.cpp" />
     <ClCompile Include="ShadowCallouts.cpp" />
     <ClCompile Include="ShadowFilter.cpp" />
-    <ClCompile Include="ShadowFilterWindowsSpecific.cpp" />
+    <ClCompile Include="ShadowFilterContext.cpp" />
     <ClCompile Include="PacketHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -64,7 +64,7 @@
     <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="Trace.h" />
     <ClInclude Include="PacketHelper.h" />
-    <ClInclude Include="ShadowFilterWindowsSpecific.h" />
+    <ClInclude Include="ShadowFilterContext.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf" />

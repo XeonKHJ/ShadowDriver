@@ -22,7 +22,7 @@ Environment:
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
 #endif
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 
 typedef struct _INVERTED_DEVICE_CONTEXT {
     WDFQUEUE    NotificationQueue;

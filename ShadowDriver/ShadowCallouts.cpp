@@ -1,5 +1,5 @@
 #include "ShadowCallouts.h"
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 //#include "NetFilteringCondition.h"
 #include "IOCTLHelper.h"
 

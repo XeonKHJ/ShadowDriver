@@ -1,5 +1,5 @@
 #include "CancelSafeQueueCallouts.h"
-#include "ShadowFilterWindowsSpecific.h"
+#include "ShadowFilterContext.h"
 #include "IOCTLHelperContext.h"
 
 NTSTATUS
