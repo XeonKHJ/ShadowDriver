@@ -371,6 +371,10 @@ NTSTATUS IOCTLHelper::IoctlGetQueuedIoctlCount(PIRP irp, PIO_STACK_LOCATION ioSt
 			currentEntry = currentEntry->Flink;
 		}
 	}
+	else
+	{
+		status = SHADOW_APP_UNREGISTERED;
+	}
 
 	status = WriteDataToIrpOutputBuffer(&count, sizeof(count), irp, ioStackLocation);
 
