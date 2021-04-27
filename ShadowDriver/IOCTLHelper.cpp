@@ -389,33 +389,6 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 		{
 			if (NT_SUCCESS(status))
 			{
-				//NetFilteringCondition condition = NetFilteringCondition();
-				//condition.AddrLocation = AddressLocation::Remote;
-				//condition.FilterLayer = NetLayer::NetworkLayer;
-				//condition.FilterPath = NetPacketDirection::Out;
-				//condition.IPAddressType = IpAddrFamily::IPv4;
-				//condition.IPv4 = 0xC0A80168;
-				//condition.IPv4Mask = 0xFFFFFFFF;
-				//condition.MatchType = FilterMatchType::Equal;
-				//Filter->AddFilterCondition(&condition, 1);
-
-				//NetFilteringCondition condition = NetFilteringCondition();
-				//condition.AddrLocation = AddressLocation::Local;
-				//condition.FilterLayer = NetLayer::LinkLayer;
-				//condition.FilterPath = NetPacketDirection::Out;
-				//condition.MatchType = FilterMatchType::Equal;
-				//condition.MacAddress[0] = 0x00;
-				//condition.MacAddress[1] = 0x15;
-				//condition.MacAddress[2] = 0x5D;
-				//condition.MacAddress[3] = 0x00;
-				//condition.MacAddress[4] = 0x65;
-				//condition.MacAddress[5] = 0x06;
-				
-				//filter->AddFilterConditions(&condition, 1);
-			}
-
-			if (NT_SUCCESS(status))
-			{
 				filter->StartFiltering();
 			}
 		}
