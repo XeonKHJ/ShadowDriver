@@ -122,6 +122,6 @@ Return Value:
         IOCTLHelper::SetDeviceObject(deviceObject);
         //status = InitializeWfp(deviceObject);
     }
-
+    
     return status;
 }

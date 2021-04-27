@@ -103,4 +103,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <MessageCompile Include="ShadowDriverStatus.mc">
+      <Filter>Resource Files</Filter>
+    </MessageCompile>
+  </ItemGroup>
 </Project>

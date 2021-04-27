@@ -44,7 +44,7 @@ ShadowFilter::ShadowFilter(void* enviromentContexts)
 	}
 	else
 	{
-		status = STATUS_ABANDONED;
+		status = STATUS_CONTEXT_MISMATCH;
 	}
 	if (!NT_SUCCESS(status))
 	{
@@ -256,7 +256,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				//如果内存分配错误则将状态置为错误并且跳出循环
 				if(wpmConditonsGroupByFilterLayer[currentCode] == nullptr)
 				{
-					status = STATUS_ERROR_PROCESS_NOT_IN_JOB;
+					status = STATUS_FATAL_MEMORY_EXHAUSTION;
 					break;
 				}
 
@@ -278,7 +278,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 				}
 				else
 				{
-					status = STATUS_ABANDONED;
+					status = STATUS_FATAL_MEMORY_EXHAUSTION;
 				}
 
 				switch (currentCondition->FilterLayer)
@@ -344,7 +344,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 					break;
 				default:
 					//还未实现
-					status = STATUS_NULL_LM_PASSWORD;
+					status = SHADOW_FILTER_NOT_IMPLEMENTED;
 				}
 
 
@@ -390,7 +390,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 	}
 	else
 	{
-		status = STATUS_NULL_LM_PASSWORD;
+		status = SHADOW_FILTER_NO_CONDITION;
 	}
 	return (int)status;
 }

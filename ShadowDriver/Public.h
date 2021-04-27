@@ -16,6 +16,11 @@ Environment:
 --*/
 #pragma once
 //
+// Include addtional status.
+//
+#include "ShadowDriverStatus.h"
+
+//
 // Define an Interface Guid so that apps can find the device and talk to it.
 //
 DEFINE_GUID (GUID_DEVINTERFACE_ShadowDriver,

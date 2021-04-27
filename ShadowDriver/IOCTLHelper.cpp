@@ -149,7 +149,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 				}
 				else
 				{
-					status = STATUS_BUFFER_ALL_ZEROS;
+					status = SHADOW_APP_UNREGISTERED;
 					WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 					Irp->IoStatus.Status = status;
 					IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -345,12 +345,12 @@ NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 		}
 		else
 		{
-			status = STATUS_ABANDONED;
+			status = SHADOW_APP_UNREGISTERED;
 		}
 	}
 	else
 	{
-		status = STATUS_ABANDONED;
+		status = SHADOW_APP_UNREGISTERED;
 	}
 	return status;
 }
@@ -396,7 +396,7 @@ NTSTATUS IOCTLHelper::IoctlStartFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLo
 	else
 	{
 		//Unregsitered app trying to start filtering.
-		status = STATUS_BAD_DATA;
+		status = SHADOW_APP_UNREGISTERED;
 	}
 	return status;
 }
@@ -486,12 +486,12 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 		}
 		else
 		{
-			status = STATUS_ABANDONED;
+			status = SHADOW_APP_UNREGISTERED;
 		}
 	}
 	else
 	{
-		status = STATUS_ABANDONED;
+		status = SHADOW_APP_NO_CONDITION;
 	}
 	return status;
 }
@@ -540,12 +540,12 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 		}
 		else
 		{
-			status = STATUS_ABANDONED;
+			status = SHADOW_APP_REGISTERED;
 		}
 	}
 	else
 	{
-		status = STATUS_ABANDONED;
+		status = SHADOW_APP_APPID_INVALID;
 	}
 
 	return status;
