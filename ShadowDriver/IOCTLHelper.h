@@ -24,6 +24,7 @@ private:
 	static IOCTLHelperLinkEntry _helperListHeader;
 	static AppRegisterContext GetAppContextFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static IOCTLHelper* GetHelperByAppId(int id);
+	static IOCTLHelper* GetHelperByOriginalFileObject(PFILE_OBJECT fileObject);
 	static void NotifyUserByDequeuingIoctl(IOCTLHelperContext* context, void* outputBuffer, size_t outputLength);
 	static NTSTATUS IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocation);

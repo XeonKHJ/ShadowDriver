@@ -12,4 +12,5 @@ struct IOCTLHelperContext
 	KSPIN_LOCK SpinLock;
 	IO_CSQ IoCsq;
 	IRP_LINK_ENTRY IrpLinkHeadEntry;
+	PFILE_OBJECT OriginalFileObject;
 };

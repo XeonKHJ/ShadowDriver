@@ -68,7 +68,7 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 
 			// Remove helper instance from list.
 			RemoveEntryList(listEntry);
-
+			_helperCount--;
 			// Delete link list entry that containts deleted helper instance.
 			delete currentEntry;
 			break;
@@ -184,6 +184,13 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
+		case IOCTL_SHADOWDRIVER_GET_REGISTERED_APP_COUNT:
+			status = STATUS_SUCCESS;
+			WriteDataToIrpOutputBuffer(&_helperCount, sizeof(int), Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
 		default:
 #ifdef DBG 
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");
@@ -209,8 +216,31 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_In_ _DEVICE_OBJECT* DeviceObject, _I
 NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
 #ifdef DBG
-	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpCleanUp\t\n");
+	DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpCleanUp\t\n");
 #endif
+	auto fileObject = Irp->Tail.Overlay.OriginalFileObject;
+
+	auto helper = GetHelperByOriginalFileObject(fileObject);
+
+	if (helper != nullptr)
+	{
+#ifdef DBG
+		DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Clean up file object pointer: %p\t\n", (void*)fileObject);
+#endif
+
+		auto filter = helper->_context.Filter;
+		auto filterContext = helper->_context.FilterContext;
+
+		// Delete helper.
+		RemoveHelper(helper);
+
+		//Delete ShadowFilter instance;
+		delete helper->_context.Filter;
+
+		//Delete ShadowFilterContext instance.
+		delete helper->_context.FilterContext;
+	}
+
 	NTSTATUS status = STATUS_SUCCESS;
 	Irp->IoStatus.Status = STATUS_SUCCESS;
 	return status;
@@ -257,6 +287,27 @@ IOCTLHelper* IOCTLHelper::GetHelperByAppId(int id)
 		if (currentEntry->Helper != nullptr)
 		{
 			if (currentEntry->Helper->_context.AppContext.AppId == id)
+			{
+				result = currentEntry->Helper;
+				break;
+			}
+		}
+	} while (currentEntry != &_helperListHeader);
+	return result;
+}
+
+IOCTLHelper* IOCTLHelper::GetHelperByOriginalFileObject(PFILE_OBJECT fileObject)
+{
+	IOCTLHelper* result = nullptr;
+	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
+	do
+	{
+		PLIST_ENTRY listEntry = currentEntry->ListEntry.Flink;
+		currentEntry = CONTAINING_RECORD(listEntry, IOCTLHelperLinkEntry, ListEntry);
+
+		if (currentEntry->Helper != nullptr)
+		{
+			if (currentEntry->Helper->_context.OriginalFileObject == fileObject)
 			{
 				result = currentEntry->Helper;
 				break;
@@ -315,7 +366,7 @@ void IOCTLHelper::CancelAllPendingNotifyIoctls()
 	// Csq is also the same.
 	// But link list for queueing IOCTL needs to be deleted manually.
 	auto currentEntry = _context.IrpLinkHeadEntry.ListEntry.Flink;
-	while(!IsListEmpty(&(_context.IrpLinkHeadEntry.ListEntry)))
+	while (!IsListEmpty(&(_context.IrpLinkHeadEntry.ListEntry)))
 	{
 		IRP_LINK_ENTRY* irpEntry = CONTAINING_RECORD(currentEntry, IRP_LINK_ENTRY, ListEntry);
 		auto cancelResult = IoCancelIrp(irpEntry->Irp);
@@ -451,7 +502,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 	if (appId != 0)
 	{
 		IOCTLHelper* selectedHelper = GetHelperByAppId(appId);
-		
+
 		if (selectedHelper != nullptr)
 		{
 			auto filter = selectedHelper->_context.Filter;
@@ -471,7 +522,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				inputBufferBytes += sizeof(int);
 				condition.MatchType = (FilterMatchType)(*(int*)inputBufferBytes);
 				inputBufferBytes += sizeof(int);
-				condition.AddrLocation = (AddressLocation)(*(int *)inputBufferBytes);
+				condition.AddrLocation = (AddressLocation)(*(int*)inputBufferBytes);
 				inputBufferBytes += sizeof(int);
 				condition.FilterPath = (NetPacketDirection)(*(int*)inputBufferBytes);
 				inputBufferBytes += sizeof(int);
@@ -530,10 +581,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 	helperContext.AppContext = GetAppContextFromIoctl(irp, ioStackLocation);
 	auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 	PVOID inputBuffer = irp->AssociatedIrp.SystemBuffer;
-
-	// Thread that sends the file, can be used as a identifier.
-	void * thread = irp->Tail.Overlay.Thread;
-
+	DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Register app from file object pointer: %p\t\n", (void*)(irp->Tail.Overlay.OriginalFileObject));
 	// Make sure that app id is not zero and output buffer size is enought for status to fit in.
 	if (helperContext.AppContext.AppId != 0)
 	{
@@ -544,7 +592,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
 			sfContext->NetPacketFilteringCallout = FilterFunc;
-			
+
 			auto guidSize = sizeof(GUID);
 
 			//Set up guids
@@ -564,6 +612,10 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			auto shadowFilter = new ShadowFilter(sfContext);
 			helperContext.Filter = shadowFilter;
 			helperContext.FilterContext = sfContext;
+
+			//Use original file object as a indentifier.
+			helperContext.OriginalFileObject = irp->Tail.Overlay.OriginalFileObject;
+
 			auto ioctlHelper = new IOCTLHelper(helperContext);
 			sfContext->CustomContext = ioctlHelper;
 			AddHelper(ioctlHelper);
