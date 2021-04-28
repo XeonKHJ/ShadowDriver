@@ -4,10 +4,11 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  IgnorableNamespaces="uap mp">
+  xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4"
+  IgnorableNamespaces="uap mp uap4">
 
   <Identity
-    Name="3b231089-c17f-4c48-8e7c-c43e7b58fdc8"
+    Name="ShadowDriver.UWPDemo"
     Publisher="CN=redal"
     Version="1.0.0.0" />
 
@@ -45,5 +46,6 @@
 
   <Capabilities>
     <Capability Name="internetClient" />
+    <uap4:CustomCapability Name="hongjia.shadowdrivercontrol_xe7ejb7dfnp4r"/>
   </Capabilities>
 </Package>
