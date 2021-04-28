@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Windows.Devices.Custom;
 using Windows.Devices.Enumeration;
 using ShadowDriver.Core.Interface;
+using ShadowDriver.Core.Status;
 
 namespace ShadowDriver.Core
 {
