@@ -461,6 +461,10 @@ unsigned int ShadowFilter::StartFiltering()
 			status = SHADOW_FILTER_NO_CONDITION;
 		}
 	}
+	else
+	{
+		status = SHADOW_FILTER_IS_RUNNING;
+	}
 	return status;
 }
 
