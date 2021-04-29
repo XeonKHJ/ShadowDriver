@@ -292,7 +292,7 @@ NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringC
 						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_LOCAL_ADDRESS;
 						break;
 					case AddressLocation::Remote:
-						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_DESTINATION_ADDRESS;
+						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
 						break;
 					}
 					currentWpmCondition->conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
