@@ -84,7 +84,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 #ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+	//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
