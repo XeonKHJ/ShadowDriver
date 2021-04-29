@@ -3,7 +3,7 @@
 //#include "NetFilteringCondition.h"
 #include "IOCTLHelper.h"
 
-NTSTATUS CalloutPreproecess(
+inline NTSTATUS CalloutPreproecess(
 	_Inout_opt_ void* layerData,
 	_In_ const FWPS_FILTER0* filter,
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut,
@@ -189,6 +189,7 @@ VOID NTAPI LinkInClassifyFn(
 #endif
 
 	packet = (NET_BUFFER_LIST*)layerData;
+	
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 	if (packet)
