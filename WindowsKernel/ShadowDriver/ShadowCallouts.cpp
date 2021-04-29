@@ -8,7 +8,7 @@ NTSTATUS CalloutPreproecess(
 	_In_ const FWPS_FILTER0* filter,
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut,
 	NetLayer layer,
-	NetPacketDirection
+	NetPacketDirection direction
 )
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -22,7 +22,7 @@ NTSTATUS CalloutPreproecess(
 	packet = (NET_BUFFER_LIST*)layerData;
 
 #ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+	//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 #endif
 
@@ -36,8 +36,12 @@ NTSTATUS CalloutPreproecess(
 		{
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+			auto dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
+			BYTE* packetBuffer = new BYTE[dataLength];
+			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
+
+			(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+			delete packetBuffer;
 		}
 		if (context->IsModificationEnable)
 		{
