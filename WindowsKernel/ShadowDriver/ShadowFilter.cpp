@@ -455,6 +455,14 @@ unsigned int ShadowFilter::StartFiltering()
 			{
 				shadowFilterContext->IsFilteringStarted = TRUE;
 			}
+
+			if (!NT_SUCCESS(status))
+			{
+#ifdef DBG
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+#endif
+				StopFiltering();
+			}
 		}
 		else
 		{
