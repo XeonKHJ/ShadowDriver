@@ -395,10 +395,10 @@ NTSTATUS IOCTLHelper::IoctlDeregisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLoc
 			RemoveHelper(selectedHelper);
 
 			//Delete ShadowFilter instance;
-			delete selectedHelper->_context.Filter;
+			delete filter;
 
 			//Delete ShadowFilterContext instance.
-			delete selectedHelper->_context.FilterContext;
+			delete filterContext;
 		}
 		else
 		{
