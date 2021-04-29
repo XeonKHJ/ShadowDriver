@@ -73,8 +73,16 @@
                     <x:String>Network Layer</x:String>
                 </ComboBox>
                 <TextBox  x:Name="IPAddressBox" Grid.Row="2" Grid.Column="1" Text="192.168.1.1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Visibility="Collapsed"></TextBox>
-                <ComboBox x:Name="MacAddressBox" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" ItemsSource="{x:Bind NetworkInterfaceViewModels}" SelectedIndex="0">
-                </ComboBox>
+                <Grid x:Name="MacAddressPanel" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition></ColumnDefinition>
+                        <ColumnDefinition></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" x:Name="MacAddressBox"  HorizontalAlignment="Stretch" VerticalAlignment="Center" ItemsSource="{x:Bind NetworkInterfaceViewModels}" SelectedIndex="0">
+                    </ComboBox>
+                    <TextBox x:Name="MacAddressTypeBox" Grid.Column="0"  Text="C03EBAD48189" HorizontalAlignment="Stretch" VerticalAlignment="Center" Visibility="Collapsed"></TextBox>
+                    <CheckBox Grid.Column="1" x:Name="InputManuallyBox" IsChecked="True" Margin="10,0,0,0" Checked="InputManuallyBox_Checked" Unchecked="InputManuallyBox_Unchecked">Input</CheckBox>
+                </Grid>
                 <ComboBox x:Name="DirectionBox" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
                     <x:String>In</x:String>
                     <x:String>Out</x:String>

@@ -3,6 +3,52 @@
 //#include "NetFilteringCondition.h"
 #include "IOCTLHelper.h"
 
+NTSTATUS CalloutPreproecess(
+	_Inout_opt_ void* layerData,
+	_In_ const FWPS_FILTER0* filter,
+	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut,
+	NetLayer layer,
+	NetPacketDirection
+)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	NET_BUFFER_LIST* packet;
+	SIZE_T dataLength = 0;
+	SIZE_T bytes = 0;
+
+	PNET_BUFFER_LIST clonedPacket = NULL;
+	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
+
+	packet = (NET_BUFFER_LIST*)layerData;
+
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+#endif
+
+	classifyOut->actionType = FWP_ACTION_PERMIT;
+
+	if (packet)
+	{
+		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+
+		if (context->NetPacketFilteringCallout != NULL)
+		{
+			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
+			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
+			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+		}
+		if (context->IsModificationEnable)
+		{
+			//还未实现
+		}
+		//删除分配的缓冲区
+	}
+
+	return status;
+}
+
 NTSTATUS PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType, _In_ const GUID* filterKey, _Inout_ FWPS_FILTER0* filter)
 {
 	return STATUS_SUCCESS;
@@ -41,26 +87,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 
 	if (packet)
 	{
-		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-		
-		if (context->NetPacketFilteringCallout != NULL)
-		{
-			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), NULL, 1, 0);
-#ifdef DBG
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
-#endif
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
-		}
-		if (context->IsModificationEnable)
-		{
-			//还未实现
-		}
-
-		//删除分配的缓冲区
-
+		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 	}
 }
 
@@ -74,6 +101,7 @@ VOID NTAPI NetworkInV4ClassifyFn(
 )
 {
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
 
@@ -87,6 +115,7 @@ VOID NTAPI NetworkInV6ClassifyFn(
 )
 {
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
 VOID NTAPI NetworkOutV6ClassifyFn(
@@ -99,6 +128,7 @@ VOID NTAPI NetworkOutV6ClassifyFn(
 )
 {
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 }
 
 VOID NTAPI LinkOutClassifyFn(
@@ -119,36 +149,16 @@ VOID NTAPI LinkOutClassifyFn(
 	PNET_BUFFER_LIST clonedPacket = NULL;
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
+#endif
+
 	packet = (NET_BUFFER_LIST*)layerData;
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 	if (packet)
 	{
-		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-
-		if (context->NetPacketFilteringCallout != NULL)
-		{
-			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			auto dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
-			BYTE * packetBuffer = new BYTE[dataLength];
-			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
-
-#ifdef DBG
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
-#endif
-
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
-			delete packetBuffer;
-		}
-		if (context->IsModificationEnable)
-		{
-			//还未实现
-		}
-
-		//删除分配的缓冲区
-
+		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
 	}
 }
 
@@ -170,34 +180,15 @@ VOID NTAPI LinkInClassifyFn(
 	PNET_BUFFER_LIST clonedPacket = NULL;
 	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
 
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
+#endif
+
 	packet = (NET_BUFFER_LIST*)layerData;
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 	if (packet)
 	{
-		ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-
-		if (context->NetPacketFilteringCallout != NULL)
-		{
-			//+++++++++++将数据包包装成自己的形式以便进行处理+++++++++++
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			auto dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
-			BYTE* packetBuffer = new BYTE[dataLength];
-			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
-
-#ifdef DBG
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Packet received!\t\n");
-#endif
-
-			(context->NetPacketFilteringCallout)(NetLayer::NetworkLayer, NetPacketDirection::Out, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
-			delete packetBuffer;
-		}
-		if (context->IsModificationEnable)
-		{
-			//还未实现
-		}
-
-		//删除分配的缓冲区
+		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
 	}
 }

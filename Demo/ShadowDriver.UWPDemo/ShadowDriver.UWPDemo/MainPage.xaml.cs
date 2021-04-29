@@ -223,7 +223,16 @@ namespace ShadowDriver.UWPDemo
                     break;
                 case "Link Layer":
                     filterCondition.FilteringLayer = FilteringLayer.LinkLayer;
-                    filterCondition.MacAddress = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface.GetPhysicalAddress();
+                    if ((bool)InputManuallyBox.IsChecked)
+                    {
+                        filterCondition.MacAddress = PhysicalAddress.Parse(MacAddressTypeBox.Text);
+                    }
+                    else
+                    {
+                        
+                        filterCondition.MacAddress = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface.GetPhysicalAddress();
+                    }
+
                     break;
             }
             switch (directionString)
@@ -270,7 +279,7 @@ namespace ShadowDriver.UWPDemo
                 case "Link Layer":
                     if (MacAddressBox != null)
                     {
-                        MacAddressBox.Visibility = Visibility.Visible;
+                        MacAddressPanel.Visibility = Visibility.Visible;
                     }
                     if (IPAddressBox != null)
                     {
@@ -281,7 +290,7 @@ namespace ShadowDriver.UWPDemo
                 case "Network Layer":
                     if (MacAddressBox != null)
                     {
-                        MacAddressBox.Visibility = Visibility.Collapsed;
+                        MacAddressPanel.Visibility = Visibility.Collapsed;
                     }
                     if (IPAddressBox != null)
                     {
@@ -310,6 +319,30 @@ namespace ShadowDriver.UWPDemo
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+        }
+
+        private void InputManuallyBox_Checked(object sender, RoutedEventArgs e)
+        {
+            if (MacAddressBox != null)
+            {
+                MacAddressBox.Visibility = Visibility.Collapsed;
+            }
+            if (MacAddressTypeBox != null)
+            {
+                MacAddressTypeBox.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void InputManuallyBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if(MacAddressBox!= null)
+            {
+                MacAddressBox.Visibility = Visibility.Visible;
+            }
+            if(MacAddressTypeBox != null)
+            {
+                MacAddressTypeBox.Visibility = Visibility.Collapsed;
+            }
         }
     }
 }
