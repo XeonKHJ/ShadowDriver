@@ -235,10 +235,10 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_In_ _DEVICE_OBJECT* DeviceObject, 
 		RemoveHelper(helper);
 
 		//Delete ShadowFilter instance;
-		delete helper->_context.Filter;
+		delete filter;
 
 		//Delete ShadowFilterContext instance.
-		delete helper->_context.FilterContext;
+		delete filterContext;
 	}
 
 	NTSTATUS status = STATUS_SUCCESS;
