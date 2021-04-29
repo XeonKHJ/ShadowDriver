@@ -49,7 +49,9 @@ Return Value:
     WDFQUEUE queue;
     NTSTATUS status;
     WDF_IO_QUEUE_CONFIG queueConfig;
-
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverQueueInitialize\n");
+#endif
     PAGED_CODE();
 
     //
@@ -113,6 +115,9 @@ Return Value:
 
 --*/
 {
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtIoDeviceControl\n");
+#endif
     TraceEvents(TRACE_LEVEL_INFORMATION, 
                 TRACE_QUEUE, 
                 "%!FUNC! Queue 0x%p, Request 0x%p OutputBufferLength %d InputBufferLength %d IoControlCode %d", 
@@ -152,6 +157,9 @@ Return Value:
 
 --*/
 {
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtIoStop\n");
+#endif
     TraceEvents(TRACE_LEVEL_INFORMATION, 
                 TRACE_QUEUE, 
                 "%!FUNC! Queue 0x%p, Request 0x%p ActionFlags %d", 

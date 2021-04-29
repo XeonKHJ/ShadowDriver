@@ -116,6 +116,9 @@ Return Value:
             status = ShadowDriverQueueInitialize(device);
         }
 
+#ifdef DBG
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverCreateDevice\n");
+#endif
         PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
 
         //初始化Windows筛选平台

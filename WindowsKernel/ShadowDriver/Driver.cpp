@@ -30,6 +30,9 @@ Environment:
 PDRIVER_OBJECT driversss;
 VOID Unload(PDRIVER_OBJECT DriverObject)
 {
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "Driver unloaded.\n");
+#endif
     driversss = DriverObject;
 }
 
@@ -119,9 +122,9 @@ Return Value:
         WPP_CLEANUP(DriverObject);
         return status;
     }
-
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "Driver Installing.\n");
-
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "Driver Installing.\n");
+#endif
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "WdfDriverCreate failed %!STATUS!", status);
         WPP_CLEANUP(DriverObject);
@@ -156,6 +159,9 @@ Return Value:
 
 --*/
 {
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtDeviceAdd\n");
+#endif
     NTSTATUS status;
 
     UNREFERENCED_PARAMETER(Driver);
@@ -190,6 +196,9 @@ Return Value:
 
 --*/
 {
+#ifdef DBG
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtDriverContextCleanup\n");
+#endif
     UNREFERENCED_PARAMETER(DriverObject);
 
     PAGED_CODE();
