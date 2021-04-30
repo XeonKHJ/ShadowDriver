@@ -187,7 +187,7 @@ unsigned int ShadowFilter::StopFiltering()
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
 
 	// Deregister callouts
-	for (UINT8 currentCode = 0; currentCode <= shadowFilterContext->FilterIdMaxNumber; ++currentCode)
+	for (UINT8 currentCode = 0; currentCode < shadowFilterContext->FilterIdMaxNumber; ++currentCode)
 	{
 		if (shadowFilterContext->FilterIds[currentCode] != NULL)
 		{

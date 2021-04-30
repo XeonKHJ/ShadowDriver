@@ -595,6 +595,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 		{
 #ifdef DBG
 			DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_INFO_LEVEL, "Registering app from file object pointer: %p\t\n", (void*)(irp->Tail.Overlay.OriginalFileObject));
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Registering app id is: %d\t\n", helperContext.AppContext.AppId);
 #endif
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;

@@ -262,6 +262,15 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 	break;
 	case NetLayer::NetworkLayer:
 	{
+		switch (condition->AddrLocation)
+		{
+		case AddressLocation::Local:
+			fwpmCondition.fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS;
+			break;
+		case AddressLocation::Remote:
+			fwpmCondition.fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+			break;
+		}
 		switch (condition->IPAddressType)
 		{
 		case IpAddrFamily::IPv4:
@@ -271,15 +280,6 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 			RtlCopyMemory(&(v4AddrAndMask->addr), &(condition->IPv4Address), 4);
 			RtlCopyMemory(&(v4AddrAndMask->mask), &(condition->IPv4Mask), 4);
 			fwpmCondition.conditionValue.v4AddrMask = v4AddrAndMask;
-			switch (condition->AddrLocation)
-			{
-			case AddressLocation::Local:
-				fwpmCondition.fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS_V4;
-				break;
-			case AddressLocation::Remote:
-				fwpmCondition.fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS_V4;
-				break;
-			}
 		}
 		break;
 		case IpAddrFamily::IPv6:
