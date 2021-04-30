@@ -155,19 +155,19 @@ unsigned int ShadowFilter::StopFiltering()
 	NTSTATUS status = STATUS_SUCCESS;
 	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
 
-	//反注册回调函数
+	// Deregister callouts
 	for (UINT8 currentCode = 0; currentCode <= shadowFilterContext->FilterIdMaxNumber; ++currentCode)
 	{
 		if (shadowFilterContext->FilterIds[currentCode] != NULL)
 		{
-			//Delete FWPM_FILTERs.
+			// Delete FWPM_FILTERs.
 			status = FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
 
-			//Delete FWPM_CALLOUTs.
+			// Delete FWPM_CALLOUTs.
 			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
 			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
 
-			//Delete FWPS_CALLOUTs.
+			// Delete FWPS_CALLOUTs.
 			status = FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
 			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
 		}
