@@ -49,6 +49,7 @@
     <ClCompile Include="ShadowFilter.cpp" />
     <ClCompile Include="ShadowFilterContext.cpp" />
     <ClCompile Include="PacketHelper.cpp" />
+    <ClCompile Include="WfpHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CancelSafeQueueCallouts.h" />
@@ -65,6 +66,7 @@
     <ClInclude Include="Trace.h" />
     <ClInclude Include="PacketHelper.h" />
     <ClInclude Include="ShadowFilterContext.h" />
+    <ClInclude Include="WfpHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf" />

@@ -1,4 +1,8 @@
 #include "ShadowFilterContext.h"
+#include "ShadowDriverStatus.h"
+#include "ShadowCallouts.h"
+
+
 
 void* operator new(size_t size)
 {

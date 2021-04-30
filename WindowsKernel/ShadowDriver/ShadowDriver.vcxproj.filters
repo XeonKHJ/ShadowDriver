@@ -70,6 +70,9 @@
     <ClInclude Include="IOCTLHelperContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WfpHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Device.cpp">
@@ -100,6 +103,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CancelSafeQueueCallouts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WfpHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

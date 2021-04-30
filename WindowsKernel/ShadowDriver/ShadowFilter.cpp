@@ -1,33 +1,8 @@
-//shadowcommon这玩意放在shadowfilter.h就没事
 #include "ShadowFilterContext.h"
 #include "public.h"
 #include "ShadowFilter.h"
 #include "ShadowCallouts.h"
-
-NTSTATUS InitializeWfpEngine(ShadowFilterContext* context)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-
-	FWPM_SESSION0 session;
-	FWPM_PROVIDER0 provider;
-	memset(&session, 0, sizeof(session));
-	session.displayData.name = L"ShadowDriver Session";
-	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;
-	status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, &(context->WfpEngineHandle));;
-	return status;
-}
-
-NTSTATUS InitializeSublayer(ShadowFilterContext* context)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-	FWPM_SUBLAYER0 sublayer = { 0 };
-	sublayer.displayData.name = L"ShadowDriverFilterSublayer";
-	sublayer.displayData.description = L"ShadowDriver Sublayer";
-	sublayer.subLayerKey = context->SublayerGuid;
-	sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
-	status = FwpmSubLayerAdd0(context->WfpEngineHandle, &sublayer, NULL);
-	return status;
-}
+#include "WfpHelper.h"
 
 ShadowFilter::ShadowFilter(void* enviromentContexts)
 {
@@ -73,327 +48,6 @@ struct NetFilteringConditionAndCode
 	void* Address;
 };
 
-/// <summary>
-/// 总共有8种；2个层（网络层链路层）*2个方向（进和出）。
-/// 0代表网络层，1代表链路层。接着0代表进，1代表出。
-/// 这样就有00为网络层进，01为网络层出。如果是网络层，接下来那一位代表IPv4（0）或IPv6（1）
-/// 10为链路层进，11为链路层出。
-/// </summary>
-inline UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition)
-{
-	UINT8 filterLayerAndPathCode = 0;
-	switch (currentCondition->FilterLayer)
-	{
-	case NetLayer::LinkLayer:
-	{
-		filterLayerAndPathCode = 1;
-	}
-	break;
-	case NetLayer::NetworkLayer:
-	{
-		filterLayerAndPathCode = 0;
-		switch (currentCondition->IPAddressType)
-		{
-		case IpAddrFamily::IPv4:
-		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (0 << 2);
-		}
-		break;
-		case IpAddrFamily::IPv6:
-		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (1 << 2);
-		}
-		break;
-		}
-	}
-	break;
-	}
-	switch (currentCondition->FilterPath)
-	{
-	case NetPacketDirection::Out:
-		filterLayerAndPathCode = filterLayerAndPathCode + (0 << 1);
-		break;
-	case NetPacketDirection::In:
-		filterLayerAndPathCode = filterLayerAndPathCode + (1 << 1);
-		break;
-	}
-
-	return filterLayerAndPathCode;
-}
-
-inline GUID GetLayerKeyByCode(UINT8 code)
-{
-	GUID guid = { 0 };
-	switch (code)
-	{
-	case 0:
-		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
-		break;
-	case 1:
-		// 链路层出口过滤
-		// Untested
-		guid = FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET;
-		break;
-	case 2:
-		//网络层IPv4接收过滤
-		guid = FWPM_LAYER_INBOUND_IPPACKET_V4;
-		break;
-	case 3:
-		// 链路层接收过滤
-		// Untested
-		guid = FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET;
-		break;
-	case 4:
-		// 网络层IPv6发送过滤
-		// Untested
-		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
-		break;
-	case 5:
-		// 无意义
-		break;
-	case 6:
-		// 网络层IPv6接收过滤
-		// Untested
-		guid = FWPM_LAYER_INBOUND_IPPACKET_V6;
-		break;
-	case 7:
-		break;
-	}
-	return guid;
-}
-
-inline void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
-{
-	switch (code)
-	{
-	case 0:
-		callout->classifyFn = NetworkOutV4ClassifyFn;
-		break;
-	case 1:
-		//链路层出口过滤
-		callout->classifyFn = LinkOutClassifyFn;
-		break;
-	case 2:
-		//网络层IPv4接收过滤
-		callout->classifyFn = NetworkInV4ClassifyFn;
-		break;
-	case 3:
-		//链路层接收过滤
-		callout->classifyFn = LinkInClassifyFn;
-		break;
-	case 4:
-		//网络层IPv6发送过滤
-		// Untested
-		callout->classifyFn = NetworkOutV6ClassifyFn;
-		break;
-	case 5:
-		//无意义
-		break;
-	case 6:
-		//网络层IPv6接收过滤
-		// Untested
-		callout->classifyFn = NetworkInV6ClassifyFn;
-		break;
-	case 7:
-		break;
-	}
-}
-
-NTSTATUS RegisterCalloutFuntionsAccrodingToCode(ShadowFilterContext* context, UINT8 currentCode)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-
-	FWPS_CALLOUT0 wpsCallout = { 0 };
-	UINT32 calloutId;
-	wpsCallout.calloutKey = context->CalloutGuids[currentCode];
-	wpsCallout.flags = 0;
-	wpsCallout.notifyFn = PacketNotify;
-	wpsCallout.flowDeleteFn = PacketFlowDeleteNotfy;
-	AddCalloutsAccrodingToCode(&wpsCallout, currentCode);
-	status = FwpsCalloutRegister0(context->DeviceObject, &wpsCallout, &(context->WpsCalloutIds[currentCode]));
-	return status;
-}
-
-NTSTATUS AddCalloutToWfpAcrrodingToCode(ShadowFilterContext* context, UINT8 currentCode)
-{
-	NTSTATUS status;
-	FWPM_CALLOUT0 wpmCallout = { 0 };
-	wpmCallout.flags = 0;
-	wpmCallout.displayData.description = L"I think you know what it is.";
-	wpmCallout.displayData.name = L"ShadowSendCallouts";
-	wpmCallout.calloutKey = context->CalloutGuids[currentCode];
-	wpmCallout.applicableLayer = GetLayerKeyByCode(currentCode);
-	status = FwpmCalloutAdd0(context->WfpEngineHandle, &wpmCallout, NULL, &(context->WpmCalloutIds[currentCode]));
-	return status;
-}
-
-NTSTATUS AddFilterConditionAndFilter(ShadowFilterContext* context, NetFilteringCondition* conditions, int length)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-	if (conditions != nullptr && length != 0 && context != nullptr)
-	{
-		int conditionCounts[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
-		FWPM_FILTER_CONDITION0* wpmConditonsGroupByFilterLayer[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
-		NetFilteringConditionAndCode* wpmConditionAndCodes = new NetFilteringConditionAndCode[length];
-
-		//计算每个过滤器类型的条件的数量
-		for (int currentIndex = 0; currentIndex < length; ++currentIndex)
-		{
-			NetFilteringCondition* currentCondition = &conditions[currentIndex];
-			UINT8 filterLayerAndPathCode = CalculateFilterLayerAndPathCode(currentCondition);
-			wpmConditionAndCodes[currentIndex].CurrentCondition = currentCondition;
-			wpmConditionAndCodes[currentIndex].Code = filterLayerAndPathCode;
-			wpmConditionAndCodes[currentIndex].Index = conditionCounts[filterLayerAndPathCode];
-			conditionCounts[filterLayerAndPathCode]++;
-		}
-
-		//分配内存
-		for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
-		{
-			if (conditionCounts[currentCode] != 0)
-			{
-				wpmConditonsGroupByFilterLayer[currentCode] = new FWPM_FILTER_CONDITION0[conditionCounts[currentCode]];
-				//如果内存分配错误则将状态置为错误并且跳出循环
-				if(wpmConditonsGroupByFilterLayer[currentCode] == nullptr)
-				{
-					status = STATUS_FATAL_MEMORY_EXHAUSTION;
-					break;
-				}
-
-				RegisterCalloutFuntionsAccrodingToCode(context, currentCode);
-				AddCalloutToWfpAcrrodingToCode(context, currentCode);
-			}
-		}
-		if (NT_SUCCESS(status))
-		{
-			//添加条件
-			for (int currentNo = 0; currentNo < length; currentNo++)
-			{
-				NetFilteringConditionAndCode* currentConditionAndCodes = &(wpmConditionAndCodes[currentNo]);
-				NetFilteringCondition* currentCondition = currentConditionAndCodes->CurrentCondition;
-				FWPM_FILTER_CONDITION0* currentWpmCondition = NULL;
-				if (wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code] != NULL)
-				{
-					currentWpmCondition = &(wpmConditonsGroupByFilterLayer[currentConditionAndCodes->Code][currentConditionAndCodes->Index]);
-				}
-				else
-				{
-					status = STATUS_FATAL_MEMORY_EXHAUSTION;
-				}
-
-				switch (currentCondition->FilterLayer)
-				{
-				case NetLayer::LinkLayer:
-				{
-					// Untested
-					switch (currentCondition->AddrLocation)
-					{
-					case AddressLocation::Local:
-						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_LOCAL_ADDRESS;
-						break;
-					case AddressLocation::Remote:
-						currentWpmCondition->fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
-						break;
-					}
-					currentWpmCondition->conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
-					currentConditionAndCodes->Address = new FWP_BYTE_ARRAY6();
-					FWP_BYTE_ARRAY6* macAddress = (FWP_BYTE_ARRAY6*)(currentConditionAndCodes->Address);
-					for (int macAddressIndex = 0; macAddressIndex < 6; ++macAddressIndex)
-					{
-						macAddress->byteArray6[macAddressIndex] = currentCondition->MacAddress[macAddressIndex];
-					}
-					currentWpmCondition->conditionValue.byteArray6 = macAddress;
-				}
-				break;
-				case NetLayer::NetworkLayer:
-				{
-					switch (currentCondition->AddrLocation)
-					{
-					case AddressLocation::Local:
-						currentWpmCondition->fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS;
-						break;
-					case AddressLocation::Remote:
-						currentWpmCondition->fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
-						break;
-					}
-					switch (currentCondition->IPAddressType)
-					{
-					case IpAddrFamily::IPv4:
-					{
-						(currentWpmCondition->conditionValue).type = FWP_V4_ADDR_MASK;
-						currentConditionAndCodes->Address = new FWP_V4_ADDR_AND_MASK();
-						FWP_V4_ADDR_AND_MASK* v4AddrAndMask = (FWP_V4_ADDR_AND_MASK*)(currentConditionAndCodes->Address);
-						v4AddrAndMask->addr = currentCondition->IPv4Address;
-						v4AddrAndMask->mask = currentCondition->IPv4Mask;
-						currentWpmCondition->conditionValue.v4AddrMask = v4AddrAndMask;
-					}
-					break;
-					case IpAddrFamily::IPv6:
-					{
-						(currentWpmCondition->conditionValue).type = FWP_V6_ADDR_MASK;
-					}
-					break;
-					}
-				}
-				break;
-				}
-				switch (currentCondition->MatchType)
-				{
-				case FilterMatchType::Equal:
-					currentWpmCondition->matchType = FWP_MATCH_EQUAL;
-					break;
-				default:
-					//还未实现
-					status = SHADOW_FILTER_NOT_IMPLEMENTED;
-				}
-
-
-			}
-		}
-
-		//注册过滤器
-		for (UINT8 currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber && NT_SUCCESS(status); ++currentCode)
-		{
-			if (conditionCounts[currentCode] != 0)
-			{
-				FWPM_FILTER0 wpmFilter = { 0 };
-				wpmFilter.displayData.name = L"ShadowDriverFilter";
-				wpmFilter.displayData.description = L"ShadowDriver's filter";
-				wpmFilter.subLayerKey = context->SublayerGuid;
-				wpmFilter.layerKey = GetLayerKeyByCode(currentCode);
-				wpmFilter.weight.type = FWP_EMPTY;
-				wpmFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
-				wpmFilter.flags = FWPM_FILTER_FLAG_NONE;
-				wpmFilter.rawContext = (UINT64)context;
-				wpmFilter.action.calloutKey = context->CalloutGuids[currentCode];
-				wpmFilter.numFilterConditions = conditionCounts[currentCode];
-				wpmFilter.filterCondition = wpmConditonsGroupByFilterLayer[currentCode];
-
-				//一下这个status需要被验证
-				status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(context->FilterIds[currentCode]));
-			}
-		}
-
-		//清理动态分配的变量
-		for (size_t i = 0; i < length; i++)
-		{
-			delete wpmConditionAndCodes[i].Address;
-		}
-		delete[]wpmConditionAndCodes;
-		for (int i = 0; i < ShadowFilterContext::FilterIdMaxNumber; ++i)
-		{
-			if (conditionCounts[i] != 0)
-			{
-				delete[]wpmConditonsGroupByFilterLayer[i];
-			}
-		}
-	}
-	else
-	{
-		status = SHADOW_FILTER_NO_CONDITION;
-	}
-	return (int)status;
-}
 /*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
 
 unsigned int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
@@ -430,36 +84,51 @@ unsigned int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions
 unsigned int ShadowFilter::StartFiltering()
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
-
-	if (!shadowFilterContext->IsFilteringStarted)
+	ShadowFilterContext* context = (ShadowFilterContext*)_context;
+	WfpHelper wfpHelper{};
+	if (!context->IsFilteringStarted)
 	{
 		if (_conditionCount != 0 && _filteringConditions != nullptr)
 		{
 			if (NT_SUCCESS(status))
 			{
-				status = InitializeWfpEngine(shadowFilterContext);
+				status = wfpHelper.InitializeWfpEngine(context);
 			}
 
 			if (NT_SUCCESS(status))
 			{
-				status = InitializeSublayer(shadowFilterContext);
+				status = wfpHelper.InitializeSublayer(context);
 			}
 
 			if (NT_SUCCESS(status))
 			{
-				status = AddFilterConditionAndFilter(shadowFilterContext, _filteringConditions, _conditionCount);
+				status = wfpHelper.AllocateConditionGroups(_filteringConditions, _conditionCount);
 			}
 
 			if (NT_SUCCESS(status))
 			{
-				shadowFilterContext->IsFilteringStarted = TRUE;
+				status = wfpHelper.RegisterCalloutsToDevice(context);
+			}
+
+			if (NT_SUCCESS(status))
+			{
+				status = wfpHelper.AddCalloutsToWfp(context);
+			}
+
+			if (NT_SUCCESS(status))
+			{
+				status = wfpHelper.AddFwpmFiltersToWpf(context);
+			}
+
+			if (NT_SUCCESS(status))
+			{
+				context->IsFilteringStarted = TRUE;
 			}
 
 			if (!NT_SUCCESS(status))
 			{
 #ifdef DBG
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in starting filter process.\t\n");
 #endif
 				StopFiltering();
 			}
