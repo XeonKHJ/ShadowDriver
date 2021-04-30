@@ -84,14 +84,14 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 	packet = (NET_BUFFER_LIST*)layerData;
 #ifdef DBG
-	//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	if (packet)
 	{
-		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
+		//CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 	}
 }
 
@@ -105,7 +105,11 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 )
 {
 	classifyOut->actionType = FWP_ACTION_PERMIT;
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkInV4ClassifyFn\t\n");
+	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+#endif
+	//CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
 
@@ -144,26 +148,18 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	NTSTATUS status = STATUS_SUCCESS;
-	NET_BUFFER_LIST* packet;
-	SIZE_T dataLength = 0;
-	SIZE_T bytes = 0;
-	NDIS_STATUS ndisStatus;
-
-	PNET_BUFFER_LIST clonedPacket = NULL;
-	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
-
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
 #endif
 
-	packet = (NET_BUFFER_LIST*)layerData;
-	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
-	classifyOut->actionType = FWP_ACTION_PERMIT;
-	if (packet)
-	{
-		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
-	}
+	//packet = (NET_BUFFER_LIST*)layerData;
+	////PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+	//classifyOut->actionType = FWP_ACTION_PERMIT;
+	//if (packet)
+	//{
+	//	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
+	//}
 }
 
 VOID NTAPI ShadowCallout::LinkInClassifyFn(
@@ -175,25 +171,20 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	NTSTATUS status = STATUS_SUCCESS;
-	NET_BUFFER_LIST* packet;
-	SIZE_T dataLength = 0;
-	SIZE_T bytes = 0;
-	NDIS_STATUS ndisStatus;
-
-	PNET_BUFFER_LIST clonedPacket = NULL;
-	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
-
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	IOCTLHelper* ioctlHelper = (IOCTLHelper*)(context->CustomContext);
+	int appId = ioctlHelper->_context.AppContext.AppId;
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "%d: LinkInClassifyFn\t\n", appId);
 #endif
 
-	packet = (NET_BUFFER_LIST*)layerData;
-	
-	//PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
-	classifyOut->actionType = FWP_ACTION_PERMIT;
-	if (packet)
-	{
-		CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
-	}
+	//packet = (NET_BUFFER_LIST*)layerData;
+	//
+	////PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
+	//classifyOut->actionType = FWP_ACTION_PERMIT;
+	//if (packet)
+	//{
+	//	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
+	//}
 }
