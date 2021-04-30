@@ -19,7 +19,7 @@ private:
 	NetFilteringCondition** _conditionsByCode[8];
 	FWPM_FILTER_CONDITION0* _fwpmConditionsByCode[8];
 	void** _addressesByCode[8];
-	int _groupCounts[8];
+	int _groupCounts[8] = { 0 };
 	static UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition);
 	static GUID GetLayerKeyByCode(UINT8 code);
 	static void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code);

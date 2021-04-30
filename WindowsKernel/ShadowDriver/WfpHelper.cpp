@@ -4,6 +4,9 @@
 
 WfpHelper::~WfpHelper()
 {
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "Deleting a WfpHelper instance.\t\n");
+#endif
 	for (UINT8 code = 0; code < ShadowFilterContext::FilterIdMaxNumber; ++code)
 	{
 		
@@ -250,8 +253,10 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 		{
 		case AddressLocation::Local:
 			fwpmCondition.fieldKey = FWPM_CONDITION_MAC_LOCAL_ADDRESS;
+			break;
 		case AddressLocation::Remote:
 			fwpmCondition.fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
+			break;
 		}
 	}
 		break;
@@ -265,6 +270,16 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 			auto v4AddrAndMask = new FWP_V4_ADDR_AND_MASK;
 			RtlCopyMemory(&(v4AddrAndMask->addr), &(condition->IPv4Address), 4);
 			RtlCopyMemory(&(v4AddrAndMask->mask), &(condition->IPv4Mask), 4);
+			fwpmCondition.conditionValue.v4AddrMask = v4AddrAndMask;
+			switch (condition->AddrLocation)
+			{
+			case AddressLocation::Local:
+				fwpmCondition.fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS_V4;
+				break;
+			case AddressLocation::Remote:
+				fwpmCondition.fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS_V4;
+				break;
+			}
 		}
 			break;
 		case IpAddrFamily::IPv6:
@@ -301,9 +316,6 @@ NTSTATUS WfpHelper::AllocateConditionGroups(NetFilteringCondition* conditionsToG
 		int Code;
 	};
 
-	//array[CODE] = the number of conditions that was assigned to CODE.
-	int conditionNumbers[ShadowFilterContext::FilterIdMaxNumber] = { 0 };
-
 	NetFilteringConditionAndCode* indicators = new NetFilteringConditionAndCode[conditionCount];
 	for (int i = 0; i < conditionCount; ++i)
 	{
@@ -311,14 +323,14 @@ NTSTATUS WfpHelper::AllocateConditionGroups(NetFilteringCondition* conditionsToG
 		auto code = CalculateFilterLayerAndPathCode(currentCondition);
 		NetFilteringConditionAndCode* indicator = &(indicators[i]);
 		indicator->Code = code;
-		indicator->Index = conditionNumbers[code];
+		indicator->Index = _groupCounts[code];
 		indicator->Condition = currentCondition;
-		++(conditionNumbers[code]);
+		++(_groupCounts[code]);
 	}
 
 	for (int currentCode = 0; currentCode < ShadowFilterContext::FilterIdMaxNumber; ++currentCode)
 	{
-		int currentCodeConditionCount = conditionNumbers[currentCode];
+		int currentCodeConditionCount = _groupCounts[currentCode];
 		if (currentCodeConditionCount > 0)
 		{
 			_conditionsByCode[currentCode] = new NetFilteringCondition * [currentCodeConditionCount];

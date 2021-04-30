@@ -35,7 +35,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClassDiagram.cd" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
@@ -44,10 +43,10 @@
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="IOCTLHelper.cpp" />
     <ClCompile Include="NetFilteringCondition.cpp" />
+    <ClCompile Include="OverloadOperators.cpp" />
     <ClCompile Include="Queue.cpp" />
     <ClCompile Include="ShadowCallouts.cpp" />
     <ClCompile Include="ShadowFilter.cpp" />
-    <ClCompile Include="ShadowFilterContext.cpp" />
     <ClCompile Include="PacketHelper.cpp" />
     <ClCompile Include="WfpHelper.cpp" />
   </ItemGroup>
@@ -59,6 +58,7 @@
     <ClInclude Include="IOCTLHelperContext.h" />
     <ClInclude Include="IrpLinkEntry.h" />
     <ClInclude Include="NetFilteringCondition.h" />
+    <ClInclude Include="OverloadOperators.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="ShadowCallouts.h" />

@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="ShadowDriver.inf">
@@ -73,6 +72,9 @@
     <ClInclude Include="WfpHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OverloadOperators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Device.cpp">
@@ -96,9 +98,6 @@
     <ClCompile Include="ShadowCallouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ShadowFilterContext.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="IOCTLHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -106,6 +105,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WfpHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OverloadOperators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

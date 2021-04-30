@@ -39,17 +39,6 @@ ShadowFilter::~ShadowFilter()
 	delete[] _filteringConditions;
 }
 
-/*++++++++++++++++++++++++++++++++++++为添加过滤条件做准备的代码++++++++++++++++++++++++++++++++++++++++++++*/
-struct NetFilteringConditionAndCode
-{
-	NetFilteringCondition* CurrentCondition;
-	int Code;
-	int Index;
-	void* Address;
-};
-
-/*-----------------------------------为添加过滤条件做准备的代码---------------------------------------------*/
-
 unsigned int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
 {
 	NTSTATUS statusCode = 0;
@@ -95,30 +84,72 @@ unsigned int ShadowFilter::StartFiltering()
 				status = wfpHelper.InitializeWfpEngine(context);
 			}
 
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeWfpEngine routine.\t\n");
+			}
+#endif
+
 			if (NT_SUCCESS(status))
 			{
 				status = wfpHelper.InitializeSublayer(context);
 			}
+
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeSublayer routine.\t\n");
+			}
+#endif
 
 			if (NT_SUCCESS(status))
 			{
 				status = wfpHelper.AllocateConditionGroups(_filteringConditions, _conditionCount);
 			}
 
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AllocateConditionGroups routine.\t\n");
+			}
+#endif
+
 			if (NT_SUCCESS(status))
 			{
 				status = wfpHelper.RegisterCalloutsToDevice(context);
 			}
+
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in RegisterCalloutsToDevice routine.\t\n");
+			}
+#endif
 
 			if (NT_SUCCESS(status))
 			{
 				status = wfpHelper.AddCalloutsToWfp(context);
 			}
 
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddCalloutsToWfp routine.\t\n");
+			}
+#endif
+
 			if (NT_SUCCESS(status))
 			{
 				status = wfpHelper.AddFwpmFiltersToWpf(context);
 			}
+
+#ifdef DBG
+			if (!NT_SUCCESS(status))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddFwpmFiltersToWpf routine.\t\n");
+			}
+#endif
 
 			if (NT_SUCCESS(status))
 			{
