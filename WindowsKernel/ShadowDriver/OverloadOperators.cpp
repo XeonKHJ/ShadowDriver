@@ -1,8 +1,5 @@
-#include "ShadowFilterContext.h"
-#include "ShadowDriverStatus.h"
-#include "ShadowCallouts.h"
-
-
+#include "OverloadOperators.h"
+#include <wdm.h>
 
 void* operator new(size_t size)
 {
@@ -45,3 +42,4 @@ void operator delete[](void* toFreeObject, size_t)
 		ExFreePoolWithTag(toFreeObject, 'oona');
 	}
 }
+
