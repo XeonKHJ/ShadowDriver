@@ -61,7 +61,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     NTSTATUS status;
 
     FWPM_FILTER0 sendFilter = { 0 };
-    FWPM_FILTER_CONDITION0 condition[2] = { 0 };
+    FWPM_FILTER_CONDITION0 condition[1] = { 0 };
 
     FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
 
@@ -71,26 +71,21 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     FWP_V4_ADDR_AND_MASK AddrandMaskSend2 = { 0 };
     AddrandMaskSend2.addr = 0x72727272;
     AddrandMaskSend2.mask = 0xFFFFFFFF;
-
+    FWP_BYTE_ARRAY6 macAddress = { 0xC0, 0x3E, 0xBA, 0xD4, 0x81, 0x89 };
     sendFilter.displayData.name = L"ShadowDriveFilter";
     sendFilter.displayData.description = L"ShadowDriver's filter";
-    sendFilter.layerKey = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+    sendFilter.layerKey = FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET;
     sendFilter.subLayerKey = WFP_SUBLAYER_GUID;
     sendFilter.weight.type = FWP_EMPTY;
-    sendFilter.numFilterConditions = 2;
+    sendFilter.numFilterConditions = 1;
     sendFilter.action.type = FWP_ACTION_CALLOUT_TERMINATING;
     sendFilter.action.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
     sendFilter.filterCondition = condition;
 
-    condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+    condition[0].fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
     condition[0].matchType = FWP_MATCH_EQUAL;
-    condition[0].conditionValue.type = FWP_V4_ADDR_MASK;
-    condition[0].conditionValue.v4AddrMask = &AddrandMask;
-
-    condition[1].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
-    condition[1].matchType = FWP_MATCH_EQUAL;
-    condition[1].conditionValue.type = FWP_V4_ADDR_MASK;
-    condition[1].conditionValue.v4AddrMask = &AddrandMaskSend2;
+    condition[0].conditionValue.byteArray6 = &macAddress;
+    condition[0].conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
 
     status = FwpmFilterAdd0(engineHandler, &sendFilter, NULL, &filterId);
     UINT64 abc = filterId;
@@ -110,7 +105,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     FWPM_FILTER_CONDITION0 condition2[1] = { 0 };
     receiveFilter.displayData.name = L"ShadowDriveFilter";
     receiveFilter.displayData.description = L"ShadowDriver's filter";
-    receiveFilter.layerKey = FWPM_LAYER_INBOUND_IPPACKET_V4;
+    receiveFilter.layerKey = FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET;
     receiveFilter.subLayerKey = WFP_SUBLAYER_GUID;
     receiveFilter.weight.type = FWP_EMPTY;
     receiveFilter.numFilterConditions = 1;
@@ -118,10 +113,10 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     receiveFilter.action.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
     receiveFilter.filterCondition = condition2;
 
-    condition2[0].fieldKey = FWPM_CONDITION_IP_REMOTE_ADDRESS;
+    condition2[0].fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
     condition2[0].matchType = FWP_MATCH_EQUAL;
-    condition2[0].conditionValue.type = FWP_V4_ADDR_MASK;
-    condition2[0].conditionValue.v4AddrMask = &AddrandMask2;
+    condition2[0].conditionValue.byteArray6 = &macAddress;
+    condition2[0].conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
 
     status = FwpmFilterAdd0(engineHandler, &receiveFilter, NULL, &filterId2);
     UINT64 abc2 = filterId2;

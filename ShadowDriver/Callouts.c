@@ -241,165 +241,8 @@ VOID NTAPI ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	NTSTATUS status = 0;
-	NET_BUFFER_LIST* packet;
-	FWPS_STREAM_DATA* streamData;
-	SIZE_T dataLength = 0;
-	SIZE_T bytes = 0;
-	NDIS_STATUS ndisStatus;
-
-	PNET_BUFFER_LIST clonedPacket = NULL;
-	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
-
-	packet = (NET_BUFFER_LIST*)layerData;
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Original Net Buffer List:\t\n");
-	PrintNetBufferList(packet, DPFLTR_TRACE_LEVEL);
-	classifyOut->actionType = FWP_ACTION_PERMIT;
-
-	BOOL hasNextNBL = FALSE;
-	BOOL hasNextNB = FALSE;
-	if (packet)
-	{
-		if (NET_BUFFER_LIST_NEXT_NBL(packet))
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer list link to another list. \n");
-			hasNextNBL = TRUE;
-		}
-
-		if (NET_BUFFER_NEXT_NB(NET_BUFFER_LIST_FIRST_NB(packet)))
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "The net buffer link to another buffer. \n");
-			hasNextNB = TRUE;
-		}
-	}
-
-	if (SendInjectHandle != NULL && filter->filterId == filterId && packet)
-	{
-		injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, packet, NULL);
-
-		classifyOut->actionType = FWP_ACTION_PERMIT;
-		//如果捕获的数据包是主动
-		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
-			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
-		{
-			classifyOut->actionType = FWP_ACTION_PERMIT;
-			//PrintNetBufferList(packet);
-		}
-		//该数据包不是被手动注入的数据包
-		else if (injectionState == FWPS_PACKET_NOT_INJECTED && IsModificationEnable)
-		{
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-
-			if (NT_SUCCESS(status))
-			{
-				if (hasNextNB || hasNextNBL)
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Original net buffers:\n");
-					PrintNetBufferList(clonedPacket, DPFLTR_WARNING_LEVEL);
-				}
-
-				//如果数据包缓冲区创建成功
-				ModifySendIPPacket(clonedPacket);
-
-				//检查校验和
-
-
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Net Buffer List: \t\n");
-
-				if (hasNextNB || hasNextNBL)
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Modified net buffers:\n");
-					PrintNetBufferList(clonedPacket, DPFLTR_WARNING_LEVEL);
-				}
-				else
-				{
-					PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
-				}
-				
-
-				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				status = FwpsInjectNetworkSendAsync0(SendInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, SendInjectCompleted, NULL);
-
-				//如果注入失败，则令包正常通过。
-				if (!NT_SUCCESS(status))
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Send Inject Failed\n");
-					classifyOut->actionType = FWP_ACTION_PERMIT;
-				}
-				else
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Success\n");
-					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
-					classifyOut->actionType = FWP_ACTION_BLOCK;
-					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-				}
-			}
-			else
-			{
-				classifyOut->actionType = FWP_ACTION_PERMIT;
-			}
-
-		}
-	}
-	else if (ReceiveInjectHandle != NULL && filter->filterId == filterId2 && IsModificationEnable)
-	{
-		injectionState = FwpsQueryPacketInjectionState0(ReceiveInjectHandle, packet, NULL);
-		//如果捕获的数据包是主动
-		if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
-			injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
-		{
-			classifyOut->actionType = FWP_ACTION_PERMIT;
-		}
-		//该数据包不是被手动注入的数据包
-		else if (injectionState == FWPS_PACKET_NOT_INJECTED)
-		{
-			UINT32 ipHeaderSize = 0;
-
-			if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
-			{
-				ipHeaderSize = inMetaValues->ipHeaderSize;
-			}
-
-			NdisRetreatNetBufferListDataStart(packet, ipHeaderSize, 0, NULL, NULL);
-			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-			NdisAdvanceNetBufferListDataStart(packet, ipHeaderSize, FALSE, 0);
-			if (NT_SUCCESS(status))
-			{
-				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Retreat: \n");
-				//PrintNetBufferList(clonedPacket);
-
-				//如果数据包缓冲区创建成功
-				ModifyReceiveIPPacket(clonedPacket);
-
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Modified Receving Net Buffer List: \t\n");
-				PrintNetBufferList(clonedPacket, DPFLTR_TRACE_LEVEL);
-
-				//status = FwpsInjectNetworkSendAsync0(InjectHandle, NULL, 0, UNSPECIFIED_COMPARTMENT_ID, clonedPacket, InjectCompleted, NULL);
-				//status = FwpsInjectNetworkSendAsync0(ReceiveInjectHandle, NULL, 0, inMetaValues->compartmentId, clonedPacket, ReceiveInjectCompleted, NULL);
-
-				FWPS_INCOMING_VALUE ifIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
-				FWPS_INCOMING_VALUE subIfIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX];
-				status = FwpsInjectNetworkReceiveAsync0(ReceiveInjectHandle, NULL, 0,
-					(inMetaValues->currentMetadataValues & FWPS_METADATA_FIELD_COMPARTMENT_ID ? inMetaValues->compartmentId : UNSPECIFIED_COMPARTMENT_ID),
-					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32,
-					inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32,
-					clonedPacket, ReceiveInjectCompleted, NULL);
-
-				//如果注入失败，则令包正常通过。
-				if (!NT_SUCCESS(status))
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Receive Inject Failed\n");
-				}
-				else
-				{
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Receive Inject Start\n");
-					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Ready to block\n");
-					classifyOut->actionType = FWP_ACTION_BLOCK;
-					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-				}
-			}
-		}
-	}
+	//classifyOut->actionType = FWP_ACTION_PERMIT;
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "SendClassifyFn\n");
 }
 
 VOID NTAPI ReceiveClassifyFn(
@@ -411,13 +254,8 @@ VOID NTAPI ReceiveClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	UINT32 ipHeaderSize = inMetaValues->ipHeaderSize;
-	NDIS_TCP_IP_CHECKSUM_PACKET_INFO checkSum = { 0 };
-	if (FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_IP_HEADER_SIZE))
-	{
-	}
-
-	checkSum.Value = (ULONG)(ULONG_PTR)NET_BUFFER_LIST_INFO((NET_BUFFER_LIST*)layerData, TcpIpChecksumNetBufferListInfo);
+	classifyOut->actionType = FWP_ACTION_PERMIT;
+	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ReceiveClassifyFn\n");
 }
 
 NTSTATUS NTAPI NotifyFn(
@@ -459,7 +297,7 @@ NTSTATUS RegisterCalloutFuntions(IN PDEVICE_OBJECT deviceObject)
 	FWPS_CALLOUT0 receiveCallout = { 0 };
 	receiveCallout.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
 	receiveCallout.flags = 0;
-	receiveCallout.classifyFn = ClassifyFn;
+	receiveCallout.classifyFn = ReceiveClassifyFn;
 	receiveCallout.notifyFn = NotifyFn;
 	receiveCallout.flowDeleteFn = FlowDeleteFn;
 	status = FwpsCalloutRegister0(deviceObject, &receiveCallout, &WpsReceiveCalloutId);
@@ -503,7 +341,7 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
 	sendCallout.displayData.description = L"I think you know what it is.";
 	sendCallout.displayData.name = L"ShadowSendCallouts";
 	sendCallout.calloutKey = WFP_SEND_ESTABLISHED_CALLOUT_GUID;
-	sendCallout.applicableLayer = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+	sendCallout.applicableLayer = FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET;
 	status = FwpmCalloutAdd0(engineHandle, &sendCallout, NULL, &WpmSendCalloutId);
 
 
@@ -520,7 +358,7 @@ NTSTATUS AddCalloutToWfp(IN HANDLE engineHandle)
 	receiveCallout.displayData.description = L"I think you know what it is.";
 	receiveCallout.displayData.name = L"ShadowReceiveCallouts";
 	receiveCallout.calloutKey = WFP_RECEIVE_ESTABLISHED_CALLOUT_GUID;
-	receiveCallout.applicableLayer = FWPM_LAYER_INBOUND_IPPACKET_V4;
+	receiveCallout.applicableLayer = FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET;
 	status = FwpmCalloutAdd0(engineHandle, &receiveCallout, NULL, &WpmReceiveCalloutId);
 
 	if (NT_SUCCESS(status))
