@@ -598,7 +598,7 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 #endif
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
-			sfContext->NetPacketFilteringCallout = FilterFunc;
+			sfContext->NetPacketFilteringCallout = PacketHelper::FilterFunc;
 
 			auto guidSize = sizeof(GUID);
 
