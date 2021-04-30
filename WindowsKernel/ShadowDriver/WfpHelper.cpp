@@ -206,24 +206,24 @@ void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 	switch (code)
 	{
 	case 0:
-		callout->classifyFn = NetworkOutV4ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkOutV4ClassifyFn;
 		break;
 	case 1:
 		//链路层出口过滤
-		callout->classifyFn = LinkOutClassifyFn;
+		callout->classifyFn = ShadowCallout::LinkOutClassifyFn;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
-		callout->classifyFn = NetworkInV4ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkInV4ClassifyFn;
 		break;
 	case 3:
 		//链路层接收过滤
-		callout->classifyFn = LinkInClassifyFn;
+		callout->classifyFn = ShadowCallout::LinkInClassifyFn;
 		break;
 	case 4:
 		//网络层IPv6发送过滤
 		// Untested
-		callout->classifyFn = NetworkOutV6ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkOutV6ClassifyFn;
 		break;
 	case 5:
 		//无意义
@@ -231,7 +231,7 @@ void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 	case 6:
 		//网络层IPv6接收过滤
 		// Untested
-		callout->classifyFn = NetworkInV6ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkInV6ClassifyFn;
 		break;
 	case 7:
 		break;
@@ -359,8 +359,8 @@ NTSTATUS WfpHelper::RegisterCalloutsToDevice(_Inout_ ShadowFilterContext* contex
 			FWPS_CALLOUT0 wpsCallout = { 0 };
 			wpsCallout.calloutKey = context->CalloutGuids[code];
 			wpsCallout.flags = 0;
-			wpsCallout.notifyFn = PacketNotify;
-			wpsCallout.flowDeleteFn = PacketFlowDeleteNotfy;
+			wpsCallout.notifyFn = ShadowCallout::PacketNotify;
+			wpsCallout.flowDeleteFn = ShadowCallout::PacketFlowDeleteNotfy;
 			AddCalloutsAccrodingToCode(&wpsCallout, code);
 			status = FwpsCalloutRegister0(context->DeviceObject, &wpsCallout, &(context->WpsCalloutIds[code]));
 		}

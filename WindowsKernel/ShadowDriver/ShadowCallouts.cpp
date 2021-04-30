@@ -3,7 +3,7 @@
 //#include "NetFilteringCondition.h"
 #include "IOCTLHelper.h"
 
-inline NTSTATUS CalloutPreproecess(
+NTSTATUS ShadowCallout::CalloutPreproecess(
 	_Inout_opt_ void* layerData,
 	_In_ const FWPS_FILTER0* filter,
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut,
@@ -53,17 +53,17 @@ inline NTSTATUS CalloutPreproecess(
 	return status;
 }
 
-NTSTATUS PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType, _In_ const GUID* filterKey, _Inout_ FWPS_FILTER0* filter)
+NTSTATUS ShadowCallout::PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType, _In_ const GUID* filterKey, _Inout_ FWPS_FILTER0* filter)
 {
 	return STATUS_SUCCESS;
 }
 
-void PacketFlowDeleteNotfy(_In_ UINT16 layerId, _In_ UINT32 calloutId, _In_ UINT64 flowContext)
+void ShadowCallout::PacketFlowDeleteNotfy(_In_ UINT16 layerId, _In_ UINT32 calloutId, _In_ UINT64 flowContext)
 {
 	return;
 }
 
-VOID NTAPI NetworkOutV4ClassifyFn(
+VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
@@ -95,7 +95,7 @@ VOID NTAPI NetworkOutV4ClassifyFn(
 	}
 }
 
-VOID NTAPI NetworkInV4ClassifyFn(
+VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
@@ -109,7 +109,7 @@ VOID NTAPI NetworkInV4ClassifyFn(
 }
 
 
-VOID NTAPI NetworkInV6ClassifyFn(
+VOID NTAPI ShadowCallout::NetworkInV6ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
@@ -122,7 +122,7 @@ VOID NTAPI NetworkInV6ClassifyFn(
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
-VOID NTAPI NetworkOutV6ClassifyFn(
+VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
@@ -135,7 +135,7 @@ VOID NTAPI NetworkOutV6ClassifyFn(
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 }
 
-VOID NTAPI LinkOutClassifyFn(
+VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
@@ -166,7 +166,7 @@ VOID NTAPI LinkOutClassifyFn(
 	}
 }
 
-VOID NTAPI LinkInClassifyFn(
+VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 	_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
 	_Inout_opt_ void* layerData,
