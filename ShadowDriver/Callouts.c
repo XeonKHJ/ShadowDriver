@@ -241,7 +241,7 @@ VOID NTAPI ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 )
 {
-	//classifyOut->actionType = FWP_ACTION_PERMIT;
+	classifyOut->actionType = FWP_ACTION_PERMIT;
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "SendClassifyFn\n");
 }
 

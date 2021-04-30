@@ -62,15 +62,6 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 
     FWPM_FILTER0 sendFilter = { 0 };
     FWPM_FILTER_CONDITION0 condition[1] = { 0 };
-
-    FWP_V4_ADDR_AND_MASK AddrandMask = { 0 };
-
-    AddrandMask.addr = 0xC0A80166;
-    AddrandMask.mask = 0xFFFFFFFF;
-
-    FWP_V4_ADDR_AND_MASK AddrandMaskSend2 = { 0 };
-    AddrandMaskSend2.addr = 0x72727272;
-    AddrandMaskSend2.mask = 0xFFFFFFFF;
     FWP_BYTE_ARRAY6 macAddress = { 0xC0, 0x3E, 0xBA, 0xD4, 0x81, 0x89 };
     sendFilter.displayData.name = L"ShadowDriveFilter";
     sendFilter.displayData.description = L"ShadowDriver's filter";
@@ -96,11 +87,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
     }
 
     DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Added Send Filter to WPF.\n");
-
-    FWP_V4_ADDR_AND_MASK AddrandMask2 = { 0 };
-    AddrandMask2.addr = 0xC0A80166;
-    AddrandMask2.mask = 0xFFFFFFFF;
-
+    FWP_BYTE_ARRAY6 macAddress2 = { 0xC0, 0x3E, 0xBA, 0xD4, 0x81, 0x89 };
     FWPM_FILTER0 receiveFilter = { 0 };
     FWPM_FILTER_CONDITION0 condition2[1] = { 0 };
     receiveFilter.displayData.name = L"ShadowDriveFilter";
@@ -115,7 +102,7 @@ NTSTATUS AddFilterToWfp(HANDLE engineHandler)
 
     condition2[0].fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
     condition2[0].matchType = FWP_MATCH_EQUAL;
-    condition2[0].conditionValue.byteArray6 = &macAddress;
+    condition2[0].conditionValue.byteArray6 = &macAddress2;
     condition2[0].conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
 
     status = FwpmFilterAdd0(engineHandler, &receiveFilter, NULL, &filterId2);
