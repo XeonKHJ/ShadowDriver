@@ -9,7 +9,7 @@ WfpHelper::~WfpHelper()
 #endif
 	for (UINT8 code = 0; code < ShadowFilterContext::FilterIdMaxNumber; ++code)
 	{
-		
+
 		if (_groupCounts[code] > 0)
 		{
 			auto conditions = _conditionsByCode[code];
@@ -49,7 +49,7 @@ WfpHelper::~WfpHelper()
 /// 这样就有00为网络层进，01为网络层出。如果是网络层，接下来那一位代表IPv4（0）或IPv6（1）
 /// 10为链路层进，11为链路层出。
 /// </summary>
-UINT8  WfpHelper::CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition)
+UINT8 WfpHelper::CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition)
 {
 	UINT8 filterLayerAndPathCode = 0;
 	switch (currentCondition->FilterLayer)
@@ -91,7 +91,7 @@ UINT8  WfpHelper::CalculateFilterLayerAndPathCode(NetFilteringCondition* current
 	return filterLayerAndPathCode;
 }
 
-GUID  WfpHelper::GetLayerKeyByCode(UINT8 code)
+GUID WfpHelper::GetLayerKeyByCode(UINT8 code)
 {
 	GUID guid = { 0 };
 	switch (code)
@@ -238,7 +238,7 @@ void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
 	}
 }
 
-FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* condition, _Inout_ NTSTATUS * status)
+FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* condition, _Inout_ NTSTATUS* status)
 {
 	FWPM_FILTER_CONDITION0 fwpmCondition{};
 	switch (condition->FilterLayer)
@@ -259,7 +259,7 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 			break;
 		}
 	}
-		break;
+	break;
 	case NetLayer::NetworkLayer:
 	{
 		switch (condition->IPAddressType)
@@ -281,7 +281,7 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 				break;
 			}
 		}
-			break;
+		break;
 		case IpAddrFamily::IPv6:
 			*status = SHADOW_FILTER_NOT_IMPLEMENTED;
 			break;
@@ -290,7 +290,7 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 			break;
 		}
 	}
-		break;
+	break;
 	}
 
 	switch (condition->MatchType)
