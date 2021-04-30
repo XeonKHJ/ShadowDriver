@@ -192,23 +192,23 @@ unsigned int ShadowFilter::StopFiltering()
 		if (shadowFilterContext->FilterIds[currentCode] != NULL)
 		{
 			// Delete FWPM_FILTERs.
-			status = FwpmFilterDeleteById0(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
+			status = FwpmFilterDeleteById(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
 
 			// Delete FWPM_CALLOUTs.
 			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
 			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
 
 			// Delete FWPS_CALLOUTs.
-			status = FwpsCalloutUnregisterById0((shadowFilterContext->WpsCalloutIds)[currentCode]);
+			status = FwpsCalloutUnregisterById((shadowFilterContext->WpsCalloutIds)[currentCode]);
 			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
 		}
 	}
 
 	// Delete FWPM_SUBLAYER.
-	status = FwpmSubLayerDeleteByKey0(shadowFilterContext->WfpEngineHandle, &(shadowFilterContext->SublayerGuid));
+	status = FwpmSubLayerDeleteByKey(shadowFilterContext->WfpEngineHandle, &(shadowFilterContext->SublayerGuid));
 
 	// Close FWPM_ENGINE session.
-	status = FwpmEngineClose0(shadowFilterContext->WfpEngineHandle);
+	status = FwpmEngineClose(shadowFilterContext->WfpEngineHandle);
 	shadowFilterContext->WfpEngineHandle = NULL;
 
 	shadowFilterContext->IsFilteringStarted = false;

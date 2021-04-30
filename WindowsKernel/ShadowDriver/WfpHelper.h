@@ -17,12 +17,12 @@ public:
 	NTSTATUS AddFwpmFiltersToWpf(ShadowFilterContext* context);
 private:
 	NetFilteringCondition** _conditionsByCode[8];
-	FWPM_FILTER_CONDITION0* _fwpmConditionsByCode[8];
+	FWPM_FILTER_CONDITION* _fwpmConditionsByCode[8];
 	void** _addressesByCode[8];
 	int _groupCounts[8] = { 0 };
 	static UINT8 CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition);
 	static GUID GetLayerKeyByCode(UINT8 code);
-	static void AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code);
+	static void AddCalloutsAccrodingToCode(FWPS_CALLOUT* callout, UINT8 code);
 
 	/// <summary>
 	/// 
@@ -30,6 +30,6 @@ private:
 	/// <param name="condition"></param>
 	/// <param name="status">A pointer to NTSTATUS. During converting process, if error occures, this function will set status in the pointer.</param>
 	/// <returns>Address field in return value is dynamic allocated.</returns>
-	static FWPM_FILTER_CONDITION0 ConvertToFwpmCondition(NetFilteringCondition* condition, _Inout_ NTSTATUS* status);
+	static FWPM_FILTER_CONDITION ConvertToFwpmCondition(NetFilteringCondition* condition, _Inout_ NTSTATUS* status);
 };
 

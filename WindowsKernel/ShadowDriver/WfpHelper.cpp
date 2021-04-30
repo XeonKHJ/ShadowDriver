@@ -136,24 +136,24 @@ NTSTATUS WfpHelper::InitializeWfpEngine(ShadowFilterContext* context)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 
-	FWPM_SESSION0 session;
-	FWPM_PROVIDER0 provider;
+	FWPM_SESSION session;
+	FWPM_PROVIDER provider;
 	memset(&session, 0, sizeof(session));
 	session.displayData.name = L"ShadowDriver Session";
 	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;
-	status = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, &(context->WfpEngineHandle));;
+	status = FwpmEngineOpen(NULL, RPC_C_AUTHN_DEFAULT, NULL, &session, &(context->WfpEngineHandle));;
 	return status;
 }
 
 NTSTATUS WfpHelper::InitializeSublayer(ShadowFilterContext* context)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	FWPM_SUBLAYER0 sublayer = { 0 };
+	FWPM_SUBLAYER sublayer = { 0 };
 	sublayer.displayData.name = L"ShadowDriverFilterSublayer";
 	sublayer.displayData.description = L"ShadowDriver Sublayer";
 	sublayer.subLayerKey = context->SublayerGuid;
 	sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
-	status = FwpmSubLayerAdd0(context->WfpEngineHandle, &sublayer, NULL);
+	status = FwpmSubLayerAdd(context->WfpEngineHandle, &sublayer, NULL);
 	return status;
 }
 
@@ -164,7 +164,7 @@ NTSTATUS WfpHelper::AddFwpmFiltersToWpf(ShadowFilterContext* context)
 	{
 		if (_groupCounts[code] > 0)
 		{
-			FWPM_FILTER0 wpmFilter = { 0 };
+			FWPM_FILTER wpmFilter = { 0 };
 			wpmFilter.displayData.name = L"ShadowDriverFilter";
 			wpmFilter.displayData.description = L"ShadowDriver's filter";
 			wpmFilter.subLayerKey = context->SublayerGuid;
@@ -176,7 +176,7 @@ NTSTATUS WfpHelper::AddFwpmFiltersToWpf(ShadowFilterContext* context)
 			wpmFilter.action.calloutKey = context->CalloutGuids[code];
 			wpmFilter.numFilterConditions = _groupCounts[code];
 			wpmFilter.filterCondition = _fwpmConditionsByCode[code];
-			status = FwpmFilterAdd0(context->WfpEngineHandle, &wpmFilter, NULL, &(context->FilterIds[code]));
+			status = FwpmFilterAdd(context->WfpEngineHandle, &wpmFilter, NULL, &(context->FilterIds[code]));
 		}
 	}
 	return status;
@@ -189,19 +189,19 @@ NTSTATUS WfpHelper::AddCalloutsToWfp(_Inout_ ShadowFilterContext* context)
 	{
 		if (_groupCounts[code] > 0)
 		{
-			FWPM_CALLOUT0 wpmCallout = { 0 };
+			FWPM_CALLOUT wpmCallout = { 0 };
 			wpmCallout.flags = 0;
 			wpmCallout.displayData.description = L"I think you know what it is.";
 			wpmCallout.displayData.name = L"ShadowSendCallouts";
 			wpmCallout.calloutKey = context->CalloutGuids[code];
 			wpmCallout.applicableLayer = GetLayerKeyByCode(code);
-			status = FwpmCalloutAdd0(context->WfpEngineHandle, &wpmCallout, NULL, &(context->WpmCalloutIds[code]));
+			status = FwpmCalloutAdd(context->WfpEngineHandle, &wpmCallout, NULL, &(context->WpmCalloutIds[code]));
 		}
 	}
 	return status;
 }
 
-void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT0* callout, UINT8 code)
+void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT* callout, UINT8 code)
 {
 	switch (code)
 	{
@@ -356,13 +356,14 @@ NTSTATUS WfpHelper::RegisterCalloutsToDevice(_Inout_ ShadowFilterContext* contex
 	{
 		if (_groupCounts[code] > 0)
 		{
-			FWPS_CALLOUT0 wpsCallout = { 0 };
+			FWPS_CALLOUT wpsCallout = { 0 };
+			
 			wpsCallout.calloutKey = context->CalloutGuids[code];
 			wpsCallout.flags = 0;
 			wpsCallout.notifyFn = ShadowCallout::PacketNotify;
 			wpsCallout.flowDeleteFn = ShadowCallout::PacketFlowDeleteNotfy;
 			AddCalloutsAccrodingToCode(&wpsCallout, code);
-			status = FwpsCalloutRegister0(context->DeviceObject, &wpsCallout, &(context->WpsCalloutIds[code]));
+			status = FwpsCalloutRegister(context->DeviceObject, &wpsCallout, &(context->WpsCalloutIds[code]));
 		}
 	}
 	return status;
