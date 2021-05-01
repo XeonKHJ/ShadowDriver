@@ -245,19 +245,9 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 	{
 	case NetLayer::LinkLayer:
 	{
-		fwpmCondition.conditionValue.type = FWP_BYTE_ARRAY6_TYPE;
-		auto macAddress = new FWP_BYTE_ARRAY6;
-		fwpmCondition.conditionValue.byteArray6 = macAddress;
-		RtlCopyMemory(macAddress, condition->MacAddress, FWP_BYTE_ARRAY6_SIZE);
-		switch (condition->AddrLocation)
-		{
-		case AddressLocation::Local:
-			fwpmCondition.fieldKey = FWPM_CONDITION_MAC_LOCAL_ADDRESS;
-			break;
-		case AddressLocation::Remote:
-			fwpmCondition.fieldKey = FWPM_CONDITION_MAC_REMOTE_ADDRESS;
-			break;
-		}
+		fwpmCondition.fieldKey = FWPM_CONDITION_INTERFACE_INDEX;
+		fwpmCondition.conditionValue.type = FWP_DATA_TYPE::FWP_UINT32;
+		fwpmCondition.conditionValue.uint32 = condition->InterfaceId;
 	}
 	break;
 	case NetLayer::NetworkLayer:

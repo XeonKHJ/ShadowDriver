@@ -46,7 +46,7 @@ public:
 		unsigned int IPv4Mask;
 		unsigned char IPv6Mask[16];
 	};
-	char MacAddress[6];
+	unsigned long long InterfaceId;
 	AddressLocation AddrLocation;
 	FilterMatchType MatchType;
 };

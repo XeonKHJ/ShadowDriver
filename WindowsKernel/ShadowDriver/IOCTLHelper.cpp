@@ -553,8 +553,8 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 					break;
 				case NetLayer::LinkLayer:
 					// Untested
-					RtlCopyMemory(condition.MacAddress, inputBufferBytes, 6);
-					inputBufferBytes += 6;
+					RtlCopyMemory(&(condition.InterfaceId), inputBufferBytes, 8);
+					inputBufferBytes += 8;
 					break;
 				default:
 					break;
