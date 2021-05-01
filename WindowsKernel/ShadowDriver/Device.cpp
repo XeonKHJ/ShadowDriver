@@ -62,7 +62,6 @@ Return Value:
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&deviceAttributes, DEVICE_CONTEXT);
 
 
-    UNICODE_STRING deviceName;
     UNICODE_STRING deviceDosName;
     //RtlInitUnicodeString(&deviceName, L"\\Device\\ShadowDriver");
     RtlInitUnicodeString(&deviceDosName, L"\\DosDevices\\ShadowDriver");

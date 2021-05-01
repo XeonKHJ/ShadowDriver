@@ -9,6 +9,8 @@ CsqInsertIrpEx(
     _In_ PVOID             InsertContext
 )
 {
+    UNREFERENCED_PARAMETER(InsertContext);
+
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqInsertIrpEx\n");
     IOCTLHelperContext* context = CONTAINING_RECORD(Csq, IOCTLHelperContext, IoCsq);
     NTSTATUS status = STATUS_FAIL_CHECK;
@@ -57,6 +59,8 @@ CsqPeekNextIrp(
     _In_ PVOID   PeekContext
 )
 {
+    UNREFERENCED_PARAMETER(PeekContext);
+
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqPeekNextIrp\n");
     IOCTLHelperContext* context = CONTAINING_RECORD(Csq, IOCTLHelperContext, IoCsq);
     PLIST_ENTRY selectedEntry = NULL;
@@ -68,9 +72,6 @@ CsqPeekNextIrp(
         {
             IRP_LINK_ENTRY * matchedIRPLiskEntry = NULL;
             IRP_LINK_ENTRY * currentIrpListEntry = CONTAINING_RECORD(context->IrpLinkHeadEntry.ListEntry.Flink, IRP_LINK_ENTRY, ListEntry);
-            IRP_LINK_ENTRY * entryForDebug = &(context->IrpLinkHeadEntry);
-            bool ea = (matchedIRPLiskEntry == NULL);
-            bool eb = (currentIrpListEntry != &context->IrpLinkHeadEntry);
             while ((matchedIRPLiskEntry == NULL) && (currentIrpListEntry != &(context->IrpLinkHeadEntry)))
             {
 
@@ -131,6 +132,8 @@ CsqCompleteCanceledIrp(
     _In_ PIRP       Irp
 )
 {
+    UNREFERENCED_PARAMETER(Csq);
+
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "CsqCompleteCanceledIrp\n");
     Irp->IoStatus.Status = STATUS_CANCELLED;
     Irp->IoStatus.Information = 0;

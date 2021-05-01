@@ -16,6 +16,8 @@ void operator delete(void* toFreeObject) noexcept
 
 void operator delete(void* toFreeObject, size_t size)
 {
+	UNREFERENCED_PARAMETER(size);
+
 	if (toFreeObject != nullptr)
 	{
 		ExFreePoolWithTag(toFreeObject, 'oon');

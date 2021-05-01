@@ -13,7 +13,6 @@ WfpHelper::~WfpHelper()
 		if (_groupCounts[code] > 0)
 		{
 			auto conditions = _conditionsByCode[code];
-			auto addresses = _addressesByCode[code];
 			auto conditionCount = _groupCounts[code];
 			auto wpmConditions = _fwpmConditionsByCode[code];
 
@@ -138,7 +137,7 @@ NTSTATUS WfpHelper::InitializeWfpEngine(ShadowFilterContext* context)
 	NTSTATUS status = STATUS_SUCCESS;
 
 	FWPM_SESSION session;
-	FWPM_PROVIDER provider;
+	//FWPM_PROVIDER provider;
 	memset(&session, 0, sizeof(session));
 	session.displayData.name = L"ShadowDriver Session";
 	session.txnWaitTimeoutInMSec = 0xFFFFFFFF;

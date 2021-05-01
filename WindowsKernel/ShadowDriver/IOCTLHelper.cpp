@@ -53,7 +53,6 @@ void IOCTLHelper::AddHelper(IOCTLHelper* helper)
 
 void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 {
-	IOCTLHelper* result = nullptr;
 	IOCTLHelperLinkEntry* currentEntry = &_helperListHeader;
 	do
 	{
@@ -78,6 +77,7 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
+	UNREFERENCED_PARAMETER(DeviceObject);
 #ifdef DBG
 	//DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriver_IRP_IoControl\n");
 #endif
@@ -205,6 +205,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
+	UNREFERENCED_PARAMETER(DeviceObject);
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpClose\t\n");
 #endif
@@ -215,6 +216,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_In_ _DEVICE_OBJECT* DeviceObject, _I
 
 NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
+	UNREFERENCED_PARAMETER(DeviceObject);
 #ifdef DBG
 	DbgPrintEx(DPFLTR_ENVIRON_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverIrpCleanUp\t\n");
 #endif
@@ -329,7 +331,6 @@ void IOCTLHelper::NotifyUserByDequeuingIoctl(IOCTLHelperContext* context, void* 
 	if (dequeuedIrp != NULL)
 	{
 		PIO_STACK_LOCATION dispatchedStackIrp = IoGetCurrentIrpStackLocation(dequeuedIrp);
-		auto outputBufferLength = dispatchedStackIrp->Parameters.DeviceIoControl.OutputBufferLength;
 		if (dispatchedStackIrp->Parameters.DeviceIoControl.IoControlCode == IOCTL_SHADOWDRIVER_QUEUE_NOTIFICATION)
 		{
 #ifdef DBG
@@ -369,7 +370,7 @@ void IOCTLHelper::CancelAllPendingNotifyIoctls()
 	while (!IsListEmpty(&(_context.IrpLinkHeadEntry.ListEntry)))
 	{
 		IRP_LINK_ENTRY* irpEntry = CONTAINING_RECORD(currentEntry, IRP_LINK_ENTRY, ListEntry);
-		auto cancelResult = IoCancelIrp(irpEntry->Irp);
+		IoCancelIrp(irpEntry->Irp);
 		currentEntry = currentEntry->Flink;
 	}
 }
@@ -600,8 +601,6 @@ NTSTATUS IOCTLHelper::IoctlRegisterApp(PIRP irp, PIO_STACK_LOCATION ioStackLocat
 			ShadowFilterContext* sfContext = new ShadowFilterContext();
 			sfContext->DeviceObject = _deviceObject;
 			sfContext->NetPacketFilteringCallout = PacketHelper::FilterFunc;
-
-			auto guidSize = sizeof(GUID);
 
 			//Set up guids
 			if (inputBufferLength >= sizeof(int) + 40 + 16 + 16 * 5)

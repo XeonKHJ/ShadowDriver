@@ -14,8 +14,6 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 	NTSTATUS status = STATUS_SUCCESS;
 	NET_BUFFER_LIST* packet;
 	SIZE_T dataLength = 0;
-	SIZE_T bytes = 0;
-
 	PNET_BUFFER_LIST clonedPacket = NULL;
 
 	packet = (NET_BUFFER_LIST*)layerData;
@@ -36,7 +34,7 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
 			
 			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
-			auto dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
+			dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 			BYTE* packetBuffer = new BYTE[dataLength];
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
 
@@ -58,11 +56,19 @@ NTSTATUS ShadowCallout::PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 	_In_ const GUID* filterKey,
 	_Inout_ FWPS_FILTER* filter)
 {
+	UNREFERENCED_PARAMETER(filter);
+	UNREFERENCED_PARAMETER(filterKey);
+	UNREFERENCED_PARAMETER(notifyType);
+
 	return STATUS_SUCCESS;
 }
 
 void ShadowCallout::PacketFlowDeleteNotfy(_In_ UINT16 layerId, _In_ UINT32 calloutId, _In_ UINT64 flowContext)
 {
+	UNREFERENCED_PARAMETER(layerId);
+	UNREFERENCED_PARAMETER(calloutId);
+	UNREFERENCED_PARAMETER(flowContext);
+
 	return;
 }
 
@@ -76,17 +82,11 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
-	NTSTATUS status = STATUS_SUCCESS;
-	NET_BUFFER_LIST* packet;
-	FWPS_STREAM_DATA* streamData;
-	SIZE_T dataLength = 0;
-	SIZE_T bytes = 0;
-	NDIS_STATUS ndisStatus;
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
 
-	PNET_BUFFER_LIST clonedPacket = NULL;
-	FWPS_PACKET_INJECTION_STATE injectionState = FWPS_PACKET_NOT_INJECTED;
-
-	packet = (NET_BUFFER_LIST*)layerData;
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 #endif
@@ -104,6 +104,11 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
+
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkInV4ClassifyFn\t\n");
@@ -122,6 +127,11 @@ VOID NTAPI ShadowCallout::NetworkInV6ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
+
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
@@ -136,6 +146,11 @@ VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
+
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 }
@@ -150,6 +165,11 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
+
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
@@ -167,6 +187,11 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	UNREFERENCED_PARAMETER(flowContext);
+	UNREFERENCED_PARAMETER(classifyContext);
+	UNREFERENCED_PARAMETER(inMetaValues);
+	UNREFERENCED_PARAMETER(inFixedValues);
+
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
