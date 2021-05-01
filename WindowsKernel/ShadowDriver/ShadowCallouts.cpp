@@ -153,6 +153,7 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
 #endif
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
 }
 
 VOID NTAPI ShadowCallout::LinkInClassifyFn(
@@ -169,4 +170,5 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
 #endif
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
 }
