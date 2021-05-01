@@ -70,7 +70,7 @@ namespace ShadowDriver.UWPDemo
         private void View_Consolidated(ApplicationView sender, ApplicationViewConsolidatedEventArgs args)
         {
             System.Diagnostics.Debug.WriteLine(string.Format("Deregistering app id {0}", _filter.AppId));
-            _filter.DeregisterAppFromDevice();
+            _filter.DeregisterApp();
         }
 
         private DispatcherTimer _dispatcherTimer;
@@ -174,7 +174,7 @@ namespace ShadowDriver.UWPDemo
         {
             try
             {
-                await _filter.RegisterAppToDeviceAsync();
+                await _filter.RegisterAppAsync();
             }
             catch (Exception exception)
             {
@@ -186,7 +186,7 @@ namespace ShadowDriver.UWPDemo
         {
             try
             {
-                await _filter.DeregisterAppFromDeviceAsync();
+                await _filter.DeregisterAppAsync();
                 NetPacketViewModels.Clear();
             }
             catch (Exception exception)
@@ -258,7 +258,7 @@ namespace ShadowDriver.UWPDemo
 
             try
             {
-                await _filter.AddFilteringConditionAsync(filterCondition);
+                await _filter.AddConditionAsync(filterCondition);
             }
             catch (Exception exception)
             {
@@ -298,7 +298,7 @@ namespace ShadowDriver.UWPDemo
         {
             try
             {
-                var count = await _filter.GetRegisterAppCount();
+                var count = await _filter.GetRegisterAppCountAsync();
                 await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
                 {
                     GetAppCountBlock.Text = count.ToString();

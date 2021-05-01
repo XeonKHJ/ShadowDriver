@@ -60,7 +60,7 @@ namespace ShadowDriver.Core
             shadowDriverDeviceWatcher.Start();
         }
     
-        public async Task<int> GetRegisterAppCount()
+        public async Task<int> GetRegisterAppCountAsync()
         {
             byte[] outputBuffer = new byte[2 * sizeof(int)];
             try
@@ -85,7 +85,7 @@ namespace ShadowDriver.Core
             var count = BitConverter.ToInt32(outputBuffer, sizeof(int));
             return count;
         }
-        public async Task RegisterAppToDeviceAsync()
+        public async Task RegisterAppAsync()
         {
             var contextBytes = _shadowRegisterContext.SeralizeToByteArray();
             byte[] outputBuffer = new byte[sizeof(int)];
@@ -109,7 +109,7 @@ namespace ShadowDriver.Core
                 HandleError(status);
             }
         }
-        public async Task AddFilteringConditionAsync(FilterCondition condition)
+        public async Task AddConditionAsync(FilterCondition condition)
         {
             byte[] encodedNetLayer = BitConverter.GetBytes((int)condition.FilteringLayer);
             byte[] encodedMatchType = BitConverter.GetBytes((int)condition.MatchType);
@@ -217,7 +217,7 @@ namespace ShadowDriver.Core
             _isFilteringStarted = true;
         }
 
-        public async Task DeregisterAppFromDeviceAsync()
+        public async Task DeregisterAppAsync()
         {
             _isQueueingContinue = false;
             _isFilteringStarted = false;
@@ -244,7 +244,7 @@ namespace ShadowDriver.Core
             }
         }
 
-        public async void DeregisterAppFromDevice()
+        public async void DeregisterApp()
         {
             _isQueueingContinue = false;
             _isFilteringStarted = false;
@@ -367,6 +367,26 @@ namespace ShadowDriver.Core
             }
         }
 
+        public async void StopFiltering()
+        {
+            _isFilteringStarted = false;
+            var outputBuffer = new byte[sizeof(int)];
+            _isQueueingContinue = false;
+            var inputBuffer = _shadowRegisterContext.SeralizeAppIdToByteArray();
+
+            if(_shadowDevice != null)
+            {
+                try
+                {
+                    await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverStopFiltering, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+                }
+                catch(Exception)
+                {
+
+                }
+            }
+        }
+
         private static void HandleError(uint errorCode)
         {
             if(errorCode != 0)
@@ -374,10 +394,8 @@ namespace ShadowDriver.Core
                 throw new ShadowFilterException(errorCode);
             }
         }
-        public delegate void PacketReceivedEventHandler(byte[] buffer);
-        public event PacketReceivedEventHandler PacketReceived;
 
-        public delegate void FilterReadyEventHandler();
+        public event PacketReceivedEventHandler PacketReceived;
         public event FilterReadyEventHandler FilterReady;
     }
 }
