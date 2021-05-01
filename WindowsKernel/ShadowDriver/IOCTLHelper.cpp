@@ -518,7 +518,7 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 			if (inputBufferLength >= (ULONG)dataReadSize)
 			{
-				NetFilteringCondition condition{};
+				FilterCondition condition{};
 				PCHAR inputBufferBytes = (PCHAR)inputBuffer;
 				int currentIndex = StatusSize;
 				inputBufferBytes += currentIndex;
@@ -553,8 +553,8 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 					break;
 				case NetLayer::LinkLayer:
 					// Untested
-					RtlCopyMemory(&(condition.InterfaceId), inputBufferBytes, 8);
-					inputBufferBytes += 8;
+					RtlCopyMemory(&(condition.InterfaceId), inputBufferBytes, 4);
+					inputBufferBytes += 4;
 					break;
 				default:
 					break;

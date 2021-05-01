@@ -229,8 +229,10 @@ namespace ShadowDriver.UWPDemo
                     }
                     else
                     {
-                        
+                        var networkInterface = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface;
+                        var index = networkInterface.GetIPProperties().GetIPv4Properties().Index;
                         filterCondition.MacAddress = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface.GetPhysicalAddress();
+                        filterCondition.InterfaceIndex = (uint)index;
                     }
 
                     break;

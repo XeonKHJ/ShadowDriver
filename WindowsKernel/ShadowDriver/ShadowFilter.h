@@ -6,7 +6,7 @@ class ShadowFilter
 public:
 	ShadowFilter(void* enviromentContexts);
 	~ShadowFilter();
-	unsigned int AddFilterConditions(NetFilteringCondition * conditions, int length);
+	unsigned int AddFilterConditions(FilterCondition * conditions, int length);
 	unsigned int StartFiltering();
 	unsigned int StopFiltering();
 	void EnablePacketModification();
@@ -18,6 +18,6 @@ public:
 private:
 	bool _isModificationEnabled = false;
 	void* _context;
-	NetFilteringCondition* _filteringConditions;
+	FilterCondition* _filteringConditions;
 	int _conditionCount;
 };

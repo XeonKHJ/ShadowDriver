@@ -30,7 +30,7 @@ enum FilterMatchType
 	NotEqual = 5
 };
 
-class NetFilteringCondition
+class FilterCondition
 {
 public:
 	NetLayer FilterLayer;

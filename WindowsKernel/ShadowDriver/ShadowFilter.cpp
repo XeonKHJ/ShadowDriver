@@ -39,13 +39,13 @@ ShadowFilter::~ShadowFilter()
 	delete[] _filteringConditions;
 }
 
-unsigned int ShadowFilter::AddFilterConditions(NetFilteringCondition* conditions, int length)
+unsigned int ShadowFilter::AddFilterConditions(FilterCondition* conditions, int length)
 {
 	NTSTATUS statusCode = 0;
 	if (conditions != nullptr && length != 0)
 	{
-		NetFilteringCondition* newConditions = new NetFilteringCondition[_conditionCount + length];
-		NetFilteringCondition* oldConditions = _filteringConditions;
+		FilterCondition* newConditions = new FilterCondition[_conditionCount + length];
+		FilterCondition* oldConditions = _filteringConditions;
 		for (int i = 0; i < _conditionCount; ++i)
 		{
 			newConditions[i] = oldConditions[i];

@@ -17,5 +17,7 @@ namespace ShadowDriver.Core.Common
         public FilterMatchType MatchType { set; get; }
         public AddressLocation AddressLocation { set; get; }
         public NetPacketDirection PacketDirection { set; get; }
+
+        public uint InterfaceIndex { set; get; }
     }
 }

@@ -120,7 +120,7 @@ namespace ShadowDriver.Core
             switch (condition.FilteringLayer)
             {
                 case FilteringLayer.LinkLayer:
-                    condition.MacAddress.GetAddressBytes().CopyTo(filteringAddressAndMask, 0);
+                    BitConverter.GetBytes(condition.InterfaceIndex).CopyTo(filteringAddressAndMask, 0);
                     break;
                 case FilteringLayer.NetworkLayer:
                     condition.IPAddress.GetAddressBytes().CopyTo(filteringAddressAndMask, 0);

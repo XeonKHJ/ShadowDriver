@@ -49,46 +49,47 @@ WfpHelper::~WfpHelper()
 /// 这样就有00为网络层进，01为网络层出。如果是网络层，接下来那一位代表IPv4（0）或IPv6（1）
 /// 10为链路层进，11为链路层出。
 /// </summary>
-UINT8 WfpHelper::CalculateFilterLayerAndPathCode(NetFilteringCondition* currentCondition)
+UINT8 WfpHelper::EncodeFilterCondition(FilterCondition* condition)
 {
-	UINT8 filterLayerAndPathCode = 0;
-	switch (currentCondition->FilterLayer)
+	UINT8 encodedCondition = 0;
+	switch (condition->FilterLayer)
 	{
 	case NetLayer::LinkLayer:
 	{
-		filterLayerAndPathCode = 1;
+		encodedCondition = 1;
 	}
 	break;
+
 	case NetLayer::NetworkLayer:
 	{
-		filterLayerAndPathCode = 0;
-		switch (currentCondition->IPAddressType)
-		{
-		case IpAddrFamily::IPv4:
-		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (0 << 2);
-		}
-		break;
-		case IpAddrFamily::IPv6:
-		{
-			filterLayerAndPathCode = filterLayerAndPathCode + (1 << 2);
-		}
-		break;
-		}
+		encodedCondition = 0;
 	}
 	break;
 	}
-	switch (currentCondition->FilterPath)
+
+	switch (condition->FilterPath)
 	{
 	case NetPacketDirection::Out:
-		filterLayerAndPathCode = filterLayerAndPathCode + (0 << 1);
+		encodedCondition = (encodedCondition << 1) + 1;
 		break;
 	case NetPacketDirection::In:
-		filterLayerAndPathCode = filterLayerAndPathCode + (1 << 1);
+		encodedCondition = (encodedCondition << 1) + 0;
 		break;
 	}
 
-	return filterLayerAndPathCode;
+	switch (condition->IPAddressType)
+	{
+	case IpAddrFamily::IPv4:
+		encodedCondition = (encodedCondition << 1) + 0;
+		break;
+	case IpAddrFamily::IPv6:
+		encodedCondition = (encodedCondition << 1) + 1;
+		break;
+	default:
+		encodedCondition = (encodedCondition << 1) + 0;
+		break;
+	}
+	return encodedCondition;
 }
 
 GUID WfpHelper::GetLayerKeyByCode(UINT8 code)
@@ -97,26 +98,26 @@ GUID WfpHelper::GetLayerKeyByCode(UINT8 code)
 	switch (code)
 	{
 	case 0:
-		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
+		guid = FWPM_LAYER_INBOUND_IPPACKET_V4;
 		break;
 	case 1:
 		// 链路层出口过滤
 		// Untested
-		guid = FWPM_LAYER_OUTBOUND_MAC_FRAME_ETHERNET;
+		guid = FWPM_LAYER_INBOUND_IPPACKET_V6;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
-		guid = FWPM_LAYER_INBOUND_IPPACKET_V4;
+		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V4;
 		break;
 	case 3:
 		// 链路层接收过滤
 		// Untested
-		guid = FWPM_LAYER_INBOUND_MAC_FRAME_ETHERNET;
+		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
 		break;
 	case 4:
 		// 网络层IPv6发送过滤
 		// Untested
-		guid = FWPM_LAYER_OUTBOUND_IPPACKET_V6;
+		guid = FWPM_LAYER_INBOUND_MAC_FRAME_NATIVE;
 		break;
 	case 5:
 		// 无意义
@@ -124,7 +125,7 @@ GUID WfpHelper::GetLayerKeyByCode(UINT8 code)
 	case 6:
 		// 网络层IPv6接收过滤
 		// Untested
-		guid = FWPM_LAYER_INBOUND_IPPACKET_V6;
+		guid = FWPM_LAYER_OUTBOUND_MAC_FRAME_NATIVE;
 		break;
 	case 7:
 		break;
@@ -206,24 +207,24 @@ void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT* callout, UINT8 code)
 	switch (code)
 	{
 	case 0:
-		callout->classifyFn = ShadowCallout::NetworkOutV4ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkInV4ClassifyFn;
 		break;
 	case 1:
 		//链路层出口过滤
-		callout->classifyFn = ShadowCallout::LinkOutClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkInV6ClassifyFn;
 		break;
 	case 2:
 		//网络层IPv4接收过滤
-		callout->classifyFn = ShadowCallout::NetworkInV4ClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkOutV4ClassifyFn;
 		break;
 	case 3:
 		//链路层接收过滤
-		callout->classifyFn = ShadowCallout::LinkInClassifyFn;
+		callout->classifyFn = ShadowCallout::NetworkOutV6ClassifyFn;
 		break;
 	case 4:
 		//网络层IPv6发送过滤
 		// Untested
-		callout->classifyFn = ShadowCallout::NetworkOutV6ClassifyFn;
+		callout->classifyFn = ShadowCallout::LinkInClassifyFn;
 		break;
 	case 5:
 		//无意义
@@ -231,14 +232,14 @@ void WfpHelper::AddCalloutsAccrodingToCode(FWPS_CALLOUT* callout, UINT8 code)
 	case 6:
 		//网络层IPv6接收过滤
 		// Untested
-		callout->classifyFn = ShadowCallout::NetworkInV6ClassifyFn;
+		callout->classifyFn = ShadowCallout::LinkOutClassifyFn;
 		break;
 	case 7:
 		break;
 	}
 }
 
-FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* condition, _Inout_ NTSTATUS* status)
+FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(FilterCondition* condition, _Inout_ NTSTATUS* status)
 {
 	FWPM_FILTER_CONDITION0 fwpmCondition{};
 	switch (condition->FilterLayer)
@@ -296,12 +297,12 @@ FWPM_FILTER_CONDITION0 WfpHelper::ConvertToFwpmCondition(NetFilteringCondition* 
 	return fwpmCondition;
 }
 
-NTSTATUS WfpHelper::AllocateConditionGroups(NetFilteringCondition* conditionsToGroup, int conditionCount)
+NTSTATUS WfpHelper::AllocateConditionGroups(FilterCondition* conditionsToGroup, int conditionCount)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	struct NetFilteringConditionAndCode
 	{
-		NetFilteringCondition* Condition;
+		FilterCondition* Condition;
 		int Index;
 		int Code;
 	};
@@ -309,8 +310,8 @@ NTSTATUS WfpHelper::AllocateConditionGroups(NetFilteringCondition* conditionsToG
 	NetFilteringConditionAndCode* indicators = new NetFilteringConditionAndCode[conditionCount];
 	for (int i = 0; i < conditionCount; ++i)
 	{
-		NetFilteringCondition* currentCondition = &(conditionsToGroup[i]);
-		auto code = CalculateFilterLayerAndPathCode(currentCondition);
+		FilterCondition* currentCondition = &(conditionsToGroup[i]);
+		auto code = EncodeFilterCondition(currentCondition);
 		NetFilteringConditionAndCode* indicator = &(indicators[i]);
 		indicator->Code = code;
 		indicator->Index = _groupCounts[code];
@@ -323,7 +324,7 @@ NTSTATUS WfpHelper::AllocateConditionGroups(NetFilteringCondition* conditionsToG
 		int currentCodeConditionCount = _groupCounts[currentCode];
 		if (currentCodeConditionCount > 0)
 		{
-			_conditionsByCode[currentCode] = new NetFilteringCondition * [currentCodeConditionCount];
+			_conditionsByCode[currentCode] = new FilterCondition * [currentCodeConditionCount];
 			_fwpmConditionsByCode[currentCode] = new FWPM_FILTER_CONDITION0[currentCodeConditionCount];
 		}
 	}
