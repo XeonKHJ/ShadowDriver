@@ -91,6 +91,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 }
 
 VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
