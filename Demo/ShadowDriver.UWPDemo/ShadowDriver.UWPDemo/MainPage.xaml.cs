@@ -223,17 +223,9 @@ namespace ShadowDriver.UWPDemo
                     break;
                 case "Link Layer":
                     filterCondition.FilteringLayer = FilteringLayer.LinkLayer;
-                    if ((bool)InputManuallyBox.IsChecked)
-                    {
-                        filterCondition.MacAddress = PhysicalAddress.Parse(MacAddressTypeBox.Text);
-                    }
-                    else
-                    {
                         var networkInterface = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface;
                         var index = networkInterface.GetIPProperties().GetIPv4Properties().Index;
-                        filterCondition.MacAddress = ((NetworkInterfaceViewModel)MacAddressBox.SelectedItem).NetworkInterface.GetPhysicalAddress();
                         filterCondition.InterfaceIndex = (uint)index;
-                    }
 
                     break;
             }
@@ -321,30 +313,6 @@ namespace ShadowDriver.UWPDemo
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-        }
-
-        private void InputManuallyBox_Checked(object sender, RoutedEventArgs e)
-        {
-            if (MacAddressBox != null)
-            {
-                MacAddressBox.Visibility = Visibility.Collapsed;
-            }
-            if (MacAddressTypeBox != null)
-            {
-                MacAddressTypeBox.Visibility = Visibility.Visible;
-            }
-        }
-
-        private void InputManuallyBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            if(MacAddressBox!= null)
-            {
-                MacAddressBox.Visibility = Visibility.Visible;
-            }
-            if(MacAddressTypeBox != null)
-            {
-                MacAddressTypeBox.Visibility = Visibility.Collapsed;
-            }
         }
     }
 }
