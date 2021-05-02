@@ -146,6 +146,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 				if (helper != nullptr)
 				{
 					status = IoCsqInsertIrpEx(&(helper->_context.IoCsq), Irp, NULL, NULL);
+					status = STATUS_PENDING;
 				}
 				else
 				{
@@ -211,6 +212,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpClose(_In_ _DEVICE_OBJECT* DeviceObject, _I
 #endif
 	NTSTATUS status = STATUS_SUCCESS;
 	Irp->IoStatus.Status = status;
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 	return status;
 }
 
@@ -245,6 +247,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpCleanUp(_In_ _DEVICE_OBJECT* DeviceObject, 
 
 	NTSTATUS status = STATUS_SUCCESS;
 	Irp->IoStatus.Status = STATUS_SUCCESS;
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 	return status;
 }
 
@@ -369,9 +372,10 @@ void IOCTLHelper::CancelAllPendingNotifyIoctls()
 	auto currentEntry = _context.IrpLinkHeadEntry.ListEntry.Flink;
 	while (!IsListEmpty(&(_context.IrpLinkHeadEntry.ListEntry)))
 	{
+		auto nextEntry = currentEntry->Flink;
 		IRP_LINK_ENTRY* irpEntry = CONTAINING_RECORD(currentEntry, IRP_LINK_ENTRY, ListEntry);
 		IoCancelIrp(irpEntry->Irp);
-		currentEntry = currentEntry->Flink;
+		currentEntry = nextEntry;
 	}
 }
 
