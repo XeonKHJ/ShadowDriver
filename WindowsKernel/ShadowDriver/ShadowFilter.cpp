@@ -184,34 +184,40 @@ unsigned int ShadowFilter::StartFiltering()
 unsigned int ShadowFilter::StopFiltering()
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	ShadowFilterContext* shadowFilterContext = (ShadowFilterContext*)_context;
+	ShadowFilterContext* context = (ShadowFilterContext*)_context;
 
 	// Deregister callouts
-	for (UINT8 currentCode = 0; currentCode < shadowFilterContext->FilterIdMaxNumber; ++currentCode)
+	for (UINT8 code = 0; code < context->FilterIdMaxNumber; ++code)
 	{
-		if (shadowFilterContext->FilterIds[currentCode] != NULL)
+		if (context->FilterIds[code] != NULL)
 		{
 			// Delete FWPM_FILTERs.
-			status = FwpmFilterDeleteById(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
-
-			// Delete FWPM_CALLOUTs.
-			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
-			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
-
-			// Delete FWPS_CALLOUTs.
-			status = FwpsCalloutUnregisterById((shadowFilterContext->WpsCalloutIds)[currentCode]);
-			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;
+			status = FwpmFilterDeleteById(context->WfpEngineHandle, context->FilterIds[code]);
+			context->FilterIds[code] = NULL;
 		}
+		if (context->WpmCalloutIds[code] != NULL)
+		{
+			// Delete FWPM_CALLOUTs.
+			FwpmCalloutDeleteById(context->WfpEngineHandle, (context->WpmCalloutIds)[code]);
+			(context->WpmCalloutIds)[code] = NULL;
+		}
+		if (context->WpsCalloutIds[code] != NULL)
+		{
+			// Delete FWPS_CALLOUTs.
+			status = FwpsCalloutUnregisterById((context->WpsCalloutIds)[code]);
+			(context->WpsCalloutIds)[code] = NULL;
+		}
+
 	}
 
 	// Delete FWPM_SUBLAYER.
-	status = FwpmSubLayerDeleteByKey(shadowFilterContext->WfpEngineHandle, &(shadowFilterContext->SublayerGuid));
+	status = FwpmSubLayerDeleteByKey(context->WfpEngineHandle, &(context->SublayerGuid));
 
 	// Close FWPM_ENGINE session.
-	status = FwpmEngineClose(shadowFilterContext->WfpEngineHandle);
-	shadowFilterContext->WfpEngineHandle = NULL;
+	status = FwpmEngineClose(context->WfpEngineHandle);
+	context->WfpEngineHandle = NULL;
 
-	shadowFilterContext->IsFilteringStarted = false;
+	context->IsFilteringStarted = false;
 	return status;
 }
 
