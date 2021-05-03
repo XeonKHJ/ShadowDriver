@@ -159,11 +159,6 @@ unsigned int ShadowFilter::StartFiltering()
 				context->IsFilteringStarted = TRUE;
 			}
 
-			if (NT_SUCCESS(status) && _isModificationEnabled)
-			{
-				status = InjectionHelper::CreateInjector(context);
-			}
-
 			if (!NT_SUCCESS(status))
 			{
 #ifdef DBG
@@ -230,11 +225,17 @@ unsigned int ShadowFilter::EnablePacketModification()
 
 	if (!_isModificationEnabled)
 	{
-		_isModificationEnabled = true;
 		ShadowFilterContext* context = (ShadowFilterContext*)_context;
+		
 		if (context != nullptr)
 		{
 			status = InjectionHelper::CreateInjector(context);
+
+			if (NT_SUCCESS(status))
+			{
+				_isModificationEnabled = true;
+				context->IsModificationEnable = _isModificationEnabled;
+			}
 		}
 	}
 	else

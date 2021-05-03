@@ -331,7 +331,7 @@ namespace ShadowDriver.Core
 
                 if(_isFilteringStarted)
                 {
-                    PacketReceived?.Invoke(packetBuffer);
+                    var newPacket = PacketReceived?.Invoke(packetBuffer);
                 }
 
             }

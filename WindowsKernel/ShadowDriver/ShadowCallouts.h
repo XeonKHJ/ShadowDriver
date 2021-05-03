@@ -1,5 +1,6 @@
 #pragma once
 #include <fwpsk.h>
+#include "ShadowFilterContext.h"
 #include "NetFilteringCondition.h"
 
 class ShadowCallout
@@ -12,6 +13,14 @@ private:
 		NetLayer layer,
 		NetPacketDirection direction
 	);
+
+	static void SendPacketToUserMode(
+		NetLayer layer,
+		NetPacketDirection direction,
+		PNET_BUFFER_LIST netBufferList,
+		ShadowFilterContext* context
+	);
+
 public:
 	static NTSTATUS PacketNotify(
 		_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,

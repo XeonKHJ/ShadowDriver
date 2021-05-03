@@ -52,6 +52,24 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 	return status;
 }
 
+void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PNET_BUFFER_LIST packet, ShadowFilterContext * context)
+{
+	if (packet)
+	{
+		if (context->NetPacketFilteringCallout != NULL)
+		{
+			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+			ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
+			BYTE* packetBuffer = new BYTE[dataLength];
+			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
+
+			(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+			delete packetBuffer;
+		}
+	}
+}
+
+
 NTSTATUS ShadowCallout::PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 	_In_ const GUID* filterKey,
 	_Inout_ FWPS_FILTER* filter)
@@ -87,11 +105,47 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	UNREFERENCED_PARAMETER(inMetaValues);
 	UNREFERENCED_PARAMETER(inFixedValues);
 
+	NTSTATUS status = STATUS_SUCCESS;
+
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
+
+	ShadowFilterContext* contextToVerify = (ShadowFilterContext*)classifyContext;
+
+	UNREFERENCED_PARAMETER(contextToVerify);
+
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	HANDLE injectionHandle = context->InjectionHandles[2];
+	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
+
+	if (packet != nullptr)
+	{
+		PNET_BUFFER_LIST clonedPacket = NULL;
+
+		// Send packet to user-mode application.
+		status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+
+		if (NT_SUCCESS(status))
+		{
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+			FwpsFreeCloneNetBufferList(clonedPacket, NULL);
+		}
+
+		if (context->IsModificationEnable && injectionHandle != NULL)
+		{
+			classifyOut->actionType = FWP_ACTION_BLOCK;
+			auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
+
+			// If the packet is a injected one.
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+			{
+				classifyOut->actionType = FWP_ACTION_PERMIT;
+			}
+		}
+	}
 }
 
 VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(

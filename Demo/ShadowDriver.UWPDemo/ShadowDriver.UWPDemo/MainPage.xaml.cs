@@ -82,7 +82,7 @@ namespace ShadowDriver.UWPDemo
             });
         }
         public ObservableCollection<NetworkInterfaceViewModel> NetworkInterfaceViewModels { get; } = new ObservableCollection<NetworkInterfaceViewModel>();
-        private void Filter_PacketReceived(byte[] buffer)
+        private byte[] Filter_PacketReceived(byte[] buffer)
         {
             NetPacketViewModel netPacketViewModel = new NetPacketViewModel();
             for (int i = 0; i < buffer.Length; ++i)
@@ -90,6 +90,14 @@ namespace ShadowDriver.UWPDemo
                 netPacketViewModel.Content += buffer[i].ToString("X4") + " ";
             }
             NetPacketViewModels.Add(netPacketViewModel);
+
+            // Packet Length needs to be bigger than ipheader length.
+            if (buffer.Length >= 20)
+            {
+                
+            }
+
+            return null;
         }
 
         private ShadowFilter _filter;

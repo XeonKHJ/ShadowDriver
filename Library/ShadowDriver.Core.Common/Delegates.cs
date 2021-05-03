@@ -4,6 +4,6 @@ using System.Text;
 
 namespace ShadowDriver.Core.Common
 {
-    public delegate void PacketReceivedEventHandler(byte[] buffer);
+    public delegate byte[] PacketReceivedEventHandler(byte[] buffer);
     public delegate void FilterReadyEventHandler();
 }

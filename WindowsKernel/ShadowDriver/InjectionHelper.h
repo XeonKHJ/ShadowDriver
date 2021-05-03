@@ -12,5 +12,10 @@ public:
 private: 
 	static UINT32 GetInjectionFlagByCode(unsigned int code);
 	static UINT32 InjectByCode(unsigned int code);
+	static void SendInjectCompleted(
+		void* context,
+		NET_BUFFER_LIST* netBufferList,
+		BOOLEAN dispatchLevel
+	);
 };
 

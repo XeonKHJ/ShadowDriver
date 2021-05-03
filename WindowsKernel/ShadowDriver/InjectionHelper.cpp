@@ -118,3 +118,19 @@ UINT32 InjectionHelper::InjectByCode(unsigned int code)
 	UNREFERENCED_PARAMETER(code);
 	return UINT32();
 }
+
+void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBufferList, BOOLEAN dispatchLevel)
+{
+	UNREFERENCED_PARAMETER(context);
+	UNREFERENCED_PARAMETER(netBufferList);
+	UNREFERENCED_PARAMETER(dispatchLevel);
+	//NDIS_STATUS status = netBufferList->Status;
+
+	//FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(SendInjectHandle, netBufferList, NULL);
+
+	//if (status == NDIS_STATUS_SUCCESS)
+	//{
+	//	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Completed\n");
+	//}
+	//FwpsFreeCloneNetBufferList0(netBufferList, 0);
+}
