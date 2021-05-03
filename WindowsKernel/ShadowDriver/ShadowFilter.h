@@ -9,7 +9,7 @@ public:
 	unsigned int AddFilterConditions(FilterCondition * conditions, int length);
 	unsigned int StartFiltering();
 	unsigned int StopFiltering();
-	void EnablePacketModification();
+	unsigned int EnablePacketModification();
 	void DisablePacketModification();
 	
 	//过滤器接收到数据包的回调函数

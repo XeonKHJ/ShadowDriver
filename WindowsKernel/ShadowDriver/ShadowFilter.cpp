@@ -3,6 +3,7 @@
 #include "ShadowFilter.h"
 #include "ShadowCallouts.h"
 #include "WfpHelper.h"
+#include "InjectionHelper.h"
 
 ShadowFilter::ShadowFilter(void* enviromentContexts)
 {
@@ -34,6 +35,8 @@ ShadowFilter::~ShadowFilter()
 	{
 		StopFiltering();
 	}
+
+	InjectionHelper::DeleteInjectors(context);
 
 	// Delete filtering conditions.
 	delete[] _filteringConditions;
@@ -156,6 +159,11 @@ unsigned int ShadowFilter::StartFiltering()
 				context->IsFilteringStarted = TRUE;
 			}
 
+			if (NT_SUCCESS(status) && _isModificationEnabled)
+			{
+				status = InjectionHelper::CreateInjector(context);
+			}
+
 			if (!NT_SUCCESS(status))
 			{
 #ifdef DBG
@@ -215,10 +223,25 @@ unsigned int ShadowFilter::StopFiltering()
 	return status;
 }
 
-void ShadowFilter::EnablePacketModification()
+unsigned int ShadowFilter::EnablePacketModification()
 {
+	NTSTATUS status = STATUS_SUCCESS;
 	//添加注入句柄之类的。
-	_isModificationEnabled = true;
+
+	if (!_isModificationEnabled)
+	{
+		_isModificationEnabled = true;
+		ShadowFilterContext* context = (ShadowFilterContext*)_context;
+		if (context != nullptr)
+		{
+			status = InjectionHelper::CreateInjector(context);
+		}
+	}
+	else
+	{
+		status = SHADOW_FILTER_MODIFICATION_HAS_BEEN_ENABLED;
+	}
+	return status;
 }
 
 void ShadowFilter::DisablePacketModification()

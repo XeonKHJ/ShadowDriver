@@ -191,10 +191,14 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
+		case IOCTL_SHADOWDRIVER_ENABLE_MODIFICATION:
+			status = STATUS_SUCCESS;
+			status = IoctlEnableModification(Irp, pIoStackIrp);
 		default:
 #ifdef DBG 
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");
 #endif
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
@@ -566,6 +570,31 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 			{
 				status = STATUS_BUFFER_TOO_SMALL;
 			}
+		}
+		else
+		{
+			status = SHADOW_APP_UNREGISTERED;
+		}
+	}
+	else
+	{
+		status = SHADOW_APP_APPID_INVALID;
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlEnableModification(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+
+	if (appId != 0)
+	{
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
+		{
+			ShadowFilter* filter = helper->_context.Filter;
+			status = filter->EnablePacketModification();
 		}
 		else
 		{

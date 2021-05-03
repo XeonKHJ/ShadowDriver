@@ -20,6 +20,7 @@ public:
 	UINT64 FilterIds[FilterIdMaxNumber];
 	UINT32 WpsCalloutIds[FilterIdMaxNumber];
 	UINT32 WpmCalloutIds[FilterIdMaxNumber];
+	HANDLE InjectionHandles[FilterIdMaxNumber];
 	bool IsModificationEnable;
 	bool IsFilteringStarted;
 	void (*NetPacketFilteringCallout)(NetLayer layer, NetPacketDirection direction, void * buffer, unsigned long long bufferSize, void * context);

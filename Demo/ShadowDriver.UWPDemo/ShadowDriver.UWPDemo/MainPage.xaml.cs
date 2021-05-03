@@ -314,5 +314,17 @@ namespace ShadowDriver.UWPDemo
         {
             base.OnNavigatedTo(e);
         }
+
+        private async void EnableModificationButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await _filter.EnableModificationAsync();
+            }
+            catch (Exception exception)
+            {
+                DisplayException(exception);
+            }
+        }
     }
 }

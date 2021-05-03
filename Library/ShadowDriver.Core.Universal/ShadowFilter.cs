@@ -46,7 +46,6 @@ namespace ShadowDriver.Core
             IsFilterReady = true;
             FilterReady?.Invoke();
         }
-
         public void StartFilterWatcher()
         {
             var selector = CustomDevice.GetDeviceSelector(DriverRelatedInformation.InterfaceGuid);
@@ -107,6 +106,33 @@ namespace ShadowDriver.Core
             if (status != 0)
             {
                 HandleError(status);
+            }
+        }
+
+        public async Task EnableModificationAsync()
+        {
+            var outputBuffer = new byte[sizeof(int)];
+
+            var inputBuffer = _shadowRegisterContext.SeralizeAppIdToByteArray();
+
+            try
+            {
+                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverEnableModification, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+            }
+            catch (NullReferenceException)
+            {
+                throw new ShadowFilterException(0xC0090040);
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+
+            uint status = BitConverter.ToUInt32(outputBuffer, 0);
+
+            if (status != 0)
+            {
+                throw new ShadowFilterException(status);
             }
         }
         public async Task AddConditionAsync(FilterCondition condition)
