@@ -233,7 +233,7 @@ namespace ShadowDriver.Core
 
             try
             {
-                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverAppDeregister, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverInjectPacket, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
             }
             catch (NullReferenceException)
             {
