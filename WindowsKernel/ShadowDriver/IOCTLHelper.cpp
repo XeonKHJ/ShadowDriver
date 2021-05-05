@@ -646,7 +646,7 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
 				int packetSize = inputBuffer[4];
 
-				if (packetSize > 0)
+				if (packetSize > 0 && filter->GetModificationStatus())
 				{
 					char* packetStartPointer = (char*)(inputBuffer + 5);
 					UNREFERENCED_PARAMETER(packetStartPointer);

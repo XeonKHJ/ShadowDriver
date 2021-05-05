@@ -250,3 +250,8 @@ void* ShadowFilter::GetContext()
 {
 	return _context;
 }
+
+bool ShadowFilter::GetModificationStatus()
+{
+	return _isModificationEnabled;
+}

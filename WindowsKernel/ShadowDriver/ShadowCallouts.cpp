@@ -33,7 +33,7 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 		if (context->NetPacketFilteringCallout != NULL)
 		{
 			status = FwpsAllocateCloneNetBufferList0(packet, NULL, NULL, 0, &clonedPacket);
-			
+
 			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
 			dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
 			BYTE* packetBuffer = new BYTE[dataLength];
@@ -53,7 +53,7 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 	return status;
 }
 
-void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PNET_BUFFER_LIST packet, ShadowFilterContext * context)
+void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PNET_BUFFER_LIST packet, ShadowFilterContext* context)
 {
 	if (packet)
 	{
@@ -128,12 +128,11 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		// Send packet to user-mode application.
 		status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
+		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
-		if (context->IsModificationEnable && injectionHandle != NULL)
+		// If the packet is a injected one.		
+		if(context->IsModificationEnable)
 		{
-			auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
-
-			// If the packet is a injected one.
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
@@ -141,12 +140,20 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			}
 			else
 			{
+				classifyOut->actionType = FWP_ACTION_BLOCK;
+				classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
 				if (NT_SUCCESS(status))
 				{
 					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
 				}
-
-				classifyOut->actionType = FWP_ACTION_BLOCK;
+			}
+		}
+		else
+		{
+			if (NT_SUCCESS(status))
+			{
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
 			}
 		}
 
