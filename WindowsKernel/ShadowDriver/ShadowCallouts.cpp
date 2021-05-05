@@ -67,9 +67,9 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 			auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
 			BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize];
 			RtlCopyMemory(packetBufferWithMetaInfo, &packet, netBufferListPointerSize);
-			packetBufferWithMetaInfo += netBufferListPointerSize;
-			RtlCopyMemory(packetBufferWithMetaInfo, dataBuffer, dataLength);
-			(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+			RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize, dataBuffer, dataLength);
+
+			(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, NET_BUFFER_DATA_LENGTH(netBuffer) + netBufferListPointerSize, context->CustomContext);
 			delete packetBuffer;
 		}
 	}
@@ -135,13 +135,14 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
+		classifyOut->actionType = FWP_ACTION_PERMIT;
 		// If the packet is a injected one.		
 		if(context->IsModificationEnable)
 		{
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
-				classifyOut->actionType = FWP_ACTION_PERMIT;
+				FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 			}
 			else
 			{
@@ -152,6 +153,10 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 				{
 					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
 				}
+				else
+				{
+					FwpsFreeCloneNetBufferList(clonedPacket, NULL);
+				}
 			}
 		}
 		else
@@ -159,12 +164,8 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			if (NT_SUCCESS(status))
 			{
 				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+				FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 			}
-		}
-
-		if (clonedPacket)
-		{
-			FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 		}
 	}
 }

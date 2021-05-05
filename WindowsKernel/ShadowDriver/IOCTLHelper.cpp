@@ -645,18 +645,31 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
 				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
 				int packetSize = inputBuffer[4];
+				PNET_BUFFER_LIST netBufferList = *(PNET_BUFFER_LIST*)(inputBuffer + 5);
+
+				UNREFERENCED_PARAMETER(netBufferList);
 
 				if (packetSize > 0 && filter->GetModificationStatus())
 				{
-					char* packetStartPointer = (char*)(inputBuffer + 5);
+					char* packetStartPointer = (((char*)inputBuffer) + 5 * sizeof(int) + sizeof(PNET_BUFFER_LIST));
 					UNREFERENCED_PARAMETER(packetStartPointer);
-					status = InjectionHelper::Inject((ShadowFilterContext *)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+
+					if (netBufferList)
+					{
+						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList);
+					}
+					else
+					{
+						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+					}
+					
 				}
 				else
 				{
 					// if packetSize is smaller than or equals 0, then set status.
 
 				}
+				
 				
 
 				UNREFERENCED_PARAMETER(currentIndex);

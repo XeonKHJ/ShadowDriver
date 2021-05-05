@@ -83,7 +83,7 @@ namespace ShadowDriver.UWPDemo
             });
         }
         public ObservableCollection<NetworkInterfaceViewModel> NetworkInterfaceViewModels { get; } = new ObservableCollection<NetworkInterfaceViewModel>();
-        private byte[] Filter_PacketReceived(byte[] buffer)
+        private byte[] Filter_PacketReceived(ulong identifier, byte[] buffer)
         {
             NetPacketViewModel netPacketViewModel = new NetPacketViewModel();
             for (int i = 0; i < buffer.Length; ++i)
@@ -97,7 +97,7 @@ namespace ShadowDriver.UWPDemo
             {
                 try
                 {
-                    _ = _filter.InjectPacketAsync(FilteringLayer.NetworkLayer, NetPacketDirection.Out, IpAddrFamily.IPv4, buffer).ConfigureAwait(true);
+                    _ = _filter.InjectPacketAsync(FilteringLayer.NetworkLayer, NetPacketDirection.Out, IpAddrFamily.IPv4, identifier, buffer).ConfigureAwait(true);
                 }
                 catch
                 {

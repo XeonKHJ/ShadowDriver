@@ -115,6 +115,40 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 	return status;
 }
 
+NTSTATUS InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList)
+{
+	//UNREFERENCED_PARAMETER(context);
+	UNREFERENCED_PARAMETER(direction);
+	UNREFERENCED_PARAMETER(layer);
+
+	NTSTATUS status = STATUS_SUCCESS;
+
+	if (NT_SUCCESS(status))
+	{
+		switch (layer)
+		{
+		case NetworkLayer:
+			switch (direction)
+			{
+			case Out:
+				status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, bufferList, InjectionHelper::ModificationCompleted, context);
+				break;
+			case In:
+				break;
+			default:
+				break;
+			}
+			break;
+		case LinkLayer:
+			break;
+		default:
+			break;
+		}
+	}
+
+	return status;
+}
+
 void InjectionHelper::DeleteInjectors()
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -197,4 +231,22 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 
 	// Delete 
 	//delete mdlAddress;
+}
+
+void InjectionHelper::ModificationCompleted(void* context, NET_BUFFER_LIST* netBufferList, BOOLEAN dispatchLevel)
+{
+	UNREFERENCED_PARAMETER(context);
+	UNREFERENCED_PARAMETER(netBufferList);
+	UNREFERENCED_PARAMETER(dispatchLevel);
+	NDIS_STATUS status = netBufferList->Status;
+
+	if (status == NDIS_STATUS_SUCCESS)
+	{
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Completed\n");
+	}
+
+	//auto mdlAddress = MmGetMdlVirtualAddress(mdl);
+
+	// Delete net buffer list.
+	FwpsFreeCloneNetBufferList(netBufferList, 0);
 }
