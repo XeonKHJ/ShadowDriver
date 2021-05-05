@@ -629,6 +629,9 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 		if (helper != nullptr)
 		{
 			ShadowFilter* filter = helper->_context.Filter;
+
+			UNREFERENCED_PARAMETER(filter);
+
 			int * inputBuffer = (int *)(irp->AssociatedIrp.SystemBuffer);
 			// Read inject info.
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
@@ -644,6 +647,12 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 
 				char* packetStartPointer = (char*)(inputBuffer + 5);
 
+				UNREFERENCED_PARAMETER(currentIndex);
+				UNREFERENCED_PARAMETER(direction);
+				UNREFERENCED_PARAMETER(addrFamily);
+				UNREFERENCED_PARAMETER(layer);
+				UNREFERENCED_PARAMETER(packetStartPointer);
+				UNREFERENCED_PARAMETER(packetSize);
 			}
 		}
 		else
