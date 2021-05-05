@@ -33,6 +33,7 @@ private:
 	static NTSTATUS IoctlStopFiltering(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static NTSTATUS IoctlEnableModification(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
+	static NTSTATUS IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 	static int GetAppIdFromIoctl(PIRP irp, PIO_STACK_LOCATION ioStackLocation);
 
 	/// <summary>
