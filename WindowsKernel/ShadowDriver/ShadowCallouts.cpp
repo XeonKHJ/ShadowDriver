@@ -2,6 +2,7 @@
 #include "ShadowFilterContext.h"
 //#include "NetFilteringCondition.h"
 #include "IOCTLHelper.h"
+#include "InjectionHelper.h"
 
 NTSTATUS ShadowCallout::CalloutPreproecess(
 	_Inout_opt_ void* layerData,
@@ -117,7 +118,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	UNREFERENCED_PARAMETER(contextToVerify);
 
 	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-	HANDLE injectionHandle = context->InjectionHandles[2];
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
 	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
 
 	if (packet != nullptr)

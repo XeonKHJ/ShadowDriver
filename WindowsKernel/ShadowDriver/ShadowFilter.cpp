@@ -36,8 +36,6 @@ ShadowFilter::~ShadowFilter()
 		StopFiltering();
 	}
 
-	InjectionHelper::DeleteInjectors(context);
-
 	// Delete filtering conditions.
 	delete[] _filteringConditions;
 }
@@ -229,8 +227,6 @@ unsigned int ShadowFilter::EnablePacketModification()
 		
 		if (context != nullptr)
 		{
-			status = InjectionHelper::CreateInjector(context);
-
 			if (NT_SUCCESS(status))
 			{
 				_isModificationEnabled = true;

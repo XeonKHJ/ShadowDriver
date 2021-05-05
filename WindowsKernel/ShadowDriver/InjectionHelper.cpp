@@ -1,56 +1,73 @@
 #include "InjectionHelper.h"
 
 HANDLE InjectionHelper::NDISPoolHandle = NULL;
-NTSTATUS InjectionHelper::CreateInjector(ShadowFilterContext* context)
+HANDLE InjectionHelper::InjectionHandles[8];
+NTSTATUS InjectionHelper::CreateInjector()
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	auto filterIds = context->FilterIds;
 	HANDLE injectionHandle = NULL;
 	if (NT_SUCCESS(status))
 	{
-		if (filterIds[0] != NULL || filterIds[2] != NULL)
-		{
+
 			status = FwpsInjectionHandleCreate(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &injectionHandle);
 
 			if (NT_SUCCESS(status))
 			{
-				context->InjectionHandles[0] = injectionHandle;
-				context->InjectionHandles[2] = injectionHandle;
+				InjectionHandles[0] = injectionHandle;
+				InjectionHandles[2] = injectionHandle;
 			}
-		}
+		
 	}
 
 	if (NT_SUCCESS(status))
 	{
-		if (filterIds[1] != NULL || filterIds[3] != NULL)
-		{
+
 			status = FwpsInjectionHandleCreate(AF_INET6, FWPS_INJECTION_TYPE_NETWORK, &injectionHandle);
 
 			if (NT_SUCCESS(status))
 			{
-				context->InjectionHandles[1] = injectionHandle;
-				context->InjectionHandles[3] = injectionHandle;
+				InjectionHandles[1] = injectionHandle;
+				InjectionHandles[3] = injectionHandle;
 			}
-		}
+		
 	}
 
 	if (NT_SUCCESS(status))
 	{
-		if (filterIds[4] != NULL || filterIds[6] != NULL)
-		{
+
 			status = FwpsInjectionHandleCreate(AF_UNSPEC, FWPS_INJECTION_TYPE_L2, &injectionHandle);
 
 			if (NT_SUCCESS(status))
 			{
-				context->InjectionHandles[4] = injectionHandle;
-				context->InjectionHandles[6] = injectionHandle;
+				InjectionHandles[4] = injectionHandle;
+				InjectionHandles[6] = injectionHandle;
 			}
-		}
+		
+	}
+
+	if (NT_SUCCESS(status))
+	{
+		NET_BUFFER_LIST_POOL_PARAMETERS parameters{};
+		parameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+		parameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+		parameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+		parameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
+		parameters.fAllocateNetBuffer = TRUE;
+		parameters.ContextSize = 0;
+
+		// Indicate Inject modified packet. 
+		// This one needs to be changed later. Because every app id needs their own PoolTag.
+		parameters.PoolTag = 'imp';
+
+		parameters.DataSize = 0;
+
+		//This needs to be verified.
+		NDISPoolHandle = NdisAllocateNetBufferListPool(NULL, &parameters);
 	}
 
 	if (!NT_SUCCESS(status))
 	{
-		DeleteInjectors(context);
+		DeleteInjectors();
 	}
 
 	return status;
@@ -80,7 +97,7 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 			switch (direction)
 			{
 			case Out:
-				status = FwpsInjectNetworkSendAsync(context->InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, netBufferList, InjectionHelper::SendInjectCompleted, context);
+				status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, netBufferList, InjectionHelper::SendInjectCompleted, context);
 				break;
 			case In:
 				break;
@@ -98,33 +115,33 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 	return status;
 }
 
-void InjectionHelper::DeleteInjectors(ShadowFilterContext* context)
+void InjectionHelper::DeleteInjectors()
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	auto injectionIds = context->InjectionHandles;
-	if (injectionIds[0] != NULL || injectionIds[2] != NULL)
+	auto injectionIds = InjectionHandles;
+	if (InjectionHandles[0] != NULL || InjectionHandles[2] != NULL)
 	{
 		HANDLE injectionHandle = injectionIds[0] == NULL ? injectionIds[2] : injectionIds[0];
 		status = FwpsInjectionHandleCreate(AF_INET, FWPS_INJECTION_TYPE_NETWORK, &injectionHandle);
 
-		context->InjectionHandles[0] = NULL;
-		context->InjectionHandles[2] = NULL;
+		InjectionHandles[0] = NULL;
+		InjectionHandles[2] = NULL;
 	}
 
-	if (injectionIds[1] != NULL || injectionIds[3] != NULL)
+	if (InjectionHandles[1] != NULL || InjectionHandles[3] != NULL)
 	{
 		HANDLE injectionHandle = injectionIds[1] == NULL ? injectionIds[3] : injectionIds[1];
 		status = FwpsInjectionHandleCreate(AF_INET6, FWPS_INJECTION_TYPE_NETWORK, &injectionHandle);
-		context->InjectionHandles[1] = NULL;
-		context->InjectionHandles[3] = NULL;
+		InjectionHandles[1] = NULL;
+		InjectionHandles[3] = NULL;
 	}
 
-	if (injectionIds[4] != NULL || injectionIds[6] != NULL)
+	if (InjectionHandles[4] != NULL || InjectionHandles[6] != NULL)
 	{
 		HANDLE injectionHandle = injectionIds[4] == NULL ? injectionIds[6] : injectionIds[4];
 		status = FwpsInjectionHandleCreate(AF_UNSPEC, FWPS_INJECTION_TYPE_L2, &injectionHandle);
-		context->InjectionHandles[4] = NULL;
-		context->InjectionHandles[6] = NULL;
+		InjectionHandles[4] = NULL;
+		InjectionHandles[6] = NULL;
 	}
 }
 
@@ -158,8 +175,7 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 	UNREFERENCED_PARAMETER(netBufferList);
 	UNREFERENCED_PARAMETER(dispatchLevel);
 	NDIS_STATUS status = netBufferList->Status;
-	ShadowFilterContext* sfContext = (ShadowFilterContext*)context;
-	HANDLE sendInjectHandle = sfContext->InjectionHandles[2];
+	HANDLE sendInjectHandle = InjectionHandles[2];
 	FWPS_PACKET_INJECTION_STATE injectionState = FwpsQueryPacketInjectionState0(sendInjectHandle, netBufferList, NULL);
 
 	UNREFERENCED_PARAMETER(injectionState);
