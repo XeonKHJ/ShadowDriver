@@ -130,12 +130,10 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		if (NT_SUCCESS(status))
 		{
 			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
-			FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 		}
 
 		if (context->IsModificationEnable && injectionHandle != NULL)
 		{
-			classifyOut->actionType = FWP_ACTION_BLOCK;
 			auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
 			// If the packet is a injected one.
@@ -144,6 +142,15 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			{
 				classifyOut->actionType = FWP_ACTION_PERMIT;
 			}
+			else
+			{
+				classifyOut->actionType = FWP_ACTION_BLOCK;
+			}
+		}
+
+		if (clonedPacket)
+		{
+			FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 		}
 	}
 }
