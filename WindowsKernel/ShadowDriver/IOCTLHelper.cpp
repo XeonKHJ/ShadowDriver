@@ -2,6 +2,7 @@
 #include "ShadowFilterContext.h"
 #include "CancelSafeQueueCallouts.h"
 #include "PacketHelper.h"
+#include "InjectionHelper.h"
 
 int IOCTLHelper::_helperCount = 0;
 IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
@@ -200,7 +201,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			break;
 		case IOCTL_SHADOWDRIVER_INJECT_PACKET:
 			status = STATUS_SUCCESS;
-			status = IoctlEnableModification(Irp, pIoStackIrp);
+			status = IoctlInjectPacket(Irp, pIoStackIrp);
 			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -635,7 +636,7 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 			int * inputBuffer = (int *)(irp->AssociatedIrp.SystemBuffer);
 			// Read inject info.
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-			if (inputBufferLength >= 25)
+			if (inputBufferLength >= 20)
 			{
 				// Skip app id.
 				int currentIndex = sizeof(int);
@@ -648,10 +649,13 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				if (packetSize > 0)
 				{
 					char* packetStartPointer = (char*)(inputBuffer + 5);
+					UNREFERENCED_PARAMETER(packetStartPointer);
+					status = InjectionHelper::Inject((ShadowFilterContext *)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
 				}
 				else
 				{
 					// if packetSize is smaller than or equals 0, then set status.
+
 				}
 				
 
@@ -659,7 +663,6 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				UNREFERENCED_PARAMETER(direction);
 				UNREFERENCED_PARAMETER(addrFamily);
 				UNREFERENCED_PARAMETER(layer);
-				UNREFERENCED_PARAMETER(packetStartPointer);
 				UNREFERENCED_PARAMETER(packetSize);
 			}
 		}

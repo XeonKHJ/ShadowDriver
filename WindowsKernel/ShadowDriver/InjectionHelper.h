@@ -8,6 +8,7 @@ class InjectionHelper
 public:
 	static NTSTATUS CreateInjector(ShadowFilterContext* context);
 	static UINT32 Inject(ShadowFilterContext * context,NetPacketDirection direction, NetLayer layer, void * buffer, SIZE_T size);
+	static HANDLE NDISPoolHandle;
 	static void DeleteInjectors(ShadowFilterContext* context);
 private: 
 	static UINT32 GetInjectionFlagByCode(unsigned int code);

@@ -249,3 +249,8 @@ void ShadowFilter::DisablePacketModification()
 {
 	_isModificationEnabled = false;
 }
+
+void* ShadowFilter::GetContext()
+{
+	return _context;
+}

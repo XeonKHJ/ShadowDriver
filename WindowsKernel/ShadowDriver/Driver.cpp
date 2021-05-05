@@ -19,6 +19,7 @@ Environment:
 #include <windowsx.h>
 #include "ShadowFilter.h"
 #include "IOCTLHelper.h"
+#include "InjectionHelper.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
@@ -199,6 +200,13 @@ Return Value:
 #ifdef DBG
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtDriverContextCleanup\n");
 #endif
+
+    if (InjectionHelper::NDISPoolHandle != NULL)
+    {
+        NdisFreeNetBufferListPool(InjectionHelper::NDISPoolHandle);
+        InjectionHelper::NDISPoolHandle = NULL;
+    }
+
     UNREFERENCED_PARAMETER(DriverObject);
 
     PAGED_CODE();

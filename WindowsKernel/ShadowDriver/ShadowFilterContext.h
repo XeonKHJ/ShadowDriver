@@ -9,7 +9,6 @@ typedef struct ShadowFilterContext
 {
 public:
 	static const int FilterIdMaxNumber = 8;
-	HANDLE NDISPoolHandle;
 	PDEVICE_OBJECT DeviceObject;
 	GUID SublayerGuid;
 	GUID CalloutGuids[8];

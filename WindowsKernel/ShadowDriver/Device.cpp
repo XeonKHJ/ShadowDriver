@@ -23,6 +23,7 @@ Environment:
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
 #endif
 #include "ShadowFilterContext.h"
+#include "InjectionHelper.h"
 
 typedef struct _INVERTED_DEVICE_CONTEXT {
     WDFQUEUE    NotificationQueue;
@@ -123,6 +124,25 @@ Return Value:
         //初始化Windows筛选平台
         IOCTLHelper::SetDeviceObject(deviceObject);
         //status = InitializeWfp(deviceObject);
+
+            // Allocate net buffer list pool.
+        if (NT_SUCCESS(status))
+        {
+            NET_BUFFER_LIST_POOL_PARAMETERS parameters{};
+            parameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+            parameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+            parameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+            parameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
+            parameters.fAllocateNetBuffer = TRUE;
+            parameters.ContextSize = 0;
+
+            // Indicate Inject modified packet. 
+            // This one needs to be changed later. Because every app id needs their own PoolTag.
+            parameters.PoolTag = 'imp';
+
+            parameters.DataSize = 0;
+            InjectionHelper::NDISPoolHandle = NdisAllocateNetBufferListPool(NULL, &parameters);
+        }
     }
     
     return status;

@@ -127,10 +127,6 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		// Send packet to user-mode application.
 		status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
-		if (NT_SUCCESS(status))
-		{
-			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
-		}
 
 		if (context->IsModificationEnable && injectionHandle != NULL)
 		{
@@ -144,6 +140,11 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			}
 			else
 			{
+				if (NT_SUCCESS(status))
+				{
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+				}
+
 				classifyOut->actionType = FWP_ACTION_BLOCK;
 			}
 		}

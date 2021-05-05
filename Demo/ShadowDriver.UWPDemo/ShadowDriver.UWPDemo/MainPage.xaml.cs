@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Devices.Custom;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -94,7 +95,14 @@ namespace ShadowDriver.UWPDemo
             // Packet Length needs to be bigger than ipheader length.
             if (buffer.Length >= 20)
             {
-                
+                try
+                {
+                    _ = _filter.InjectPacketAsync(FilteringLayer.NetworkLayer, NetPacketDirection.Out, IpAddrFamily.IPv4, buffer).ConfigureAwait(true);
+                }
+                catch
+                {
+                    ;
+                }
             }
 
             return null;

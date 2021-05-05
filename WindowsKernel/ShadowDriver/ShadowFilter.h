@@ -11,7 +11,7 @@ public:
 	unsigned int StopFiltering();
 	unsigned int EnablePacketModification();
 	void DisablePacketModification();
-	
+	void* GetContext();
 	//过滤器接收到数据包的回调函数
 	void (* NetPacketFilteringCallout)(NetLayer netLayer, NetPacketDirection direction, void * buffer, unsigned long long bufferSize, void * context);
 

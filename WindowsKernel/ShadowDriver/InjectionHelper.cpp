@@ -1,5 +1,6 @@
 #include "InjectionHelper.h"
 
+HANDLE InjectionHelper::NDISPoolHandle = NULL;
 NTSTATUS InjectionHelper::CreateInjector(ShadowFilterContext* context)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -47,25 +48,6 @@ NTSTATUS InjectionHelper::CreateInjector(ShadowFilterContext* context)
 		}
 	}
 
-	// Allocate net buffer list pool.
-	if (NT_SUCCESS(status))
-	{
-		NET_BUFFER_LIST_POOL_PARAMETERS parameters{};
-		parameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
-		parameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
-		parameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
-		parameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
-		parameters.fAllocateNetBuffer = TRUE;
-		parameters.ContextSize = 0;
-
-		// Indicate Inject modified packet. 
-		// This one needs to be changed later. Because every app id needs their own PoolTag.
-		parameters.PoolTag = 'imp';
-
-		parameters.DataSize = 0;
-		context->NDISPoolHandle = NdisAllocateNetBufferListPool(NULL, &parameters);
-	}
-
 	if (!NT_SUCCESS(status))
 	{
 		DeleteInjectors(context);
@@ -76,7 +58,7 @@ NTSTATUS InjectionHelper::CreateInjector(ShadowFilterContext* context)
 
 UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection direction, NetLayer layer, void* buffer, SIZE_T size)
 {
-	UNREFERENCED_PARAMETER(context);
+	//UNREFERENCED_PARAMETER(context);
 	UNREFERENCED_PARAMETER(direction);
 	UNREFERENCED_PARAMETER(layer);
 	UNREFERENCED_PARAMETER(buffer);
@@ -86,9 +68,9 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 
 	BYTE* newBuffer = new BYTE[size];
 	RtlCopyMemory(newBuffer, buffer, size);
-	PMDL mdl = NdisAllocateMdl(context->NDISPoolHandle, buffer, (UINT)size);
+	PMDL mdl = NdisAllocateMdl(NDISPoolHandle, buffer, (UINT)size);
 	PNET_BUFFER_LIST netBufferList = nullptr;
-	status = FwpsAllocateNetBufferAndNetBufferList(context->NDISPoolHandle, 0, 0, mdl, 0, size, &netBufferList);
+	status = FwpsAllocateNetBufferAndNetBufferList(NDISPoolHandle, 0, 0, mdl, 0, size, &netBufferList);
 
 	if (NT_SUCCESS(status))
 	{
@@ -98,7 +80,7 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 			switch (direction)
 			{
 			case Out:
-				FwpsInjectNetworkSendAsync(context->InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, netBufferList, InjectionHelper::SendInjectCompleted, context);
+				status = FwpsInjectNetworkSendAsync(context->InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, netBufferList, InjectionHelper::SendInjectCompleted, context);
 				break;
 			case In:
 				break;
@@ -113,7 +95,7 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 		}
 	}
 
-	return UINT32();
+	return status;
 }
 
 void InjectionHelper::DeleteInjectors(ShadowFilterContext* context)
@@ -143,12 +125,6 @@ void InjectionHelper::DeleteInjectors(ShadowFilterContext* context)
 		status = FwpsInjectionHandleCreate(AF_UNSPEC, FWPS_INJECTION_TYPE_L2, &injectionHandle);
 		context->InjectionHandles[4] = NULL;
 		context->InjectionHandles[6] = NULL;
-	}
-
-	if (context->NDISPoolHandle != NULL)
-	{
-		NdisFreeNetBufferListPool(context->NDISPoolHandle);
-		context->NDISPoolHandle = NULL;
 	}
 }
 
@@ -195,7 +171,7 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 	
 	auto nb = NET_BUFFER_LIST_FIRST_NB(netBufferList);
 	auto mdl = NET_BUFFER_FIRST_MDL(nb);
-	auto mdlAddress = MmGetMdlVirtualAddress(mdl);
+	//auto mdlAddress = MmGetMdlVirtualAddress(mdl);
 
 	// Delete net buffer list.
 	NdisFreeNetBufferList(netBufferList);
@@ -204,5 +180,5 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 	NdisFreeMdl(mdl);
 
 	// Delete 
-	delete mdlAddress;
+	//delete mdlAddress;
 }
