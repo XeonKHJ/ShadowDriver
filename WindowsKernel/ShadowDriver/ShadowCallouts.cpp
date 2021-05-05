@@ -64,6 +64,11 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 			BYTE* packetBuffer = new BYTE[dataLength];
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
 
+			auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
+			BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize];
+			RtlCopyMemory(packetBufferWithMetaInfo, &packet, netBufferListPointerSize);
+			packetBufferWithMetaInfo += netBufferListPointerSize;
+			RtlCopyMemory(packetBufferWithMetaInfo, dataBuffer, dataLength);
 			(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
 			delete packetBuffer;
 		}
