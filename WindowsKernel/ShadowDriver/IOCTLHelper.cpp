@@ -194,11 +194,21 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		case IOCTL_SHADOWDRIVER_ENABLE_MODIFICATION:
 			status = STATUS_SUCCESS;
 			status = IoctlEnableModification(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
+		case IOCTL_SHADOWDRIVER_INJECT_PACKET:
+			status = STATUS_SUCCESS;
+			status = IoctlEnableModification(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
 		default:
 #ifdef DBG 
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");
 #endif
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
@@ -595,6 +605,46 @@ NTSTATUS IOCTLHelper::IoctlEnableModification(PIRP irp, PIO_STACK_LOCATION ioSta
 		{
 			ShadowFilter* filter = helper->_context.Filter;
 			status = filter->EnablePacketModification();
+		}
+		else
+		{
+			status = SHADOW_APP_UNREGISTERED;
+		}
+	}
+	else
+	{
+		status = SHADOW_APP_APPID_INVALID;
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+
+	if (appId != 0)
+	{
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
+		{
+			ShadowFilter* filter = helper->_context.Filter;
+			int * inputBuffer = (int *)(irp->AssociatedIrp.SystemBuffer);
+			// Read inject info.
+			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+			if (inputBufferLength >= 25)
+			{
+				// Skip app id.
+				int currentIndex = sizeof(int);
+
+				NetLayer layer = (NetLayer)(inputBuffer[1]);
+				NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
+				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
+				unsigned int packetSize = inputBuffer[4];
+
+				char* packetStartPointer = (char*)(inputBuffer + 5);
+
+			}
 		}
 		else
 		{
