@@ -208,6 +208,48 @@ namespace ShadowDriver.Core
                 throw new ShadowFilterException(status);
             }
         }
+
+        public async Task InjectPacketAsync(FilteringLayer layer, NetPacketDirection direction, IpAddrFamily addrFamily, byte[] packetBuffer)
+        {
+            byte[] outputBuffer = new byte[sizeof(int)];
+            byte[] inputBuffer = new byte[packetBuffer.Length + 5 * sizeof(int)];
+            int currentIndex = 0;
+            byte[] appIdBytes = _shadowRegisterContext.SeralizeAppIdToByteArray();
+            byte[] layerBytes = BitConverter.GetBytes((int)layer);
+            byte[] directionBytes = BitConverter.GetBytes((int)direction);
+            byte[] addrFamilyBytes = BitConverter.GetBytes((int)addrFamily);
+            byte[] sizeBytes = BitConverter.GetBytes(packetBuffer.Length);
+            appIdBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            layerBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            directionBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            addrFamilyBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            sizeBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            packetBuffer.CopyTo(inputBuffer, currentIndex);
+
+            try
+            {
+                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverAppDeregister, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+            }
+            catch (NullReferenceException)
+            {
+                throw new ShadowFilterException(0xC0090040);
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+
+            var status = BitConverter.ToUInt32(outputBuffer, 0);
+            if (status != 0)
+            {
+                HandleError(status);
+            }
+        }
         public async Task StartFilteringAsync()
         {
             var outputBuffer = new byte[sizeof(int)];
@@ -331,7 +373,7 @@ namespace ShadowDriver.Core
 
                 if(_isFilteringStarted)
                 {
-                    var newPacket = PacketReceived?.Invoke(packetBuffer);
+                    byte[] newPacket = PacketReceived?.Invoke(packetBuffer);
                 }
 
             }

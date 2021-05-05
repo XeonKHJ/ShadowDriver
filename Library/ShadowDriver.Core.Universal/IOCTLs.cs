@@ -45,5 +45,8 @@ namespace ShadowDriver.Core
 
         //#define IOCTL_SHADOWDRIVER_ENABLE_MODIFICATION          CTL_CODE(FILE_DEVICE_NETWORK, 0x926, METHOD_BUFFERED, FILE_ANY_ACCESS)
         public static IOControlCode IOCTLShadowDriverEnableModification = new IOControlCode(0x00000012, 0x926, IOControlAccessMode.Any, IOControlBufferingMethod.Buffered);
+
+        //#define IOCTL_SHADOWDRIVER_INJECT_PACKET                CTL_CODE(FILE_DEVICE_NETWORK, 0X927, METHOD_BUFFERED, FILE_ANY_ACCESS)
+        public static IOControlCode IOCTLShadowDriverInjectPacket = new IOControlCode(0x00000012, 0x927, IOControlAccessMode.Any, IOControlBufferingMethod.Buffered);
     }
 }

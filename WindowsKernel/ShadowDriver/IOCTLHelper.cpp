@@ -643,9 +643,17 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				NetLayer layer = (NetLayer)(inputBuffer[1]);
 				NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
 				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
-				unsigned int packetSize = inputBuffer[4];
+				int packetSize = inputBuffer[4];
 
-				char* packetStartPointer = (char*)(inputBuffer + 5);
+				if (packetSize > 0)
+				{
+					char* packetStartPointer = (char*)(inputBuffer + 5);
+				}
+				else
+				{
+					// if packetSize is smaller than or equals 0, then set status.
+				}
+				
 
 				UNREFERENCED_PARAMETER(currentIndex);
 				UNREFERENCED_PARAMETER(direction);
