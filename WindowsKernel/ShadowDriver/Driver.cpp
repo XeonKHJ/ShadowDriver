@@ -201,11 +201,7 @@ Return Value:
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverEvtDriverContextCleanup\n");
 #endif
 
-    if (InjectionHelper::NDISPoolHandle != NULL)
-    {
-        NdisFreeNetBufferListPool(InjectionHelper::NDISPoolHandle);
-        InjectionHelper::NDISPoolHandle = NULL;
-    }
+    InjectionHelper::DeleteInjectors();
 
     UNREFERENCED_PARAMETER(DriverObject);
 
