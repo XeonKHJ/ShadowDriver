@@ -111,7 +111,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 
 				(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), context->CustomContext);
 				delete packetBuffer;
-
+				delete packetBufferWithMetaInfo;
 				++fragIndex;
 			}
 		}
