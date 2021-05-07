@@ -370,11 +370,18 @@ namespace ShadowDriver.Core
                     //}
                 }
 
-                var packetSize = BitConverter.ToInt64(outputBuffer, sizeof(int));
 
-                var identifier = BitConverter.ToUInt64(outputBuffer, sizeof(int) + sizeof(long));
-
-                packetSize -= sizeof(UInt64);
+                int currentIndex = sizeof(int);
+                var packetSize = BitConverter.ToInt64(outputBuffer, currentIndex);
+                currentIndex += sizeof(long);
+                var identifier = BitConverter.ToUInt64(outputBuffer, currentIndex);
+                currentIndex += sizeof(ulong);
+                packetSize -= sizeof(ulong);
+                var totalFragCount = BitConverter.ToInt32(outputBuffer, currentIndex);
+                currentIndex += sizeof(int);
+                packetSize -= sizeof(int);
+                var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
+                packetSize -= sizeof(int);
 
                 byte[] packetBuffer = new byte[packetSize];
                 Array.Copy(outputBuffer, sizeof(int) + sizeof(UInt64) + sizeof(long), packetBuffer, 0, packetSize);
