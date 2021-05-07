@@ -83,18 +83,37 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 	{
 		if (context->NetPacketFilteringCallout != NULL)
 		{
-			PNET_BUFFER netBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
-			ULONG dataLength = NET_BUFFER_DATA_LENGTH(netBuffer);
-			BYTE* packetBuffer = new BYTE[dataLength];
-			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
+			// Cauculate the number of net buffers.
+			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
+			int netBufferCount = 0;
+			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; NET_BUFFER_NEXT_NB(currentBuffer))
+			{
+				++netBufferCount;
+			}
 
-			auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
-			BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize];
-			RtlCopyMemory(packetBufferWithMetaInfo, &packet, netBufferListPointerSize);
-			RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize, dataBuffer, dataLength);
+			int fragIndex = 0;
+			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; NET_BUFFER_NEXT_NB(currentBuffer))
+			{
+				ULONG dataLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
 
-			(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, NET_BUFFER_DATA_LENGTH(netBuffer) + netBufferListPointerSize, context->CustomContext);
-			delete packetBuffer;
+				BYTE* packetBuffer = new BYTE[dataLength];
+				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(firstNetBuffer, NET_BUFFER_DATA_LENGTH(firstNetBuffer), packetBuffer, 1, 0);
+
+				auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
+				BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex)];
+				RtlCopyMemory(packetBufferWithMetaInfo, &packet, netBufferListPointerSize);
+
+				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize, &netBufferCount, sizeof(netBufferCount));
+
+				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize + sizeof(netBufferCount), &fragIndex, sizeof(fragIndex));
+
+				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), dataBuffer, dataLength);
+
+				(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), context->CustomContext);
+				delete packetBuffer;
+
+				++fragIndex;
+			}
 		}
 	}
 }
