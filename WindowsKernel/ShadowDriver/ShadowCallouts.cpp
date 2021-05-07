@@ -39,7 +39,31 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 			BYTE* packetBuffer = new BYTE[dataLength];
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
 
-			(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+#ifdef DBG
+			if (NET_BUFFER_NEXT_NB(netBuffer))
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "This net buffer list has more than one net buffer.\t\n");
+
+				PNET_BUFFER currentBuffer = netBuffer;
+
+				while (currentBuffer)
+				{
+					auto netBufferOffset = NET_BUFFER_DATA_OFFSET(currentBuffer);
+					auto netBufferLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
+					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "%d, %d", netBufferOffset, netBufferLength);
+					if (currentBuffer)
+					{
+						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "->");
+					}
+				}
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "\t\n");
+			}
+#endif
+			if (netBuffer)
+			{
+				(context->NetPacketFilteringCallout)(layer, direction, dataBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), context->CustomContext);
+			}
 			FwpsFreeCloneNetBufferList0(clonedPacket, 0);
 			delete packetBuffer;
 		}
@@ -135,9 +159,55 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
+#ifdef DBG
+
+		auto currentNbl = packet;
+		while (currentNbl)
+		{
+			if (NET_BUFFER_NEXT_NB(NET_BUFFER_LIST_FIRST_NB(currentNbl)))
+			{
+				PNET_BUFFER currentBuffer = NET_BUFFER_LIST_FIRST_NB(currentNbl);
+
+				while (currentBuffer)
+				{
+					auto netBufferOffset = NET_BUFFER_DATA_OFFSET(currentBuffer);
+					auto netBufferLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
+
+					BYTE* testBuffer = new BYTE[netBufferLength];
+
+					BYTE* testBufferPointer = (PBYTE)NdisGetDataBuffer(currentBuffer, netBufferLength, testBuffer, 1, 0);
+
+					//UNREFERENCED_PARAMETER(testBufferPointer);
+
+					delete testBuffer;
+					UNREFERENCED_PARAMETER(testBufferPointer);
+
+					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "(%d, %d)", netBufferOffset, netBufferLength);
+					if (currentBuffer)
+					{
+						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "->");
+					}
+				}
+			}
+			currentNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
+			if (currentNbl)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "|");
+			}
+		}
+
+		if (NET_BUFFER_LIST_NEXT_NBL(packet))
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "\t\n");
+		}
+
+#endif
+
+
 		classifyOut->actionType = FWP_ACTION_PERMIT;
 		// If the packet is a injected one.		
-		if(context->IsModificationEnable)
+		if (context->IsModificationEnable)
 		{
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)

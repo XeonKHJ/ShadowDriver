@@ -656,7 +656,7 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 
 					if (netBufferList)
 					{
-						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList);
+						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList, packetSize);
 					}
 					else
 					{

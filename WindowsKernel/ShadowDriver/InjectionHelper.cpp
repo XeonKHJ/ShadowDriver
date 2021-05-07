@@ -115,13 +115,20 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 	return status;
 }
 
-NTSTATUS InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList)
+NTSTATUS InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList, void * buffer, SIZE_T size)
 {
 	//UNREFERENCED_PARAMETER(context);
 	UNREFERENCED_PARAMETER(direction);
 	UNREFERENCED_PARAMETER(layer);
+	UNREFERENCED_PARAMETER(size);
+	UNREFERENCED_PARAMETER(buffer);
 
 	NTSTATUS status = STATUS_SUCCESS;
+
+	// Modify original NBL here.
+	
+
+	//auto mdl = NdisAllocateMdl(InjectionHelper::NDISPoolHandle, buffer, size);
 
 	if (NT_SUCCESS(status))
 	{
