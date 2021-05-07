@@ -95,19 +95,23 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; NET_BUFFER_NEXT_NB(currentBuffer))
 			{
 				ULONG dataLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
-
+				ULONG offsetLength = NET_BUFFER_DATA_OFFSET(currentBuffer);
 				BYTE* packetBuffer = new BYTE[dataLength];
 				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(firstNetBuffer, NET_BUFFER_DATA_LENGTH(firstNetBuffer), packetBuffer, 1, 0);
 
 				auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
-				BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex)];
-				RtlCopyMemory(packetBufferWithMetaInfo, &packet, netBufferListPointerSize);
-
-				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize, &netBufferCount, sizeof(netBufferCount));
-
-				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize + sizeof(netBufferCount), &fragIndex, sizeof(fragIndex));
-
-				RtlCopyMemory(packetBufferWithMetaInfo + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), dataBuffer, dataLength);
+				BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength)];
+				BYTE* currentWrittenPos = packetBufferWithMetaInfo;
+				RtlCopyMemory(currentWrittenPos, &packet, netBufferListPointerSize);
+				currentWrittenPos += netBufferListPointerSize;
+				RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
+				currentWrittenPos += sizeof(netBufferCount);
+				RtlCopyMemory(currentWrittenPos + sizeof(netBufferCount), &fragIndex, sizeof(fragIndex));
+				currentWrittenPos += sizeof(fragIndex);
+				RtlCopyMemory(currentWrittenPos + sizeof(offsetLength), &offsetLength, sizeof(offsetLength));
+				currentWrittenPos += sizeof(offsetLength);
+				RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
+				
 
 				(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), context->CustomContext);
 				delete packetBuffer;

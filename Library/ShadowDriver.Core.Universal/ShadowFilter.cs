@@ -381,7 +381,10 @@ namespace ShadowDriver.Core
                 currentIndex += sizeof(int);
                 packetSize -= sizeof(int);
                 var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
+                currentIndex += sizeof(int);
                 packetSize -= sizeof(int);
+                var offsetLength = BitConverter.ToUInt64(outputBuffer, currentIndex);
+                packetSize -= sizeof(ulong);
 
                 byte[] packetBuffer = new byte[packetSize];
                 Array.Copy(outputBuffer, sizeof(int) + sizeof(UInt64) + sizeof(long), packetBuffer, 0, packetSize);
