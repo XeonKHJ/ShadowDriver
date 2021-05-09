@@ -2,6 +2,7 @@
 #include <fwpsk.h>
 #include "ShadowFilterContext.h"
 #include "NetFilteringCondition.h"
+#include "NetBufferListEntry.h"
 
 class ShadowCallout
 {
@@ -21,7 +22,10 @@ private:
 		ShadowFilterContext* context
 	);
 
+	static NetBufferListEntry PendingNetBufferListHeader;
+	static KSPIN_LOCK SpinLock;
 public:
+	static NTSTATUS InitializeNBLListHeader();
 	static NTSTATUS PacketNotify(
 		_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 		_In_ const GUID* filterKey,

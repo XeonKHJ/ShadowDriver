@@ -24,6 +24,7 @@ Environment:
 #endif
 #include "ShadowFilterContext.h"
 #include "InjectionHelper.h"
+#include "ShadowCallouts.h"
 
 typedef struct _INVERTED_DEVICE_CONTEXT {
     WDFQUEUE    NotificationQueue;
@@ -128,6 +129,11 @@ Return Value:
         if (NT_SUCCESS(status))
         {
             status = InjectionHelper::CreateInjector();
+        }
+
+        if (NT_SUCCESS(status))
+        {
+            status = ShadowCallout::InitializeNBLListHeader();
         }
     }
     

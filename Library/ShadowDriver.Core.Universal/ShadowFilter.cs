@@ -383,11 +383,13 @@ namespace ShadowDriver.Core
                 var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
                 currentIndex += sizeof(int);
                 packetSize -= sizeof(int);
-                var offsetLength = BitConverter.ToUInt64(outputBuffer, currentIndex);
-                packetSize -= sizeof(ulong);
+                var offsetLength = BitConverter.ToUInt32(outputBuffer, currentIndex);
+                currentIndex += sizeof(uint);
+                packetSize -= sizeof(uint);
+
 
                 byte[] packetBuffer = new byte[packetSize];
-                Array.Copy(outputBuffer, sizeof(int) + sizeof(UInt64) + sizeof(long), packetBuffer, 0, packetSize);
+                Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
 
                 if(_isFilteringStarted)
                 {

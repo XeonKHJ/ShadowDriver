@@ -4,6 +4,9 @@
 #include "IOCTLHelper.h"
 #include "InjectionHelper.h"
 
+NetBufferListEntry ShadowCallout::PendingNetBufferListHeader;
+KSPIN_LOCK ShadowCallout::SpinLock;
+
 NTSTATUS ShadowCallout::CalloutPreproecess(
 	_Inout_opt_ void* layerData,
 	_In_ const FWPS_FILTER* filter,
@@ -86,42 +89,57 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 			// Cauculate the number of net buffers.
 			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 			int netBufferCount = 0;
-			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; NET_BUFFER_NEXT_NB(currentBuffer))
+			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer))
 			{
 				++netBufferCount;
 			}
 
 			int fragIndex = 0;
-			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; NET_BUFFER_NEXT_NB(currentBuffer))
+			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer))
 			{
 				ULONG dataLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
-				ULONG offsetLength = NET_BUFFER_DATA_OFFSET(currentBuffer);
+				auto offsetLength = NET_BUFFER_DATA_OFFSET(currentBuffer);
 				BYTE* packetBuffer = new BYTE[dataLength];
-				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(firstNetBuffer, NET_BUFFER_DATA_LENGTH(firstNetBuffer), packetBuffer, 1, 0);
+				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(currentBuffer, dataLength, packetBuffer, 1, 0);
 
 				auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
-				BYTE* packetBufferWithMetaInfo = new BYTE[dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength)];
-				BYTE* currentWrittenPos = packetBufferWithMetaInfo;
-				RtlCopyMemory(currentWrittenPos, &packet, netBufferListPointerSize);
-				currentWrittenPos += netBufferListPointerSize;
-				RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
-				currentWrittenPos += sizeof(netBufferCount);
-				RtlCopyMemory(currentWrittenPos + sizeof(netBufferCount), &fragIndex, sizeof(fragIndex));
-				currentWrittenPos += sizeof(fragIndex);
-				RtlCopyMemory(currentWrittenPos + sizeof(offsetLength), &offsetLength, sizeof(offsetLength));
-				currentWrittenPos += sizeof(offsetLength);
-				RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
-				
+				size_t totolBufferLength = dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength);
+				BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
 
-				(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex), context->CustomContext);
+				if (packetBufferWithMetaInfo != nullptr)
+				{
+					BYTE* currentWrittenPos = packetBufferWithMetaInfo;
+					RtlCopyMemory(currentWrittenPos, &packet, netBufferListPointerSize);
+					currentWrittenPos += netBufferListPointerSize;
+					RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
+					currentWrittenPos += sizeof(netBufferCount);
+					RtlCopyMemory(currentWrittenPos, &fragIndex, sizeof(fragIndex));
+					currentWrittenPos += sizeof(fragIndex);
+					RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
+					currentWrittenPos += sizeof(offsetLength);
+					RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
+					(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, context->CustomContext);
+
+					delete packetBufferWithMetaInfo;
+				}
+
 				delete packetBuffer;
-				delete packetBufferWithMetaInfo;
+				
 				++fragIndex;
 			}
 		}
 	}
 }
 
+
+NTSTATUS ShadowCallout::InitializeNBLListHeader()
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	KeInitializeSpinLock(&SpinLock);
+	InitializeListHead(&(PendingNetBufferListHeader.ListEntry));
+
+	return status;
+}
 
 NTSTATUS ShadowCallout::PacketNotify(_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 	_In_ const GUID* filterKey,
@@ -244,7 +262,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 				if (NT_SUCCESS(status))
 				{
-					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
 				}
 				else
 				{
@@ -256,7 +274,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		{
 			if (NT_SUCCESS(status))
 			{
-				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
 				FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 			}
 		}
