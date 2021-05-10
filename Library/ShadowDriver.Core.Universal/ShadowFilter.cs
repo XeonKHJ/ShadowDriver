@@ -373,29 +373,32 @@ namespace ShadowDriver.Core
 
                 int currentIndex = sizeof(int);
                 var packetSize = BitConverter.ToInt64(outputBuffer, currentIndex);
-                currentIndex += sizeof(long);
-                var identifier = BitConverter.ToUInt64(outputBuffer, currentIndex);
-                currentIndex += sizeof(ulong);
-                packetSize -= sizeof(ulong);
-                var totalFragCount = BitConverter.ToInt32(outputBuffer, currentIndex);
-                currentIndex += sizeof(int);
-                packetSize -= sizeof(int);
-                var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
-                currentIndex += sizeof(int);
-                packetSize -= sizeof(int);
-                var offsetLength = BitConverter.ToUInt32(outputBuffer, currentIndex);
-                currentIndex += sizeof(uint);
-                packetSize -= sizeof(uint);
 
-
-                byte[] packetBuffer = new byte[packetSize];
-                Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
-
-                if(_isFilteringStarted)
+                if (packetSize > 0)
                 {
-                    byte[] newPacket = PacketReceived?.Invoke(identifier, packetBuffer);
-                }
+                    currentIndex += sizeof(long);
+                    var identifier = BitConverter.ToUInt64(outputBuffer, currentIndex);
+                    currentIndex += sizeof(ulong);
+                    packetSize -= sizeof(ulong);
+                    var totalFragCount = BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(int);
+                    packetSize -= sizeof(int);
+                    var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(int);
+                    packetSize -= sizeof(int);
+                    var offsetLength = BitConverter.ToUInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(uint);
+                    packetSize -= sizeof(uint);
 
+
+                    byte[] packetBuffer = new byte[packetSize];
+                    Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
+
+                    if (_isFilteringStarted)
+                    {
+                        byte[] newPacket = PacketReceived?.Invoke(identifier, packetBuffer);
+                    }
+                }
             }
             return;
         }
