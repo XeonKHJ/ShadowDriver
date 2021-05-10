@@ -7,6 +7,61 @@
 NetBufferListEntry ShadowCallout::PendingNetBufferListHeader;
 KSPIN_LOCK ShadowCallout::SpinLock;
 
+#ifdef DBG
+/// <summary>
+/// Print fragment information of a NET_BUFFER_LIST.
+/// This function can be called only when DBG is predefinded.
+/// </summary>
+/// <param name="netBufferList"></param>
+void PrintFragmentInfo(PNET_BUFFER_LIST netBufferList)
+{
+	if (netBufferList)
+	{
+		auto firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(netBufferList);
+		auto currentNbl = netBufferList;
+		while (currentNbl)
+		{
+			if (firstNetBuffer && NET_BUFFER_NEXT_NB(firstNetBuffer))
+			{
+				PNET_BUFFER currentBuffer = NET_BUFFER_LIST_FIRST_NB(currentNbl);
+
+				while (currentBuffer)
+				{
+					auto netBufferOffset = NET_BUFFER_DATA_OFFSET(currentBuffer);
+					auto netBufferLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
+
+					BYTE* testBuffer = new BYTE[netBufferLength];
+
+					BYTE* testBufferPointer = (PBYTE)NdisGetDataBuffer(currentBuffer, netBufferLength, testBuffer, 1, 0);
+
+					//UNREFERENCED_PARAMETER(testBufferPointer);
+
+					delete testBuffer;
+					UNREFERENCED_PARAMETER(testBufferPointer);
+
+					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "(%d, %d)", netBufferOffset, netBufferLength);
+					if (currentBuffer)
+					{
+						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "->");
+					}
+				}
+			}
+			currentNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
+			if (currentNbl)
+			{
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "|");
+			}
+		}
+
+		if (firstNetBuffer && NET_BUFFER_NEXT_NB(firstNetBuffer))
+		{
+			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "\t\n");
+		}
+	}
+}
+#endif
+
 NTSTATUS ShadowCallout::CalloutPreproecess(
 	_Inout_opt_ void* layerData,
 	_In_ const FWPS_FILTER* filter,
@@ -43,25 +98,7 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 			PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(netBuffer, NET_BUFFER_DATA_LENGTH(netBuffer), packetBuffer, 1, 0);
 
 #ifdef DBG
-			if (NET_BUFFER_NEXT_NB(netBuffer))
-			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "This net buffer list has more than one net buffer.\t\n");
-
-				PNET_BUFFER currentBuffer = netBuffer;
-
-				while (currentBuffer)
-				{
-					auto netBufferOffset = NET_BUFFER_DATA_OFFSET(currentBuffer);
-					auto netBufferLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
-					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "%d, %d", netBufferOffset, netBufferLength);
-					if (currentBuffer)
-					{
-						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "->");
-					}
-				}
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "\t\n");
-			}
+			PrintFragmentInfo(packet);
 #endif
 			if (netBuffer)
 			{
@@ -86,6 +123,8 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 	{
 		if (context->NetPacketFilteringCallout != NULL)
 		{
+			auto retreatOffset = NET_BUFFER_DATA_OFFSET(NET_BUFFER_LIST_FIRST_NB(packet));
+
 			// Cauculate the number of net buffers.
 			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 			int netBufferCount = 0;
@@ -95,10 +134,12 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 			}
 
 			int fragIndex = 0;
+
 			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer))
 			{
 				ULONG dataLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
 				auto offsetLength = NET_BUFFER_DATA_OFFSET(currentBuffer);
+
 				BYTE* packetBuffer = new BYTE[dataLength];
 				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(currentBuffer, dataLength, packetBuffer, 1, 0);
 
@@ -126,6 +167,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				delete packetBuffer;
 				
 				++fragIndex;
+
 			}
 		}
 	}
@@ -199,50 +241,8 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
-
 #ifdef DBG
-
-		auto currentNbl = packet;
-		while (currentNbl)
-		{
-			if (NET_BUFFER_NEXT_NB(NET_BUFFER_LIST_FIRST_NB(currentNbl)))
-			{
-				PNET_BUFFER currentBuffer = NET_BUFFER_LIST_FIRST_NB(currentNbl);
-
-				while (currentBuffer)
-				{
-					auto netBufferOffset = NET_BUFFER_DATA_OFFSET(currentBuffer);
-					auto netBufferLength = NET_BUFFER_DATA_LENGTH(currentBuffer);
-
-					BYTE* testBuffer = new BYTE[netBufferLength];
-
-					BYTE* testBufferPointer = (PBYTE)NdisGetDataBuffer(currentBuffer, netBufferLength, testBuffer, 1, 0);
-
-					//UNREFERENCED_PARAMETER(testBufferPointer);
-
-					delete testBuffer;
-					UNREFERENCED_PARAMETER(testBufferPointer);
-
-					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "(%d, %d)", netBufferOffset, netBufferLength);
-					if (currentBuffer)
-					{
-						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "->");
-					}
-				}
-			}
-			currentNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
-			if (currentNbl)
-			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "|");
-			}
-		}
-
-		if (NET_BUFFER_LIST_NEXT_NBL(packet))
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "\t\n");
-		}
-
+		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
 
 
@@ -300,6 +300,11 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkInV4ClassifyFn\t\n");
 #endif
+
+#ifdef DBG
+	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
+
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
@@ -320,6 +325,9 @@ VOID NTAPI ShadowCallout::NetworkInV6ClassifyFn(
 	UNREFERENCED_PARAMETER(inFixedValues);
 
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+#ifdef DBG
+	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
 }
 
@@ -339,6 +347,9 @@ VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
 	UNREFERENCED_PARAMETER(inFixedValues);
 
 	classifyOut->actionType = FWP_ACTION_PERMIT;
+#ifdef DBG
+	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
 }
 
@@ -361,6 +372,11 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
 #endif
+
+#ifdef DBG
+	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
+
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
 }
 
@@ -383,5 +399,10 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 #ifdef DBG
 	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
 #endif
+
+#ifdef DBG
+	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
+
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
 }
