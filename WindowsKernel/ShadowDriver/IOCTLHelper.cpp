@@ -672,7 +672,7 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 					UNREFERENCED_PARAMETER(packetStartPointer);
 					if (netBufferList)
 					{
-						//status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
+						status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
 					}
 					else
 					{

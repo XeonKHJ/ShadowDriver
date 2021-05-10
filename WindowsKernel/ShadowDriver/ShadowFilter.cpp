@@ -289,9 +289,9 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 				(currentNetBufferListEntry->ReceviedFragmentCounts)++;
 				break;
 			}
+			currentNetBufferListEntry = CONTAINING_RECORD(currentNetBufferListEntry->ListEntry.Flink, NetBufferListEntry, ListEntry);
 		}
-		
-		
+
 		if (nblToSend)
 		{
 			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
@@ -327,10 +327,15 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 				}
 			}
 
+
+			// REMEMBER TO DELETE IT LATER!
+#ifdef DBG
+			FwpsFreeCloneNetBufferList(nblToSend, 0);
+#endif
+
 		}
 
-
-
+		// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
 		if (nblToSend && currentNetBufferListEntry->ReceviedFragmentCounts == currentNetBufferListEntry->FragmentCounts)
 		{
 			//PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
@@ -339,8 +344,9 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 			{
 
 			}
+			RemoveEntryList(&currentNetBufferListEntry->ListEntry);
+			delete currentNetBufferListEntry;
 
-			//InjectionHelper::Inject(context, direction, layer, nblToSend, buffer, size);
 		}
 
 	}

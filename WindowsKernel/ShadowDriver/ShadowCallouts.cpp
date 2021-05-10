@@ -228,7 +228,6 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 	if (packet != nullptr)
 	{
-
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 #ifdef DBG
 		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
@@ -239,6 +238,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 		{
 			PNET_BUFFER_LIST clonedPacket = NULL;
 			status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
@@ -255,8 +255,19 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 					// Inqueue cloned net buffer list.
 					NetBufferListEntry* newBufferListEntry = new NetBufferListEntry;
+					newBufferListEntry->ReceviedFragmentCounts = 0;
+					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+
+					// Get net buffer counts.
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
+					{
+						++(newBufferListEntry->FragmentCounts);
+					}
+
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queue a net buffer list\t\n");
 				}
 				else
 				{
