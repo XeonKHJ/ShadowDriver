@@ -3,6 +3,7 @@
 #include "CancelSafeQueueCallouts.h"
 #include "PacketHelper.h"
 #include "InjectionHelper.h"
+#include "ShadowCallouts.h"
 
 int IOCTLHelper::_helperCount = 0;
 IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
@@ -633,62 +634,69 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 
 			UNREFERENCED_PARAMETER(filter);
 
-			int * inputBuffer = (int *)(irp->AssociatedIrp.SystemBuffer);
+			int* inputBuffer = (int*)(irp->AssociatedIrp.SystemBuffer);
 			// Read inject info.
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
-			UNREFERENCED_PARAMETER(inputBufferLength);
-			UNREFERENCED_PARAMETER(inputBuffer);
-			//if (inputBufferLength >= 20)
-			//{
-			//	// Skip app id.
-			//	int currentIndex = sizeof(int);
+			if (inputBufferLength >= 20)
+			{
+				// Skip app id.
+				int currentIndex = sizeof(int);
 
-			//	NetLayer layer = (NetLayer)(inputBuffer[1]);
-			//	NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
-			//	IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
-			//	int packetSize = inputBuffer[4];
-			//	PNET_BUFFER_LIST netBufferList = *(PNET_BUFFER_LIST*)(inputBuffer + 5);
+				UNREFERENCED_PARAMETER(currentIndex);
 
-			//	UNREFERENCED_PARAMETER(netBufferList);
+				NetLayer layer = (NetLayer)(inputBuffer[1]);
+				NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
+				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
 
-			//	if (packetSize > 0 && filter->GetModificationStatus())
-			//	{
-			//		char* packetStartPointer = (((char*)inputBuffer) + 5 * sizeof(int) + sizeof(PNET_BUFFER_LIST));
-			//		UNREFERENCED_PARAMETER(packetStartPointer);
+				UNREFERENCED_PARAMETER(addrFamily);
 
-			//		if (netBufferList)
-			//		{
-			//			status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList, packetSize);
-			//		}
-			//		else
-			//		{
-			//			status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
-			//		}
-			//		
-			//	}
-			//	else
-			//	{
-			//		// if packetSize is smaller than or equals 0, then set status.
+				int packetSize = inputBuffer[4];
+				PNET_BUFFER_LIST netBufferList = *(PNET_BUFFER_LIST*)(inputBuffer + 5);
 
-			//	}
-			//	
-			//	
+				UNREFERENCED_PARAMETER(netBufferList);
 
-			//	UNREFERENCED_PARAMETER(currentIndex);
-			//	UNREFERENCED_PARAMETER(direction);
-			//	UNREFERENCED_PARAMETER(addrFamily);
-			//	UNREFERENCED_PARAMETER(layer);
-			//	UNREFERENCED_PARAMETER(packetSize);
-			//}
+				if (packetSize > 0 && filter->GetModificationStatus())
+				{
+					char* packetStartPointer = (((char*)inputBuffer) + 5 * sizeof(int) + sizeof(PNET_BUFFER_LIST));
+					UNREFERENCED_PARAMETER(packetStartPointer);
+
+					if (netBufferList)
+					{
+						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList, packetSize);
+					}
+					else
+					{
+						// Check if net buffer list is in the queue.
+						//bool netBufferListEntryHeader = ShadowCallout::IsNBLInQueue();
+
+						//status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+					}
+
+				}
+				else
+				{
+					// if packetSize is smaller than or equals 0, then set status.
+
+				}
+
+
+
+				//	UNREFERENCED_PARAMETER(currentIndex);
+				//	UNREFERENCED_PARAMETER(direction);
+				//	UNREFERENCED_PARAMETER(addrFamily);
+				//	UNREFERENCED_PARAMETER(layer);
+				//	UNREFERENCED_PARAMETER(packetSize);
+				//}
+			}
+			else
+			{
+				status = SHADOW_APP_UNREGISTERED;
+			}
 		}
 		else
 		{
-			status = SHADOW_APP_UNREGISTERED;
+			status = SHADOW_APP_APPID_INVALID;
 		}
-	}
-	else
-	{
-		status = SHADOW_APP_APPID_INVALID;
 	}
 	return status;
 }

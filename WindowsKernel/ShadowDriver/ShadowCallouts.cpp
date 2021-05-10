@@ -123,8 +123,6 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 	{
 		if (context->NetPacketFilteringCallout != NULL)
 		{
-			auto retreatOffset = NET_BUFFER_DATA_OFFSET(NET_BUFFER_LIST_FIRST_NB(packet));
-
 			// Cauculate the number of net buffers.
 			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 			int netBufferCount = 0;
@@ -167,7 +165,6 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				delete packetBuffer;
 				
 				++fragIndex;
-
 			}
 		}
 	}
@@ -225,31 +222,23 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
-	ShadowFilterContext* contextToVerify = (ShadowFilterContext*)classifyContext;
-
-	UNREFERENCED_PARAMETER(contextToVerify);
-
 	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
 	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
 	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
 
 	if (packet != nullptr)
 	{
-		PNET_BUFFER_LIST clonedPacket = NULL;
-
-		// Send packet to user-mode application.
-		status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 #ifdef DBG
 		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
-
-
 		classifyOut->actionType = FWP_ACTION_PERMIT;
 		// If the packet is a injected one.		
 		if (context->IsModificationEnable)
 		{
+			PNET_BUFFER_LIST clonedPacket = NULL;
+			status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
@@ -262,7 +251,12 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 				if (NT_SUCCESS(status))
 				{
-					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+					//SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+
+					// Inqueue cloned net buffer list.
+					NetBufferListEntry* newBufferListEntry = new NetBufferListEntry;
+					newBufferListEntry->NetBufferList = clonedPacket;
+					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 				}
 				else
 				{
@@ -275,7 +269,6 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			if (NT_SUCCESS(status))
 			{
 				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
-				FwpsFreeCloneNetBufferList(clonedPacket, NULL);
 			}
 		}
 	}

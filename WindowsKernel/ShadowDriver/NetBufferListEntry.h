@@ -4,7 +4,8 @@
 struct NetBufferListEntry
 {
 	LIST_ENTRY ListEntry;
-	NET_BUFFER_LIST NetBufferList;
-	bool* IsModifiedFragementReceived;
+	PNET_BUFFER_LIST NetBufferList;
+	int FragmentCounts;
+	int ReceviedFragmentCounts;
 };
 

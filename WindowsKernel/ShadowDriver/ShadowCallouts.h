@@ -22,9 +22,9 @@ private:
 		ShadowFilterContext* context
 	);
 
+public:
 	static NetBufferListEntry PendingNetBufferListHeader;
 	static KSPIN_LOCK SpinLock;
-public:
 	static NTSTATUS InitializeNBLListHeader();
 	static NTSTATUS PacketNotify(
 		_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,

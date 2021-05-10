@@ -255,3 +255,94 @@ bool ShadowFilter::GetModificationStatus()
 {
 	return _isModificationEnabled;
 }
+
+unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size)
+{
+	UNREFERENCED_PARAMETER(context);
+	UNREFERENCED_PARAMETER(direction);
+	UNREFERENCED_PARAMETER(layer);
+	UNREFERENCED_PARAMETER(buffer);
+	UNREFERENCED_PARAMETER(size);
+	return false;
+}
+
+unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex)
+{
+	UNREFERENCED_PARAMETER(buffer);
+	UNREFERENCED_PARAMETER(layer);
+	UNREFERENCED_PARAMETER(direction);
+	UNREFERENCED_PARAMETER(context);
+
+	NTSTATUS status = STATUS_SUCCESS;
+	PNET_BUFFER_LIST netBufferList = (PNET_BUFFER_LIST)identifier;
+	if (netBufferList)
+	{
+		NetBufferListEntry * netBufferListHeader = &(ShadowCallout::PendingNetBufferListHeader);
+		auto currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, NetBufferListEntry, ListEntry);
+		PNET_BUFFER_LIST nblToSend = nullptr;
+		
+		while (currentNetBufferListEntry != netBufferListHeader)
+		{
+			if (currentNetBufferListEntry->NetBufferList == netBufferList)
+			{
+				nblToSend = netBufferList;
+				(currentNetBufferListEntry->ReceviedFragmentCounts)++;
+				break;
+			}
+		}
+		
+		
+		if (nblToSend)
+		{
+			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
+
+			if (firstNetBuffer)
+			{
+				// Get selected net buffer to modification.
+				PNET_BUFFER currentBuffer = firstNetBuffer;
+				for (int currentFragmentIndex = 0; currentBuffer != nullptr && currentFragmentIndex < fragmentIndex; ++currentFragmentIndex)
+				{
+					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
+				}
+
+				// Start modification.
+				if (currentBuffer)
+				{
+					//PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer);
+					//PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
+
+					SIZE_T dataWritten = 0;
+					for (PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer); currentMdl != nullptr && dataWritten < size; currentMdl = currentMdl->Next)
+					{
+#ifdef DBG
+						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "MDLByteCount: %d, MDLByteOffset: %d, DataToWrite: %d", currentMdl->ByteCount, currentMdl->ByteOffset, (int)size);
+						dataWritten += size;
+#endif
+					}
+				}
+				// Indicate that fragment index is out of index.
+				else
+				{
+					//status = 
+				}
+			}
+
+		}
+
+
+
+		if (nblToSend && currentNetBufferListEntry->ReceviedFragmentCounts == currentNetBufferListEntry->FragmentCounts)
+		{
+			//PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
+			//PNET_BUFFER currentNetBuffer = firstNetBuffer;
+			for (size_t i = 0; i < 32; i++)
+			{
+
+			}
+
+			//InjectionHelper::Inject(context, direction, layer, nblToSend, buffer, size);
+		}
+
+	}
+	return status;
+}
