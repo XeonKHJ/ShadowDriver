@@ -83,7 +83,7 @@ namespace ShadowDriver.UWPDemo
             });
         }
         public ObservableCollection<NetworkInterfaceViewModel> NetworkInterfaceViewModels { get; } = new ObservableCollection<NetworkInterfaceViewModel>();
-        private byte[] Filter_PacketReceived(ulong identifier, byte[] buffer)
+        private byte[] Filter_PacketReceived(byte[] buffer, CapturedPacketArgs args)
         {
             NetPacketViewModel netPacketViewModel = new NetPacketViewModel();
             for (int i = 0; i < buffer.Length; ++i)

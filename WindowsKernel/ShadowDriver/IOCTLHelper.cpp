@@ -634,42 +634,48 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 
 			UNREFERENCED_PARAMETER(filter);
 
-			int* inputBuffer = (int*)(irp->AssociatedIrp.SystemBuffer);
+			char* inputBuffer = (char*)(irp->AssociatedIrp.SystemBuffer);
 			// Read inject info.
 			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
 			if (inputBufferLength >= 20)
 			{
 				// Skip app id.
 				int currentIndex = sizeof(int);
+				char* currentPointer = inputBuffer + sizeof(int);
 
-				UNREFERENCED_PARAMETER(currentIndex);
-
-				NetLayer layer = (NetLayer)(inputBuffer[1]);
-				NetPacketDirection direction = (NetPacketDirection)(inputBuffer[2]);
-				IpAddrFamily addrFamily = (IpAddrFamily)(inputBuffer[3]);
-
+				NetLayer layer = (NetLayer)(*(int *)(currentPointer));
+				currentPointer += sizeof(int);
+				NetPacketDirection direction = (NetPacketDirection)(*(int*)(currentPointer));;
+				currentPointer += sizeof(int);
+				IpAddrFamily addrFamily = (IpAddrFamily)(*(int*)(currentPointer));;
 				UNREFERENCED_PARAMETER(addrFamily);
-
-				int packetSize = inputBuffer[4];
-				PNET_BUFFER_LIST netBufferList = *(PNET_BUFFER_LIST*)(inputBuffer + 5);
-
+				currentPointer += sizeof(int);
+				int packetSize = *(int*)(currentPointer);
+				currentPointer += sizeof(int);
+				PNET_BUFFER_LIST netBufferList = *((PNET_BUFFER_LIST*)currentPointer);
+				currentPointer += sizeof(PNET_BUFFER_LIST);
 				UNREFERENCED_PARAMETER(netBufferList);
+				int fragmentIndex = *(int*)(currentPointer);
+				currentPointer += sizeof(int);
+
+#ifdef DBG
+				if (fragmentIndex > 0)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Fragment index is larger than 0.\t\n");
+				}
+#endif
 
 				if (packetSize > 0 && filter->GetModificationStatus())
 				{
-					char* packetStartPointer = (((char*)inputBuffer) + 5 * sizeof(int) + sizeof(PNET_BUFFER_LIST));
-					UNREFERENCED_PARAMETER(packetStartPointer);
+					char* packetStartPointer = currentPointer;
 
 					if (netBufferList)
 					{
-						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, netBufferList, packetSize);
+						status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
 					}
 					else
 					{
-						// Check if net buffer list is in the queue.
-						//bool netBufferListEntryHeader = ShadowCallout::IsNBLInQueue();
-
-						//status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
 					}
 
 				}

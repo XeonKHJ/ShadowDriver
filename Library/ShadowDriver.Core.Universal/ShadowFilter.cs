@@ -209,17 +209,18 @@ namespace ShadowDriver.Core
             }
         }
 
-        public async Task InjectPacketAsync(FilteringLayer layer, NetPacketDirection direction, IpAddrFamily addrFamily, ulong identifier , byte[] packetBuffer)
+        public async Task InjectPacketAsync(byte[] packetBuffer, PacketInjectionArgs args)
         {
             byte[] outputBuffer = new byte[sizeof(int)];
-            byte[] inputBuffer = new byte[packetBuffer.Length + 5 * sizeof(int) + sizeof(ulong)];
+            byte[] inputBuffer = new byte[packetBuffer.Length + 6 * sizeof(int) + sizeof(ulong)];
             int currentIndex = 0;
             byte[] appIdBytes = _shadowRegisterContext.SeralizeAppIdToByteArray();
-            byte[] layerBytes = BitConverter.GetBytes((int)layer);
-            byte[] directionBytes = BitConverter.GetBytes((int)direction);
-            byte[] addrFamilyBytes = BitConverter.GetBytes((int)addrFamily);
+            byte[] layerBytes = BitConverter.GetBytes((int)args.Layer);
+            byte[] directionBytes = BitConverter.GetBytes((int)args.Direction);
+            byte[] addrFamilyBytes = BitConverter.GetBytes((int)args.AddrFamily);
             byte[] sizeBytes = BitConverter.GetBytes(packetBuffer.Length);
-            byte[] identifierBytes = BitConverter.GetBytes(identifier);
+            byte[] identifierBytes = BitConverter.GetBytes(args.Identifier);
+            byte[] fragmentIndex = BitConverter.GetBytes(args.FragmentIndex);
             appIdBytes.CopyTo(inputBuffer, currentIndex);
             currentIndex += 4;
             layerBytes.CopyTo(inputBuffer, currentIndex);
@@ -232,6 +233,8 @@ namespace ShadowDriver.Core
             currentIndex += 4;
             identifierBytes.CopyTo(inputBuffer, currentIndex);
             currentIndex += sizeof(ulong);
+            fragmentIndex.CopyTo(inputBuffer, currentIndex);
+            currentIndex += sizeof(int);
             packetBuffer.CopyTo(inputBuffer, currentIndex);
 
             try
@@ -393,10 +396,10 @@ namespace ShadowDriver.Core
 
                     byte[] packetBuffer = new byte[packetSize];
                     Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
-
+                    CapturedPacketArgs args = new CapturedPacketArgs(identifier, packetSize, totalFragCount, fragIndex);
                     if (_isFilteringStarted)
                     {
-                        byte[] newPacket = PacketReceived?.Invoke(identifier, packetBuffer);
+                        byte[] newPacket = PacketReceived?.Invoke(packetBuffer, args);
                     }
                 }
             }
