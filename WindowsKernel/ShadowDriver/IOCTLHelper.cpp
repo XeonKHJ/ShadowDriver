@@ -202,7 +202,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			break;
 		case IOCTL_SHADOWDRIVER_INJECT_PACKET:
 			status = STATUS_SUCCESS;
-			//status = IoctlInjectPacket(Irp, pIoStackIrp);
+			status = IoctlInjectPacket(Irp, pIoStackIrp);
 			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -640,7 +640,6 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 			if (inputBufferLength >= 20)
 			{
 				// Skip app id.
-				int currentIndex = sizeof(int);
 				char* currentPointer = inputBuffer + sizeof(int);
 
 				NetLayer layer = (NetLayer)(*(int *)(currentPointer));
@@ -658,6 +657,8 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				int fragmentIndex = *(int*)(currentPointer);
 				currentPointer += sizeof(int);
 
+				UNREFERENCED_PARAMETER(layer);
+				UNREFERENCED_PARAMETER(direction);
 #ifdef DBG
 				if (fragmentIndex > 0)
 				{
@@ -668,14 +669,14 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				if (packetSize > 0 && filter->GetModificationStatus())
 				{
 					char* packetStartPointer = currentPointer;
-
+					UNREFERENCED_PARAMETER(packetStartPointer);
 					if (netBufferList)
 					{
-						status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
+						//status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
 					}
 					else
 					{
-						status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+						//status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
 					}
 
 				}

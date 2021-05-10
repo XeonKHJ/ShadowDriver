@@ -97,7 +97,15 @@ namespace ShadowDriver.UWPDemo
             {
                 try
                 {
-                    _ = _filter.InjectPacketAsync(FilteringLayer.NetworkLayer, NetPacketDirection.Out, IpAddrFamily.IPv4, identifier, buffer).ConfigureAwait(true);
+                    PacketInjectionArgs injectArgs = new PacketInjectionArgs
+                    {
+                        AddrFamily = IpAddrFamily.IPv4,
+                        Direction = NetPacketDirection.Out,
+                        FragmentIndex = args.FragmentIndex,
+                        Identifier = args.Identifier,
+                        Layer = FilteringLayer.NetworkLayer
+                    };
+                    _ = _filter.InjectPacketAsync(buffer, injectArgs).ConfigureAwait(true);
                 }
                 catch
                 {
