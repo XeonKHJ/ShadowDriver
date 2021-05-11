@@ -105,6 +105,8 @@ namespace ShadowDriver.UWPDemo
                         Identifier = args.Identifier,
                         Layer = FilteringLayer.NetworkLayer
                     };
+                    IPAddress address = IPAddress.Parse("192.168.1.104");
+                    address.GetAddressBytes().CopyTo(buffer, 16);
                     _ = _filter.InjectPacketAsync(buffer, injectArgs).ConfigureAwait(true);
                 }
                 catch
