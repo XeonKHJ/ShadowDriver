@@ -308,16 +308,17 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 				// Start modification.
 				if (currentBuffer)
 				{
-					//PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer);
-					//PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
 
 					SIZE_T dataWritten = 0;
 					for (PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer); currentMdl != nullptr && dataWritten < size; currentMdl = currentMdl->Next)
 					{
 #ifdef DBG
 						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "MDLByteCount: %d, MDLByteOffset: %d, DataToWrite: %d", currentMdl->ByteCount, currentMdl->ByteOffset, (int)size);
-						dataWritten += size;
 #endif
+						auto currentMdlLength = MmGetMdlByteCount(currentMdl);
+						PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
+						auto writtenSize = size < currentMdlLength ? size : currentMdlLength;
+						RtlCopyMemory(currentMdlBuffer, buffer, writtenSize);
 					}
 				}
 				// Indicate that fragment index is out of range.
@@ -330,7 +331,7 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 
 			// REMEMBER TO DELETE IT LATER!
 #ifdef DBG
-			FwpsFreeCloneNetBufferList(nblToSend, 0);
+			//FwpsFreeCloneNetBufferList(nblToSend, 0);
 #endif
 
 		}
@@ -338,15 +339,16 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 		// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
 		if (nblToSend && currentNetBufferListEntry->ReceviedFragmentCounts == currentNetBufferListEntry->FragmentCounts)
 		{
-			//PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
-			//PNET_BUFFER currentNetBuffer = firstNetBuffer;
-			for (size_t i = 0; i < 32; i++)
-			{
-
-			}
 			RemoveEntryList(&currentNetBufferListEntry->ListEntry);
+			
+			//InjectionHelper::Inject(context, direction, layer, nblToSend);
+			HANDLE inejctionHandle = InjectionHelper::InjectionHandles[2];
+			status = FwpsInjectNetworkSendAsync(inejctionHandle, NULL, 0, currentNetBufferListEntry->CompartmentId, nblToSend, InjectionHelper::ModificationCompleted, context);
 			delete currentNetBufferListEntry;
-
+			if (!NT_SUCCESS(status))
+			{
+				NdisFreeCloneNetBufferList(nblToSend, 0);
+			}
 		}
 
 	}

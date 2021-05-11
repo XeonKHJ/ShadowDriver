@@ -258,6 +258,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 					newBufferListEntry->ReceviedFragmentCounts = 0;
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
+					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.

@@ -249,7 +249,7 @@ void InjectionHelper::ModificationCompleted(void* context, NET_BUFFER_LIST* netB
 
 	if (status == NDIS_STATUS_SUCCESS)
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Send Inject Completed\n");
+		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modification inection completed\n");
 	}
 
 	//auto mdlAddress = MmGetMdlVirtualAddress(mdl);
