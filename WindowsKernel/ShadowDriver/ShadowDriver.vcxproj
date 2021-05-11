@@ -43,7 +43,6 @@
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="InjectionHelper.cpp" />
     <ClCompile Include="IOCTLHelper.cpp" />
-    <ClCompile Include="NetBufferListEntry.cpp" />
     <ClCompile Include="NetFilteringCondition.cpp" />
     <ClCompile Include="OverloadOperators.cpp" />
     <ClCompile Include="Queue.cpp" />
@@ -60,7 +59,7 @@
     <ClInclude Include="IOCTLHelper.h" />
     <ClInclude Include="IOCTLHelperContext.h" />
     <ClInclude Include="IrpLinkEntry.h" />
-    <ClInclude Include="NetBufferListEntry.h" />
+    <ClInclude Include="PacketModificationContext.h" />
     <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="OverloadOperators.h" />
     <ClInclude Include="Public.h" />

@@ -1,7 +1,10 @@
 #include "InjectionHelper.h"
+#include "PacketModificationContext.h"
 
 HANDLE InjectionHelper::NDISPoolHandle = NULL;
 HANDLE InjectionHelper::InjectionHandles[8];
+void (*InjectionHelper::InjectCompleted)(PNET_BUFFER_LIST injectedBuffer, void* context) = nullptr;
+
 NTSTATUS InjectionHelper::CreateInjector()
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -69,7 +72,7 @@ NTSTATUS InjectionHelper::CreateInjector()
 	{
 		DeleteInjectors();
 	}
-
+	
 	return status;
 }
 
@@ -115,18 +118,12 @@ UINT32 InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection 
 	return status;
 }
 
-NTSTATUS InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList, void * buffer, SIZE_T size)
+NTSTATUS InjectionHelper::Inject(void* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList)
 {
-	//UNREFERENCED_PARAMETER(context);
-	UNREFERENCED_PARAMETER(direction);
-	UNREFERENCED_PARAMETER(layer);
-	UNREFERENCED_PARAMETER(size);
-	UNREFERENCED_PARAMETER(buffer);
-
 	NTSTATUS status = STATUS_SUCCESS;
 
-	// Modify original NBL here.
-	
+	// Retrieve modification context.
+	PacketModificationContext* pmContext = (PacketModificationContext*)context;
 
 	//auto mdl = NdisAllocateMdl(InjectionHelper::NDISPoolHandle, buffer, size);
 
@@ -138,7 +135,7 @@ NTSTATUS InjectionHelper::Inject(ShadowFilterContext* context, NetPacketDirectio
 			switch (direction)
 			{
 			case Out:
-				status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, UNSPECIFIED_COMPARTMENT_ID, bufferList, InjectionHelper::ModificationCompleted, context);
+				status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, pmContext->CompartmentId, bufferList, InjectionHelper::ModificationCompleted, context);
 				break;
 			case In:
 				break;
@@ -242,18 +239,10 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 
 void InjectionHelper::ModificationCompleted(void* context, NET_BUFFER_LIST* netBufferList, BOOLEAN dispatchLevel)
 {
-	UNREFERENCED_PARAMETER(context);
-	UNREFERENCED_PARAMETER(netBufferList);
 	UNREFERENCED_PARAMETER(dispatchLevel);
-	NDIS_STATUS status = netBufferList->Status;
 
-	if (status == NDIS_STATUS_SUCCESS)
+	if (InjectCompleted != nullptr)
 	{
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, "Modification inection completed\n");
+		InjectCompleted(netBufferList, context);
 	}
-
-	//auto mdlAddress = MmGetMdlVirtualAddress(mdl);
-
-	// Delete net buffer list.
-	FwpsFreeCloneNetBufferList(netBufferList, 0);
 }

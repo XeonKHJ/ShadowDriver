@@ -2,7 +2,7 @@
 #include <fwpsk.h>
 #include "ShadowFilterContext.h"
 #include "NetFilteringCondition.h"
-#include "NetBufferListEntry.h"
+#include "PacketModificationContext.h"
 
 class ShadowCallout
 {
@@ -23,7 +23,7 @@ private:
 	);
 
 public:
-	static NetBufferListEntry PendingNetBufferListHeader;
+	static PacketModificationContext PendingNetBufferListHeader;
 	static KSPIN_LOCK SpinLock;
 	static NTSTATUS InitializeNBLListHeader();
 	static NTSTATUS PacketNotify(
@@ -97,4 +97,8 @@ public:
 		_In_ UINT64 flowContext,
 		_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 	);
+
+	static NTSTATUS ModifyPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex);
+
+	static void ModificationComplete(PNET_BUFFER_LIST netBufferList, void* packetContext);
 };

@@ -78,7 +78,7 @@
     <ClInclude Include="InjectionHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NetBufferListEntry.h">
+    <ClInclude Include="PacketModificationContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -117,9 +117,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InjectionHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="NetBufferListEntry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

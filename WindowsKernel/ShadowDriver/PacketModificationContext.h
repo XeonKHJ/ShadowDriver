@@ -1,7 +1,7 @@
 #pragma once
 #include <fwpsk.h>
 
-struct NetBufferListEntry
+struct PacketModificationContext
 {
 	LIST_ENTRY ListEntry;
 	PNET_BUFFER_LIST NetBufferList;

@@ -120,11 +120,14 @@ Return Value:
 #ifdef DBG
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverCreateDevice\n");
 #endif
+
         PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
 
         //初始化Windows筛选平台
         IOCTLHelper::SetDeviceObject(deviceObject);
         //status = InitializeWfp(deviceObject);
+
+        InjectionHelper::InjectCompleted = ShadowCallout::ModificationComplete;
 
         if (NT_SUCCESS(status))
         {

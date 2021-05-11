@@ -4,7 +4,7 @@
 #include "IOCTLHelper.h"
 #include "InjectionHelper.h"
 
-NetBufferListEntry ShadowCallout::PendingNetBufferListHeader;
+PacketModificationContext ShadowCallout::PendingNetBufferListHeader;
 KSPIN_LOCK ShadowCallout::SpinLock;
 
 #ifdef DBG
@@ -163,7 +163,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				}
 
 				delete packetBuffer;
-				
+
 				++fragIndex;
 			}
 		}
@@ -229,32 +229,35 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 	if (packet != nullptr)
 	{
 		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
+
 #ifdef DBG
 		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
+
 		classifyOut->actionType = FWP_ACTION_PERMIT;
+
 		// If the packet is a injected one.		
 		if (context->IsModificationEnable)
 		{
 			PNET_BUFFER_LIST clonedPacket = NULL;
 			status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
-			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
-			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
-				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
-			{
-				FwpsFreeCloneNetBufferList(clonedPacket, NULL);
-			}
-			else
-			{
-				classifyOut->actionType = FWP_ACTION_BLOCK;
-				classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
-				if (NT_SUCCESS(status))
+			if (NT_SUCCESS(status))
+			{
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+
+				if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+					injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 				{
-					//SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+					FwpsFreeCloneNetBufferList(clonedPacket, NULL);
+				}
+				else
+				{
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
 					// Inqueue cloned net buffer list.
-					NetBufferListEntry* newBufferListEntry = new NetBufferListEntry;
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
 					newBufferListEntry->ReceviedFragmentCounts = 0;
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
@@ -268,11 +271,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 						++(newBufferListEntry->FragmentCounts);
 					}
 
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queue a net buffer list\t\n");
-				}
-				else
-				{
-					FwpsFreeCloneNetBufferList(clonedPacket, NULL);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
 				}
 			}
 		}
@@ -410,4 +409,100 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 #endif
 
 	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
+}
+
+NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex)
+{
+	UNREFERENCED_PARAMETER(context);
+
+
+	NTSTATUS status = STATUS_SUCCESS;
+	PNET_BUFFER_LIST netBufferList = (PNET_BUFFER_LIST)identifier;
+	if (netBufferList)
+	{
+		PacketModificationContext* netBufferListHeader = &(ShadowCallout::PendingNetBufferListHeader);
+		auto currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, PacketModificationContext, ListEntry);
+		PacketModificationContext* pmContext = nullptr;
+		PNET_BUFFER_LIST nblToSend = nullptr;
+
+		while (currentNetBufferListEntry != netBufferListHeader)
+		{
+			if (currentNetBufferListEntry->NetBufferList == netBufferList)
+			{
+				nblToSend = netBufferList;
+				pmContext = currentNetBufferListEntry;
+				(currentNetBufferListEntry->ReceviedFragmentCounts)++;
+				break;
+			}
+			currentNetBufferListEntry = CONTAINING_RECORD(currentNetBufferListEntry->ListEntry.Flink, PacketModificationContext, ListEntry);
+		}
+
+		if (nblToSend)
+		{
+			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(nblToSend);
+
+			if (firstNetBuffer)
+			{
+				// Get selected net buffer to modification.
+				PNET_BUFFER currentBuffer = firstNetBuffer;
+				for (int currentFragmentIndex = 0; currentBuffer != nullptr && currentFragmentIndex < fragmentIndex; ++currentFragmentIndex)
+				{
+					currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer);
+				}
+
+				// Start modification.
+				if (currentBuffer)
+				{
+
+					SIZE_T dataWritten = 0;
+					for (PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer); currentMdl != nullptr && dataWritten < size; currentMdl = currentMdl->Next)
+					{
+#ifdef DBG
+						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "MDLByteCount: %d, MDLByteOffset: %d, DataToWrite: %d", currentMdl->ByteCount, currentMdl->ByteOffset, (int)size);
+#endif
+						auto currentMdlLength = MmGetMdlByteCount(currentMdl);
+						PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
+						auto writtenSize = size < currentMdlLength ? size : currentMdlLength;
+						RtlCopyMemory(currentMdlBuffer, buffer, writtenSize);
+					}
+				}
+				// Indicate that fragment index is out of range.
+				else
+				{
+					//status = 
+				}
+			}
+
+		}
+
+		// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
+		if (nblToSend && pmContext->ReceviedFragmentCounts == pmContext->FragmentCounts)
+		{
+			RemoveEntryList(&currentNetBufferListEntry->ListEntry);
+
+			InjectionHelper::Inject(pmContext, direction, layer, nblToSend);
+			//status = FwpsInjectNetworkSendAsync(inejctionHandle, NULL, 0, currentNetBufferListEntry->CompartmentId, nblToSend, InjectionHelper::ModificationCompleted, context);
+			//delete pmContext;
+
+			if (!NT_SUCCESS(status))
+			{
+				NdisFreeCloneNetBufferList(nblToSend, 0);
+			}
+		}
+
+	}
+	return status;
+}
+
+void ShadowCallout::ModificationComplete(PNET_BUFFER_LIST netBufferList ,void* packetContext)
+{
+	PacketModificationContext* pmContext = (PacketModificationContext*)packetContext;
+
+	UNREFERENCED_PARAMETER(pmContext);
+
+	// Free cloned NET_BUFFER_LIST.
+	FwpsFreeCloneNetBufferList(netBufferList, 0);
+
+	// Delete context.
+	delete packetContext;
 }
