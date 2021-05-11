@@ -320,7 +320,7 @@ unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direct
 #endif
 					}
 				}
-				// Indicate that fragment index is out of index.
+				// Indicate that fragment index is out of range.
 				else
 				{
 					//status = 
