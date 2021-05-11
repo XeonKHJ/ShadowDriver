@@ -142,7 +142,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(currentBuffer, dataLength, packetBuffer, 1, 0);
 
 				auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
-				size_t totolBufferLength = dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength);
+				size_t totolBufferLength = dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength) + sizeof(NetLayer) + sizeof(NetPacketDirection);
 				BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
 
 				if (packetBufferWithMetaInfo != nullptr)
@@ -156,9 +156,14 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 					currentWrittenPos += sizeof(fragIndex);
 					RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
 					currentWrittenPos += sizeof(offsetLength);
+					RtlCopyMemory(currentWrittenPos, &layer, sizeof(int));
+					currentWrittenPos += sizeof(NetLayer);
+					RtlCopyMemory(currentWrittenPos, &direction, sizeof(NetPacketDirection));
+					currentWrittenPos += sizeof(NetPacketDirection);
+					// Write data.
 					RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
 					(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, context->CustomContext);
-
+					
 					delete packetBufferWithMetaInfo;
 				}
 

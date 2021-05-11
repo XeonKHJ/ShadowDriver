@@ -236,7 +236,7 @@ namespace ShadowDriver.Core
             fragmentIndex.CopyTo(inputBuffer, currentIndex);
             currentIndex += sizeof(int);
             packetBuffer.CopyTo(inputBuffer, currentIndex);
-
+            
             try
             {
                 await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverInjectPacket, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
@@ -392,8 +392,12 @@ namespace ShadowDriver.Core
                     var offsetLength = BitConverter.ToUInt32(outputBuffer, currentIndex);
                     currentIndex += sizeof(uint);
                     packetSize -= sizeof(uint);
-
-
+                    FilteringLayer layer = (FilteringLayer)BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(FilteringLayer);
+                    packetSize -= sizeof(FilteringLayer);
+                    NetPacketDirection direction = (NetPacketDirection)BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(NetPacketDirection);
+                    packetSize -= sizeof(NetPacketDirection);
                     byte[] packetBuffer = new byte[packetSize];
                     Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
                     CapturedPacketArgs args = new CapturedPacketArgs(identifier, packetSize, totalFragCount, fragIndex);
