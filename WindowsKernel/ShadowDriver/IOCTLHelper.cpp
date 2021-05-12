@@ -657,8 +657,6 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 				int fragmentIndex = *(int*)(currentPointer);
 				currentPointer += sizeof(int);
 
-				UNREFERENCED_PARAMETER(layer);
-				UNREFERENCED_PARAMETER(direction);
 #ifdef DBG
 				if (fragmentIndex > 0)
 				{

@@ -256,9 +256,11 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 				if (NT_SUCCESS(status))
 				{
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+
 					classifyOut->actionType = FWP_ACTION_BLOCK;
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
+					
 					// Inqueue cloned net buffer list.
 					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
 					newBufferListEntry->ReceviedFragmentCounts = 0;
@@ -298,7 +300,6 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 	NTSTATUS status = STATUS_SUCCESS;
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inFixedValues);
 
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
@@ -323,7 +324,7 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
 				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
 			{
-				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, packet, context);
 			}
 			else
 			{
@@ -332,7 +333,7 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 
 				if (NT_SUCCESS(status))
 				{
-					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, clonedPacket, context);
 					classifyOut->actionType = FWP_ACTION_BLOCK;
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
@@ -342,6 +343,8 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32;
+					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32,
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.

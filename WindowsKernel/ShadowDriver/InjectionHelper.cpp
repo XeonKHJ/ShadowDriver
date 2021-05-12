@@ -138,6 +138,7 @@ NTSTATUS InjectionHelper::Inject(void* context, NetPacketDirection direction, Ne
 				status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, pmContext->CompartmentId, bufferList, InjectionHelper::ModificationCompleted, context);
 				break;
 			case In:
+				status = FwpsInjectNetworkReceiveAsync(InjectionHandles[0], NULL, 0, pmContext->CompartmentId, pmContext->InterfaceIndex, pmContext->SubInterfaceIndex, bufferList, InjectionHelper::ModificationCompleted, context);
 				break;
 			default:
 				break;
@@ -240,6 +241,11 @@ void InjectionHelper::SendInjectCompleted(void* context, NET_BUFFER_LIST* netBuf
 void InjectionHelper::ModificationCompleted(void* context, NET_BUFFER_LIST* netBufferList, BOOLEAN dispatchLevel)
 {
 	UNREFERENCED_PARAMETER(dispatchLevel);
+
+#ifdef DBG
+	NDIS_STATUS status = netBufferList->Status;
+	UNREFERENCED_PARAMETER(status);
+#endif
 
 	if (InjectCompleted != nullptr)
 	{

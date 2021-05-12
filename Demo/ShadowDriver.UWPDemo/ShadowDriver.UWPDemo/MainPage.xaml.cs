@@ -92,30 +92,31 @@ namespace ShadowDriver.UWPDemo
             }
             NetPacketViewModels.Add(netPacketViewModel);
 
-            // Packet Length needs to be bigger than ipheader length.
-            if (buffer.Length >= 20)
+            byte[] modifiedBuffer = null;
+            switch(args.Layer)
             {
-                try
-                {
-                    PacketInjectionArgs injectArgs = new PacketInjectionArgs
+                case FilteringLayer.NetworkLayer:
+                    IPAddress address;
                     {
-                        AddrFamily = IpAddrFamily.IPv4,
-                        Direction = NetPacketDirection.Out,
-                        FragmentIndex = args.FragmentIndex,
-                        Identifier = args.Identifier,
-                        Layer = FilteringLayer.NetworkLayer
-                    };
-                    IPAddress address = IPAddress.Parse("192.168.1.104");
-                    address.GetAddressBytes().CopyTo(buffer, 16);
-                    _ = _filter.InjectPacketAsync(buffer, injectArgs).ConfigureAwait(true);
-                }
-                catch
-                {
-                    ;
-                }
+                        switch(args.Direction)
+                        {
+                            case NetPacketDirection.Out:
+                                address = IPAddress.Parse("192.168.1.104"); 
+                                address.GetAddressBytes().CopyTo(buffer, 16);
+                                modifiedBuffer = buffer;
+                                break;
+                            case NetPacketDirection.In:
+                                //address = IPAddress.Parse("22.22.22.22");
+                                //address.GetAddressBytes().CopyTo(buffer, 12);
+                                modifiedBuffer = buffer;
+                                break;
+                        }
+                    }
+                    break;
             }
 
-            return null;
+
+            return modifiedBuffer;
         }
 
         private ShadowFilter _filter;

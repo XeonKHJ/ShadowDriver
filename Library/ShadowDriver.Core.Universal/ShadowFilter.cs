@@ -10,6 +10,7 @@ using Windows.Devices.Custom;
 using Windows.Devices.Enumeration;
 using ShadowDriver.Core.Interface;
 using ShadowDriver.Core.Status;
+using System.Net;
 
 namespace ShadowDriver.Core
 {
@@ -400,10 +401,32 @@ namespace ShadowDriver.Core
                     packetSize -= sizeof(NetPacketDirection);
                     byte[] packetBuffer = new byte[packetSize];
                     Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
-                    CapturedPacketArgs args = new CapturedPacketArgs(identifier, packetSize, totalFragCount, fragIndex);
+                    CapturedPacketArgs args = new CapturedPacketArgs(identifier, packetSize, totalFragCount, fragIndex, layer, direction);
                     if (_isFilteringStarted)
                     {
                         byte[] newPacket = PacketReceived?.Invoke(packetBuffer, args);
+
+                        if(newPacket != null)
+                        {
+                            // Modify packet
+                            PacketInjectionArgs injectArgs = new PacketInjectionArgs
+                            {
+                                AddrFamily = IpAddrFamily.IPv4,
+                                Direction = args.Direction,
+                                FragmentIndex = args.FragmentIndex,
+                                Identifier = args.Identifier,
+                                Layer = args.Layer,
+                            };
+
+                            try
+                            {
+                                await InjectPacketAsync(newPacket, injectArgs);
+                            }
+                            catch(Exception exception)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Dfsdf");
+                            }
+                        }
                     }
                 }
             }
