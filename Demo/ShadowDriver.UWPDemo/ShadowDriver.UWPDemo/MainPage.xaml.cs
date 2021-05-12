@@ -353,5 +353,28 @@ namespace ShadowDriver.UWPDemo
                 DisplayException(exception);
             }
         }
+
+        private byte[] CalculateChecksum(byte[] buffer)
+        {
+            UInt32 sum = 0;
+            
+            for(int i = 0; i < buffer.Length; i+=2)
+            {
+                UInt32 x = (UInt32)(buffer[i] << 8) + (UInt32)(buffer[i + 1]);
+
+                sum += x;
+            }
+
+            while (sum > 0xffff)
+            {
+                uint exceedPart = (sum & (~(0xFFFFu))) >> 16;
+                uint remainPart = sum & 0xffff;
+                sum = remainPart + exceedPart;
+            }
+
+            UInt16 shortSum = (UInt16)(sum & 0xFFFF);
+            var result = BitConverter.GetBytes(shortSum);
+            return result;
+        }
     }
 }
