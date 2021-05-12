@@ -13,8 +13,5 @@ namespace ShadowDriver.WPFDemo
     /// </summary>
     public partial class App : Application
     {
-
-        public static Random RandomAppIdGenerator { get; } = new Random();
     }
-
 }

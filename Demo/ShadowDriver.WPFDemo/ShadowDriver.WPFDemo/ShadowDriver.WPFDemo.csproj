@@ -2,30 +2,12 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0-windows10.0.19041.0</TargetFramework>
-    <Platforms>AnyCPU;x64;x86</Platforms>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath></OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutputPath>\\VM-DRIVERDEV\Dev\ShadowDriver.WPFDemo\ShadowDriver.WPFDemo\bin</OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-    <OutputPath></OutputPath>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="1.2.5" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Library\ShadowDriver.Core.Windows\ShadowDriver.Core.Windows.csproj" />
+    <ProjectReference Include="..\..\..\Library\ShadowDriver.Core.Common\ShadowDriver.Core.Common.csproj" />
   </ItemGroup>
 
 </Project>
