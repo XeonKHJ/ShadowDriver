@@ -1,3 +1,4 @@
+# ShadowDriver
 <h2>What is this?</h2>
 
 ShadowDriver a network utitlity library that allowing user-mode application to filter link layer and network layer packet data. 
@@ -13,8 +14,12 @@ You can see the detail in [the project page](https://github.com/XeonKHJ/ShadowDr
 <h4>Windows</h4>
 
 - [x] Network layer and link layer packet captureing.
-- [ ] Network layer and link layer packet modification.
-- [ ] Network layer and link layer packet injection.
+- [x] IPv4 packet modification.
+- [ ] IPv6 packet modification.
+- [x] IPv4 packet Injection.
+- [ ] IPv6 packet Injection.
+- [ ] Link layer packet modification.
+- [ ] Link layer packet injection.
 - [x] Library that communicate with the kernel driver.
 - [ ] System test.
 
