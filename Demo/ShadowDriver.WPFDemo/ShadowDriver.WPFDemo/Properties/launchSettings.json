@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "ShadowDriver.WPFDemo": {
+      "commandName": "Project"
+    },
+    "VM-DRIVERDEV Remote Debug": {
+      "commandName": "Project",
+      "workingDirectory": "\\\\VM-DRIVERDEV\\Dev\\ShadowDriver.WPFDemo",
+      "remoteDebugEnabled": true,
+      "remoteDebugMachine": "VM-DRIVERDEV",
+      "authenticationMode": "None"
+    }
+  }
+}

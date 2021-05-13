@@ -6,7 +6,92 @@
         xmlns:local="clr-namespace:ShadowDriver.WPFDemo"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
 
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="2.5*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <Grid Grid.Row="0" Grid.Column="0" VerticalAlignment="Top">
+                <Grid.RowDefinitions>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition></ColumnDefinition>
+                    <ColumnDefinition></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="RegisterAppButton" Grid.Column="0" Grid.Row="0" Margin="10" Click="RegisterAppButton_Click">Register App</Button>
+                <Button x:Name="DeregisterAppButton" Grid.Column="0" Grid.Row="1" Margin="10" Click="DeregisterAppButton_Click">Deregister App</Button>
+                <Button x:Name="GetAppCountButton" Grid.Column="0" Grid.Row="2" Margin="10" Click="GetAppCountButton_Click">Get App Count</Button>
+                <Button x:Name="DequeueIoctlButton" Grid.Column="0" Grid.Row="3" Margin="10">Dequeue a IOCTL</Button>
+                <Button x:Name="CheckQueuedIoctlCountButton" Grid.Column="0" Grid.Row="4" Margin="10" Click="CheckQueuedIoctlCountButton_Click">Check queued IOCTL count</Button>
+                <TextBlock x:Name="ConnectStatusBlock" Grid.Column="0" Grid.Row="5" Margin="10">Device Connect Status</TextBlock>
+                <Button x:Name="StartFilterButton" Grid.Column="0" Grid.Row="6" Margin="10" Click="StartFilterButton_Click">Start Filtering</Button>
+                <Button x:Name="StopFilteringButton" Grid.Column="0" Grid.Row="7" Margin="10" Click="StopFilteringButton_Click">Stop Filtering</Button>
+                <TextBlock x:Name="RegisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="0" Text="{Binding AppRegisterStatus}"></TextBlock>
+                <TextBlock x:Name="DeregisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="1"></TextBlock>
+                <TextBlock x:Name="GetAppCountBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="2"></TextBlock>
+                <TextBlock x:Name="DequeueIoctlResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="3"></TextBlock>
+                <TextBlock x:Name="CheckQueuedIoctlCountResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="4" Text="{Binding QueuedIOCTLCount}"></TextBlock>
+                <TextBlock x:Name="ConnectStatusResultBlock" Grid.Column="1" Grid.Row="5" Margin="10"></TextBlock>
+            </Grid>
+
+            <Grid Grid.Row="1" Grid.Column="0"  VerticalAlignment="Top">
+                <Grid.RowDefinitions>
+                    <RowDefinition ></RowDefinition>
+                    <RowDefinition ></RowDefinition>
+                    <RowDefinition ></RowDefinition>
+                    <RowDefinition ></RowDefinition>
+                    <RowDefinition ></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition></ColumnDefinition>
+                    <ColumnDefinition></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Row="0" FontSize="19" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="2">Add Conditions</TextBlock>
+                <TextBlock Margin="10"  Grid.Row="1" Grid.Column="0" Text="Filter Layer" VerticalAlignment="Center" HorizontalAlignment="Stretch"></TextBlock>
+                <TextBlock  Margin="10" Grid.Row="2" Grid.Column="0" Text="Address" VerticalAlignment="Center"></TextBlock>
+                <TextBlock Margin="10" Grid.Row="3" Grid.Column="0" Text="Direction" VerticalAlignment="Center"></TextBlock>
+                <TextBlock Margin="10" Grid.Row="4" Grid.Column="0" Text="Match Type" VerticalAlignment="Center"></TextBlock>
+                <TextBlock Margin="10" Grid.Row="5" Grid.Column="0" Text="Location" VerticalAlignment="Center"></TextBlock>
+                <TextBlock Margin="10" Grid.Row="6" Grid.Column="0" Text="Address Mask" VerticalAlignment="Center"></TextBlock>
+                <ComboBox x:Name="LayerBox" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0" SelectionChanged="LayerBox_SelectionChanged">
+
+                </ComboBox>
+                <TextBox  x:Name="IPAddressBox" Grid.Row="2" Grid.Column="1" Text="192.168.1.1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Visibility="Collapsed"></TextBox>
+                <ComboBox x:Name="MacAddressBox" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"  SelectedIndex="0">
+                </ComboBox>
+                <ComboBox x:Name="DirectionBox" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
+                </ComboBox>
+                <ComboBox x:Name="MatchTypeBox" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
+                </ComboBox>
+                <ComboBox x:Name="LocationBox" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
+                </ComboBox>
+                <TextBox x:Name="IPAddressMaskBox" Grid.Row="6" Grid.Column="1" Text="255.255.255.255" HorizontalAlignment="Stretch" VerticalAlignment="Center"></TextBox>
+                <Button Margin="10" x:Name="AddConditionButton" Click="AddConditionButton_Click" Grid.Row="7" Content="Add Condition"></Button>
+            </Grid>
+        </StackPanel>
+        <ListView x:Name="PacketsView" Grid.Column="1"  Grid.RowSpan="2">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Content}"></TextBlock>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <Grid x:Name="ErrorMessageGrid" Background="Red" VerticalAlignment="Bottom" Grid.ColumnSpan="2" Grid.RowSpan="2" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorMessageBlock" Margin="5"></TextBlock>
+        </Grid>
     </Grid>
+
 </Window>
