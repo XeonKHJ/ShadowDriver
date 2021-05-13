@@ -13,8 +13,6 @@ public:
 	GUID SublayerGuid;
 	GUID CalloutGuids[8];
 	HANDLE WfpEngineHandle;
-	HANDLE SendInjectHandle;
-	HANDLE ReceiveInjectHandle;
 	UINT32 WpsSendCalloutId;
 	UINT32 WpsReceiveCalloutId;
 	UINT64 FilterIds[FilterIdMaxNumber];

@@ -10,6 +10,7 @@ using Windows.Devices.Custom;
 using Windows.Devices.Enumeration;
 using ShadowDriver.Core.Interface;
 using ShadowDriver.Core.Status;
+using System.Net;
 
 namespace ShadowDriver.Core
 {
@@ -46,7 +47,6 @@ namespace ShadowDriver.Core
             IsFilterReady = true;
             FilterReady?.Invoke();
         }
-
         public void StartFilterWatcher()
         {
             var selector = CustomDevice.GetDeviceSelector(DriverRelatedInformation.InterfaceGuid);
@@ -107,6 +107,33 @@ namespace ShadowDriver.Core
             if (status != 0)
             {
                 HandleError(status);
+            }
+        }
+
+        public async Task EnableModificationAsync()
+        {
+            var outputBuffer = new byte[sizeof(int)];
+
+            var inputBuffer = _shadowRegisterContext.SeralizeAppIdToByteArray();
+
+            try
+            {
+                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverEnableModification, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+            }
+            catch (NullReferenceException)
+            {
+                throw new ShadowFilterException(0xC0090040);
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+
+            uint status = BitConverter.ToUInt32(outputBuffer, 0);
+
+            if (status != 0)
+            {
+                throw new ShadowFilterException(status);
             }
         }
         public async Task AddConditionAsync(FilterCondition condition)
@@ -180,6 +207,54 @@ namespace ShadowDriver.Core
             if (status != 0)
             {
                 throw new ShadowFilterException(status);
+            }
+        }
+
+        public async Task InjectPacketAsync(byte[] packetBuffer, PacketInjectionArgs args)
+        {
+            byte[] outputBuffer = new byte[sizeof(int)];
+            byte[] inputBuffer = new byte[packetBuffer.Length + 6 * sizeof(int) + sizeof(ulong)];
+            int currentIndex = 0;
+            byte[] appIdBytes = _shadowRegisterContext.SeralizeAppIdToByteArray();
+            byte[] layerBytes = BitConverter.GetBytes((int)args.Layer);
+            byte[] directionBytes = BitConverter.GetBytes((int)args.Direction);
+            byte[] addrFamilyBytes = BitConverter.GetBytes((int)args.AddrFamily);
+            byte[] sizeBytes = BitConverter.GetBytes(packetBuffer.Length);
+            byte[] identifierBytes = BitConverter.GetBytes(args.Identifier);
+            byte[] fragmentIndex = BitConverter.GetBytes(args.FragmentIndex);
+            appIdBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            layerBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            directionBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            addrFamilyBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            sizeBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += 4;
+            identifierBytes.CopyTo(inputBuffer, currentIndex);
+            currentIndex += sizeof(ulong);
+            fragmentIndex.CopyTo(inputBuffer, currentIndex);
+            currentIndex += sizeof(int);
+            packetBuffer.CopyTo(inputBuffer, currentIndex);
+            
+            try
+            {
+                await _shadowDevice.SendIOControlAsync(IOCTLs.IOCTLShadowDriverInjectPacket, inputBuffer.AsBuffer(), outputBuffer.AsBuffer());
+            }
+            catch (NullReferenceException)
+            {
+                throw new ShadowFilterException(0xC0090040);
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+
+            var status = BitConverter.ToUInt32(outputBuffer, 0);
+            if (status != 0)
+            {
+                HandleError(status);
             }
         }
         public async Task StartFilteringAsync()
@@ -299,15 +374,61 @@ namespace ShadowDriver.Core
                     //}
                 }
 
-                var packetSize = BitConverter.ToInt64(outputBuffer, sizeof(int));
-                byte[] packetBuffer = new byte[packetSize];
-                Array.Copy(outputBuffer, sizeof(int) + sizeof(long), packetBuffer, 0, packetSize);
 
-                if(_isFilteringStarted)
+                int currentIndex = sizeof(int);
+                var packetSize = BitConverter.ToInt64(outputBuffer, currentIndex);
+
+                if (packetSize > 0)
                 {
-                    PacketReceived?.Invoke(packetBuffer);
-                }
+                    currentIndex += sizeof(long);
+                    var identifier = BitConverter.ToUInt64(outputBuffer, currentIndex);
+                    currentIndex += sizeof(ulong);
+                    packetSize -= sizeof(ulong);
+                    var totalFragCount = BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(int);
+                    packetSize -= sizeof(int);
+                    var fragIndex = BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(int);
+                    packetSize -= sizeof(int);
+                    var offsetLength = BitConverter.ToUInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(uint);
+                    packetSize -= sizeof(uint);
+                    FilteringLayer layer = (FilteringLayer)BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(FilteringLayer);
+                    packetSize -= sizeof(FilteringLayer);
+                    NetPacketDirection direction = (NetPacketDirection)BitConverter.ToInt32(outputBuffer, currentIndex);
+                    currentIndex += sizeof(NetPacketDirection);
+                    packetSize -= sizeof(NetPacketDirection);
+                    byte[] packetBuffer = new byte[packetSize];
+                    Array.Copy(outputBuffer, currentIndex, packetBuffer, 0, packetSize);
+                    CapturedPacketArgs args = new CapturedPacketArgs(identifier, packetSize, totalFragCount, fragIndex, layer, direction);
+                    if (_isFilteringStarted)
+                    {
+                        byte[] newPacket = PacketReceived?.Invoke(packetBuffer, args);
 
+                        if(newPacket != null)
+                        {
+                            // Modify packet
+                            PacketInjectionArgs injectArgs = new PacketInjectionArgs
+                            {
+                                AddrFamily = IpAddrFamily.IPv4,
+                                Direction = args.Direction,
+                                FragmentIndex = args.FragmentIndex,
+                                Identifier = args.Identifier,
+                                Layer = args.Layer,
+                            };
+
+                            try
+                            {
+                                await InjectPacketAsync(newPacket, injectArgs);
+                            }
+                            catch(Exception exception)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Dfsdf");
+                            }
+                        }
+                    }
+                }
             }
             return;
         }

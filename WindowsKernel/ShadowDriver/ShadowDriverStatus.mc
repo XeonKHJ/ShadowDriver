@@ -85,3 +85,11 @@ The filter is not ready.
 Language=ChineseSimplified
 过滤器还未准备好。
 .
+
+MessageId=0x0050 Facility=Filter Severity=Error SymbolicName=SHADOW_FILTER_MODIFICATION_HAS_BEEN_ENABLED
+Language=English
+Packet modfication has been enabled.
+.
+Language=ChineseSimplified
+数据包修改已经被启用了。
+.

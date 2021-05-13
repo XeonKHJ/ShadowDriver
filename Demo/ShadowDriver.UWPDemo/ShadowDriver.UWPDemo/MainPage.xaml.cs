@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Devices.Custom;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -82,7 +83,7 @@ namespace ShadowDriver.UWPDemo
             });
         }
         public ObservableCollection<NetworkInterfaceViewModel> NetworkInterfaceViewModels { get; } = new ObservableCollection<NetworkInterfaceViewModel>();
-        private void Filter_PacketReceived(byte[] buffer)
+        private byte[] Filter_PacketReceived(byte[] buffer, CapturedPacketArgs args)
         {
             NetPacketViewModel netPacketViewModel = new NetPacketViewModel();
             for (int i = 0; i < buffer.Length; ++i)
@@ -90,6 +91,39 @@ namespace ShadowDriver.UWPDemo
                 netPacketViewModel.Content += buffer[i].ToString("X4") + " ";
             }
             NetPacketViewModels.Add(netPacketViewModel);
+
+            byte[] modifiedBuffer = null;
+            switch(args.Layer)
+            {
+                case FilteringLayer.NetworkLayer:
+                    IPAddress address;
+                    {
+                        switch(args.Direction)
+                        {
+                            case NetPacketDirection.Out:
+                                address = IPAddress.Parse("192.168.1.104"); 
+                                address.GetAddressBytes().CopyTo(buffer, 16);
+
+                                modifiedBuffer = buffer;
+                                break;
+                            case NetPacketDirection.In:
+                                address = IPAddress.Parse("22.22.22.22");
+                                address.GetAddressBytes().CopyTo(buffer, 12);
+                                buffer[10] = 0;
+                                buffer[11] = 0;
+                                var checkSumCalculateBytes = (buffer[0] & 0xf) * 4;
+                                var checkSum = CalculateChecksum(buffer, checkSumCalculateBytes);
+                                buffer[10] = (byte)((checkSum & 0xff00) >> 8);
+                                buffer[11] = (byte)(checkSum & 0xff);
+                                modifiedBuffer = buffer;
+                                break;
+                        }
+                    }
+                    break;
+            }
+
+
+            return modifiedBuffer;
         }
 
         private ShadowFilter _filter;
@@ -313,6 +347,53 @@ namespace ShadowDriver.UWPDemo
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+        }
+
+        private async void EnableModificationButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await _filter.EnableModificationAsync();
+            }
+            catch (Exception exception)
+            {
+                DisplayException(exception);
+            }
+        }
+
+        private ushort CalculateChecksum(byte[] buffer, int length)
+        {
+            UInt32 sum = 0;
+            
+            for(int i = 0; i < length; ++i)
+            {
+                if(i % 2 == 0)
+                {
+                    sum += (UInt32)((buffer[i]) << 8);
+                }
+                else
+                {
+                    sum += (UInt32)(buffer[i]);
+                }
+
+            }
+
+            //for(int i = 0; i < buffer.Length; i+=2)
+            //{
+            //    UInt32 x = (UInt32)(buffer[i] << 8) + (UInt32)(buffer[i + 1]);
+
+            //    sum += x;
+            //}
+
+            while (sum > 0xffff)
+            {
+                uint exceedPart = (sum & (~(0xFFFFu))) >> 16;
+                uint remainPart = sum & 0xffffu;
+                sum = remainPart + exceedPart;
+            }
+
+            UInt16 shortSum = (UInt16)~((UInt16)(sum & 0xFFFF));
+            return shortSum;
         }
     }
 }

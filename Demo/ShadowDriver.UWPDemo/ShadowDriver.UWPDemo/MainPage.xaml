@@ -25,6 +25,7 @@
                     <RowDefinition></RowDefinition>
                     <RowDefinition></RowDefinition>
                     <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition></ColumnDefinition>
@@ -38,6 +39,7 @@
                 <TextBlock x:Name="ConnectStatusBlock" Grid.Column="0" Grid.Row="5" Margin="10">Device Connect Status</TextBlock>
                 <Button x:Name="StartFilterButton" Grid.Column="0" Grid.Row="6" Margin="10" Click="StartFilterButton_Click">Start Filtering</Button>
                 <Button x:Name="StopFilteringButton" Grid.Column="0" Grid.Row="7" Margin="10" Click="StopFilteringButton_Click">Stop Filtering</Button>
+                <Button x:Name="EnableModificationButton" Grid.Column="0" Grid.Row="8" Margin="10" Click="EnableModificationButton_Click">Enable Modification</Button>
                 <TextBlock x:Name="RegisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="0" DataContext="{x:Bind ViewModel}" Text="{Binding AppRegisterStatus}"></TextBlock>
                 <TextBlock x:Name="DeregisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="1"></TextBlock>
                 <TextBlock x:Name="GetAppCountBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="2"></TextBlock>

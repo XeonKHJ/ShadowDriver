@@ -2,6 +2,8 @@
 #include "ShadowFilterContext.h"
 #include "CancelSafeQueueCallouts.h"
 #include "PacketHelper.h"
+#include "InjectionHelper.h"
+#include "ShadowCallouts.h"
 
 int IOCTLHelper::_helperCount = 0;
 IOCTLHelperLinkEntry IOCTLHelper::_helperListHeader;
@@ -188,6 +190,20 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		case IOCTL_SHADOWDRIVER_GET_REGISTERED_APP_COUNT:
 			status = STATUS_SUCCESS;
 			WriteDataToIrpOutputBuffer(&_helperCount, sizeof(int), Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
+		case IOCTL_SHADOWDRIVER_ENABLE_MODIFICATION:
+			status = STATUS_SUCCESS;
+			status = IoctlEnableModification(Irp, pIoStackIrp);
+			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
+		case IOCTL_SHADOWDRIVER_INJECT_PACKET:
+			status = STATUS_SUCCESS;
+			status = IoctlInjectPacket(Irp, pIoStackIrp);
 			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
@@ -579,6 +595,117 @@ NTSTATUS IOCTLHelper::IoctlAddCondition(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 	else
 	{
 		status = SHADOW_APP_APPID_INVALID;
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlEnableModification(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+
+	if (appId != 0)
+	{
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
+		{
+			ShadowFilter* filter = helper->_context.Filter;
+			status = filter->EnablePacketModification();
+		}
+		else
+		{
+			status = SHADOW_APP_UNREGISTERED;
+		}
+	}
+	else
+	{
+		status = SHADOW_APP_APPID_INVALID;
+	}
+	return status;
+}
+
+NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLocation)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	int appId = GetAppIdFromIoctl(irp, ioStackLocation);
+
+	if (appId != 0)
+	{
+		IOCTLHelper* helper = GetHelperByAppId(appId);
+		if (helper != nullptr)
+		{
+			ShadowFilter* filter = helper->_context.Filter;
+
+			UNREFERENCED_PARAMETER(filter);
+
+			char* inputBuffer = (char*)(irp->AssociatedIrp.SystemBuffer);
+			// Read inject info.
+			auto inputBufferLength = ioStackLocation->Parameters.DeviceIoControl.InputBufferLength;
+			if (inputBufferLength >= 20)
+			{
+				// Skip app id.
+				char* currentPointer = inputBuffer + sizeof(int);
+
+				NetLayer layer = (NetLayer)(*(int *)(currentPointer));
+				currentPointer += sizeof(int);
+				NetPacketDirection direction = (NetPacketDirection)(*(int*)(currentPointer));;
+				currentPointer += sizeof(int);
+				IpAddrFamily addrFamily = (IpAddrFamily)(*(int*)(currentPointer));;
+				UNREFERENCED_PARAMETER(addrFamily);
+				currentPointer += sizeof(int);
+				int packetSize = *(int*)(currentPointer);
+				currentPointer += sizeof(int);
+				PNET_BUFFER_LIST netBufferList = *((PNET_BUFFER_LIST*)currentPointer);
+				currentPointer += sizeof(PNET_BUFFER_LIST);
+				UNREFERENCED_PARAMETER(netBufferList);
+				int fragmentIndex = *(int*)(currentPointer);
+				currentPointer += sizeof(int);
+
+#ifdef DBG
+				if (fragmentIndex > 0)
+				{
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "Fragment index is larger than 0.\t\n");
+				}
+#endif
+
+				if (packetSize > 0 && filter->GetModificationStatus())
+				{
+					char* packetStartPointer = currentPointer;
+					UNREFERENCED_PARAMETER(packetStartPointer);
+					if (netBufferList)
+					{
+						status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
+					}
+					else
+					{
+						//status = InjectionHelper::Inject((ShadowFilterContext*)(filter->GetContext()), direction, layer, packetStartPointer, packetSize);
+					}
+
+				}
+				else
+				{
+					// if packetSize is smaller than or equals 0, then set status.
+
+				}
+
+
+
+				//	UNREFERENCED_PARAMETER(currentIndex);
+				//	UNREFERENCED_PARAMETER(direction);
+				//	UNREFERENCED_PARAMETER(addrFamily);
+				//	UNREFERENCED_PARAMETER(layer);
+				//	UNREFERENCED_PARAMETER(packetSize);
+				//}
+			}
+			else
+			{
+				status = SHADOW_APP_UNREGISTERED;
+			}
+		}
+		else
+		{
+			status = SHADOW_APP_APPID_INVALID;
+		}
 	}
 	return status;
 }

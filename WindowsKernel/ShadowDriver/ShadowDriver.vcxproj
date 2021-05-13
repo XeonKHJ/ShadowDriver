@@ -41,6 +41,7 @@
     <ClCompile Include="CancelSafeQueueCallouts.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="InjectionHelper.cpp" />
     <ClCompile Include="IOCTLHelper.cpp" />
     <ClCompile Include="NetFilteringCondition.cpp" />
     <ClCompile Include="OverloadOperators.cpp" />
@@ -54,9 +55,11 @@
     <ClInclude Include="CancelSafeQueueCallouts.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="InjectionHelper.h" />
     <ClInclude Include="IOCTLHelper.h" />
     <ClInclude Include="IOCTLHelperContext.h" />
     <ClInclude Include="IrpLinkEntry.h" />
+    <ClInclude Include="PacketModificationContext.h" />
     <ClInclude Include="NetFilteringCondition.h" />
     <ClInclude Include="OverloadOperators.h" />
     <ClInclude Include="Public.h" />

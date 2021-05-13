@@ -23,6 +23,8 @@ Environment:
 #pragma alloc_text (PAGE, ShadowDriverCreateDevice)
 #endif
 #include "ShadowFilterContext.h"
+#include "InjectionHelper.h"
+#include "ShadowCallouts.h"
 
 typedef struct _INVERTED_DEVICE_CONTEXT {
     WDFQUEUE    NotificationQueue;
@@ -118,11 +120,24 @@ Return Value:
 #ifdef DBG
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "ShadowDriverCreateDevice\n");
 #endif
+
         PDEVICE_OBJECT deviceObject = WdfDeviceWdmGetDeviceObject(device);
 
         //初始化Windows筛选平台
         IOCTLHelper::SetDeviceObject(deviceObject);
         //status = InitializeWfp(deviceObject);
+
+        InjectionHelper::InjectCompleted = ShadowCallout::ModificationComplete;
+
+        if (NT_SUCCESS(status))
+        {
+            status = InjectionHelper::CreateInjector();
+        }
+
+        if (NT_SUCCESS(status))
+        {
+            status = ShadowCallout::InitializeNBLListHeader();
+        }
     }
     
     return status;

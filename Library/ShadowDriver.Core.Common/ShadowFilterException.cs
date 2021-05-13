@@ -45,6 +45,9 @@ namespace ShadowDriver.Core.Status
                     case 0xC0090040:
                         message = "The filter is not ready.";
                         break;
+                    case 0xC0090050:
+                        message = "Packet modfication has been enabled";
+                        break;
                 }
 
                 return message;

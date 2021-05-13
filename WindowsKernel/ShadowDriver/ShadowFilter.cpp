@@ -3,6 +3,7 @@
 #include "ShadowFilter.h"
 #include "ShadowCallouts.h"
 #include "WfpHelper.h"
+#include "InjectionHelper.h"
 
 ShadowFilter::ShadowFilter(void* enviromentContexts)
 {
@@ -221,13 +222,59 @@ unsigned int ShadowFilter::StopFiltering()
 	return status;
 }
 
-void ShadowFilter::EnablePacketModification()
+unsigned int ShadowFilter::EnablePacketModification()
 {
+	NTSTATUS status = STATUS_SUCCESS;
 	//添加注入句柄之类的。
-	_isModificationEnabled = true;
+
+	if (!_isModificationEnabled)
+	{
+		ShadowFilterContext* context = (ShadowFilterContext*)_context;
+		
+		if (context != nullptr)
+		{
+			if (NT_SUCCESS(status))
+			{
+				_isModificationEnabled = true;
+				context->IsModificationEnable = _isModificationEnabled;
+			}
+		}
+	}
+	else
+	{
+		status = SHADOW_FILTER_MODIFICATION_HAS_BEEN_ENABLED;
+	}
+	return status;
 }
 
 void ShadowFilter::DisablePacketModification()
 {
 	_isModificationEnabled = false;
+}
+
+void* ShadowFilter::GetContext()
+{
+	return _context;
+}
+
+bool ShadowFilter::GetModificationStatus()
+{
+	return _isModificationEnabled;
+}
+
+unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size)
+{
+	UNREFERENCED_PARAMETER(context);
+	UNREFERENCED_PARAMETER(direction);
+	UNREFERENCED_PARAMETER(layer);
+	UNREFERENCED_PARAMETER(buffer);
+	UNREFERENCED_PARAMETER(size);
+	return false;
+}
+
+unsigned int ShadowFilter::InjectPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex)
+{
+	NTSTATUS status = ShadowCallout::ModifyPacket(context, direction, layer, buffer, size, identifier, fragmentIndex);
+
+	return status;
 }

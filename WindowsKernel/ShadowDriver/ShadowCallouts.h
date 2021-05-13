@@ -1,6 +1,8 @@
 #pragma once
 #include <fwpsk.h>
+#include "ShadowFilterContext.h"
 #include "NetFilteringCondition.h"
+#include "PacketModificationContext.h"
 
 class ShadowCallout
 {
@@ -12,7 +14,18 @@ private:
 		NetLayer layer,
 		NetPacketDirection direction
 	);
+
+	static void SendPacketToUserMode(
+		NetLayer layer,
+		NetPacketDirection direction,
+		PNET_BUFFER_LIST netBufferList,
+		ShadowFilterContext* context
+	);
+
 public:
+	static PacketModificationContext PendingNetBufferListHeader;
+	static KSPIN_LOCK SpinLock;
+	static NTSTATUS InitializeNBLListHeader();
 	static NTSTATUS PacketNotify(
 		_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 		_In_ const GUID* filterKey,
@@ -84,4 +97,8 @@ public:
 		_In_ UINT64 flowContext,
 		_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 	);
+
+	static NTSTATUS ModifyPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex);
+
+	static void ModificationComplete(PNET_BUFFER_LIST netBufferList, void* packetContext);
 };
