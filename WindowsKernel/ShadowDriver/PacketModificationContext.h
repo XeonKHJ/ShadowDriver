@@ -10,5 +10,6 @@ struct PacketModificationContext
 	COMPARTMENT_ID CompartmentId;
 	UINT32 InterfaceIndex;
 	UINT32 SubInterfaceIndex;
+	NDIS_PORT_NUMBER NdisPortNumber;
 };
 

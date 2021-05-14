@@ -589,6 +589,8 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_OUTBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
+					newBufferListEntry->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_OUTBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
@@ -670,6 +672,8 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
+					newBufferListEntry->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
