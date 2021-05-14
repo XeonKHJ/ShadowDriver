@@ -217,7 +217,6 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 {
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inMetaValues);
 	UNREFERENCED_PARAMETER(inFixedValues);
 
 	NTSTATUS status = STATUS_SUCCESS;
@@ -378,16 +377,74 @@ VOID NTAPI ShadowCallout::NetworkInV6ClassifyFn(
 	_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 )
 {
+	NTSTATUS status = STATUS_SUCCESS;
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inMetaValues);
-	UNREFERENCED_PARAMETER(inFixedValues);
 
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 #ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkInV4ClassifyFn\t\n");
+#endif
+
+#ifdef DBG
 	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::In);
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	PNET_BUFFER_LIST packet = (PNET_BUFFER_LIST)layerData;
+
+	if (packet && context)
+	{
+		auto ipHeaderSize = inMetaValues->ipHeaderSize;
+		NdisRetreatNetBufferListDataStart(packet, ipHeaderSize, 0, NULL, NULL);
+
+		if (context->IsModificationEnable)
+		{
+			auto injectionState = FwpsQueryPacketInjectionState(InjectionHelper::InjectionHandles[0], packet, NULL);
+
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+			{
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, packet, context);
+			}
+			else
+			{
+				PNET_BUFFER_LIST clonedPacket = NULL;
+				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+
+				if (NT_SUCCESS(status))
+				{
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, clonedPacket, context);
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+					// Inqueue cloned net buffer list.
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
+					newBufferListEntry->ReceviedFragmentCounts = 0;
+					newBufferListEntry->FragmentCounts = 0;
+					newBufferListEntry->NetBufferList = clonedPacket;
+					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V6_INTERFACE_INDEX].value.uint32;
+					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V6_SUB_INTERFACE_INDEX].value.uint32,
+						InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+
+					// Get net buffer counts.
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
+					{
+						++(newBufferListEntry->FragmentCounts);
+					}
+
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
+				}
+			}
+		}
+		else
+		{
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, packet, context);
+		}
+
+		NdisAdvanceNetBufferListDataStart(packet, ipHeaderSize, FALSE, 0);
+	}
 }
 
 VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
@@ -402,14 +459,73 @@ VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
 {
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inMetaValues);
 	UNREFERENCED_PARAMETER(inFixedValues);
 
-	classifyOut->actionType = FWP_ACTION_PERMIT;
+	NTSTATUS status = STATUS_SUCCESS;
+
 #ifdef DBG
-	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 #endif
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::NetworkLayer, NetPacketDirection::Out);
+	classifyOut->actionType = FWP_ACTION_PERMIT;
+
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
+	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
+
+	if (packet != nullptr)
+	{
+		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
+
+#ifdef DBG
+		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+#endif
+
+		classifyOut->actionType = FWP_ACTION_PERMIT;
+
+		// If the packet is a injected one.		
+		if (context->IsModificationEnable)
+		{
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+			{
+				SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+			}
+			else
+			{
+				PNET_BUFFER_LIST clonedPacket = NULL;
+				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+
+				if (NT_SUCCESS(status))
+				{
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+					// Inqueue cloned net buffer list.
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
+					newBufferListEntry->ReceviedFragmentCounts = 0;
+					newBufferListEntry->FragmentCounts = 0;
+					newBufferListEntry->NetBufferList = clonedPacket;
+					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+
+					// Get net buffer counts.
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
+					{
+						++(newBufferListEntry->FragmentCounts);
+					}
+
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
+				}
+			}
+		}
+		else
+		{
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+		}
+	}
 }
 
 VOID NTAPI ShadowCallout::LinkOutClassifyFn(
@@ -424,19 +540,73 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 {
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inMetaValues);
 	UNREFERENCED_PARAMETER(inFixedValues);
 
+	NTSTATUS status = STATUS_SUCCESS;
+
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
+#endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
-#ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkOutClassifyFn\t\n");
-#endif
+
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
+	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
+
+	if (packet != nullptr)
+	{
+		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
 #ifdef DBG
-	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
 
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::Out);
+		classifyOut->actionType = FWP_ACTION_PERMIT;
+
+		// If the packet is a injected one.		
+		if (context->IsModificationEnable)
+		{
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+			{
+				SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::Out, packet, context);
+			}
+			else
+			{
+				PNET_BUFFER_LIST clonedPacket = NULL;
+				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+
+				if (NT_SUCCESS(status))
+				{
+					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::Out, clonedPacket, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+					// Inqueue cloned net buffer list.
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
+					newBufferListEntry->ReceviedFragmentCounts = 0;
+					newBufferListEntry->FragmentCounts = 0;
+					newBufferListEntry->NetBufferList = clonedPacket;
+					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+
+					// Get net buffer counts.
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
+					{
+						++(newBufferListEntry->FragmentCounts);
+					}
+
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
+				}
+			}
+		}
+		else
+		{
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+		}
+	}
 }
 
 VOID NTAPI ShadowCallout::LinkInClassifyFn(
@@ -451,19 +621,73 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 {
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
-	UNREFERENCED_PARAMETER(inMetaValues);
 	UNREFERENCED_PARAMETER(inFixedValues);
 
+	NTSTATUS status = STATUS_SUCCESS;
+
+#ifdef DBG
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "NetworkOutV4ClassifyFn\t\n");
+#endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
-#ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
-#endif
+
+	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
+	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
+
+	if (packet != nullptr)
+	{
+		auto injectionState = FwpsQueryPacketInjectionState(injectionHandle, packet, NULL);
 
 #ifdef DBG
-	PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
+		PrintFragmentInfo((PNET_BUFFER_LIST)layerData);
 #endif
 
-	CalloutPreproecess(layerData, filter, classifyOut, NetLayer::LinkLayer, NetPacketDirection::In);
+		classifyOut->actionType = FWP_ACTION_PERMIT;
+
+		// If the packet is a injected one.		
+		if (context->IsModificationEnable)
+		{
+			if (injectionState == FWPS_PACKET_INJECTED_BY_SELF ||
+				injectionState == FWPS_PACKET_PREVIOUSLY_INJECTED_BY_SELF)
+			{
+				SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, packet, context);
+			}
+			else
+			{
+				PNET_BUFFER_LIST clonedPacket = NULL;
+				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
+
+				if (NT_SUCCESS(status))
+				{
+					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, clonedPacket, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+					// Inqueue cloned net buffer list.
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
+					newBufferListEntry->ReceviedFragmentCounts = 0;
+					newBufferListEntry->FragmentCounts = 0;
+					newBufferListEntry->NetBufferList = clonedPacket;
+					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+
+					// Get net buffer counts.
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
+					{
+						++(newBufferListEntry->FragmentCounts);
+					}
+
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
+				}
+			}
+		}
+		else
+		{
+			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+		}
+	}
 }
 
 NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex)
