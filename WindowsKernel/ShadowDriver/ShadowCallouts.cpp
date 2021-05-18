@@ -550,7 +550,7 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[6];
 	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
 
 	if (packet != nullptr)
@@ -606,7 +606,7 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 		}
 		else
 		{
-			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+			SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::Out, packet, context);
 		}
 	}
 }
@@ -633,7 +633,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
 	ShadowFilterContext* context = (ShadowFilterContext*)(filter->context);
-	HANDLE injectionHandle = InjectionHelper::InjectionHandles[2];
+	HANDLE injectionHandle = InjectionHelper::InjectionHandles[4];
 	NET_BUFFER_LIST* packet = (NET_BUFFER_LIST*)layerData;
 
 	if (packet != nullptr)
@@ -657,6 +657,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 			else
 			{
 				PNET_BUFFER_LIST clonedPacket = NULL;
+				UNREFERENCED_PARAMETER(clonedPacket);
 				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
 				if (NT_SUCCESS(status))
@@ -666,7 +667,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					classifyOut->actionType = FWP_ACTION_BLOCK;
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
-					// Inqueue cloned net buffer list.
+					//// Inqueue cloned net buffer list.
 					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
 					newBufferListEntry->ReceviedFragmentCounts = 0;
 					newBufferListEntry->FragmentCounts = 0;
@@ -674,6 +675,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
 					newBufferListEntry->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
+					newBufferListEntry->MacHeader = inMetaValues->ethernetMacHeaderSize;
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
@@ -689,7 +691,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 		}
 		else
 		{
-			SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, packet, context);
+			SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, packet, context);
 		}
 	}
 }
@@ -746,6 +748,10 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 						auto currentMdlLength = MmGetMdlByteCount(currentMdl);
 						PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
 						auto writtenSize = size < currentMdlLength ? size : currentMdlLength;
+#ifdef DBG
+						char* charBuffer = (char*)buffer;
+						UNREFERENCED_PARAMETER(charBuffer);
+#endif
 						RtlCopyMemory(currentMdlBuffer, buffer, writtenSize);
 					}
 				}
@@ -763,12 +769,15 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 		{
 			RemoveEntryList(&currentNetBufferListEntry->ListEntry);
 
-			InjectionHelper::Inject(pmContext, direction, layer, nblToSend);
+			status = InjectionHelper::Inject(pmContext, direction, layer, nblToSend);
 			//status = FwpsInjectNetworkSendAsync(inejctionHandle, NULL, 0, currentNetBufferListEntry->CompartmentId, nblToSend, InjectionHelper::ModificationCompleted, context);
 			//delete pmContext;
 
 			if (!NT_SUCCESS(status))
 			{
+#ifdef DBG
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Inject packet error.\n");
+#endif
 				NdisFreeCloneNetBufferList(nblToSend, 0);
 			}
 		}

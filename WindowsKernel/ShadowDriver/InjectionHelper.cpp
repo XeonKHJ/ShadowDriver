@@ -148,10 +148,18 @@ NTSTATUS InjectionHelper::Inject(void* context, NetPacketDirection direction, Ne
 			switch (direction)
 			{
 			case Out:
-				status = FwpsInjectMacSendAsync(InjectionHandles[4], NULL, 0, FWPS_LAYER_OUTBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
+#ifdef DBG
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link layer outbound packet modifing...\n");
+#endif
+				status = FwpsInjectMacSendAsync(InjectionHandles[6], NULL, 0, FWPS_LAYER_OUTBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
 				break;
 			case In:
-				status = FwpsInjectMacReceiveAsync(InjectionHandles[6], NULL, 0, FWPS_LAYER_INBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
+
+#ifdef DBG
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link layer inbound packet modifing...\n");
+#endif
+
+				status = FwpsInjectMacReceiveAsync(InjectionHandles[4], NULL, 0, FWPS_LAYER_INBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
 				break;
 			default:
 				break;

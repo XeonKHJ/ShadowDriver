@@ -11,5 +11,6 @@ struct PacketModificationContext
 	UINT32 InterfaceIndex;
 	UINT32 SubInterfaceIndex;
 	NDIS_PORT_NUMBER NdisPortNumber;
+	UINT32 MacHeader;
 };
 

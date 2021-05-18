@@ -120,6 +120,11 @@ namespace ShadowDriver.UWPDemo
                         }
                     }
                     break;
+                case FilteringLayer.LinkLayer:
+                    {
+                        modifiedBuffer = buffer;
+                    }
+                    break;
             }
 
 
