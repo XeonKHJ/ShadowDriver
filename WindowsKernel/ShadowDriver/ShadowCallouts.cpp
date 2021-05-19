@@ -624,6 +624,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	UNREFERENCED_PARAMETER(flowContext);
 	UNREFERENCED_PARAMETER(classifyContext);
 	UNREFERENCED_PARAMETER(inFixedValues);
+	UNREFERENCED_PARAMETER(inMetaValues);
 
 	NTSTATUS status = STATUS_SUCCESS;
 
@@ -657,7 +658,6 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 			else
 			{
 				PNET_BUFFER_LIST clonedPacket = NULL;
-				UNREFERENCED_PARAMETER(clonedPacket);
 				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
 
 				if (NT_SUCCESS(status))
@@ -668,9 +668,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
 
 					//// Inqueue cloned net buffer list.
-					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
-					newBufferListEntry->ReceviedFragmentCounts = 0;
-					newBufferListEntry->FragmentCounts = 0;
+					PacketModificationContext* newBufferListEntry = new PacketModificationContext{};
 					newBufferListEntry->NetBufferList = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
@@ -684,9 +682,9 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					{
 						++(newBufferListEntry->FragmentCounts);
 					}
-
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
 				}
+
+				
 			}
 		}
 		else
