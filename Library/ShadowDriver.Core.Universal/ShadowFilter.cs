@@ -159,6 +159,10 @@ namespace ShadowDriver.Core
                                 Array.Reverse(filteringAddressAndMask, 0, 4);
                             }
                             condition.IPMask.GetAddressBytes().CopyTo(filteringAddressAndMask, 4);
+                            if(BitConverter.IsLittleEndian)
+                            {
+                                Array.Reverse(filteringAddressAndMask, 4, 4);
+                            }
                             encodedAddressFamily = BitConverter.GetBytes((int)IpAddrFamily.IPv4);
                             break;
                         case System.Net.Sockets.AddressFamily.InterNetworkV6:

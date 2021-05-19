@@ -88,7 +88,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeWfpEngine routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeWfpEngine routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -100,7 +100,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeSublayer routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in InitializeSublayer routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -112,7 +112,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AllocateConditionGroups routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AllocateConditionGroups routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -124,7 +124,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in RegisterCalloutsToDevice routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in RegisterCalloutsToDevice routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -136,7 +136,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddCalloutsToWfp routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddCalloutsToWfp routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -148,7 +148,7 @@ unsigned int ShadowFilter::StartFiltering()
 #ifdef DBG
 			if (!NT_SUCCESS(status))
 			{
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddFwpmFiltersToWpf routine.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in AddFwpmFiltersToWpf routine. Error code: %X\t\n", status);
 			}
 #endif
 
@@ -160,7 +160,7 @@ unsigned int ShadowFilter::StartFiltering()
 			if (!NT_SUCCESS(status))
 			{
 #ifdef DBG
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in starting filter process.\t\n");
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Error occuers in starting filter process. Error code: %X\t\n", status);
 #endif
 				StopFiltering();
 			}
@@ -190,15 +190,23 @@ unsigned int ShadowFilter::StopFiltering()
 	// Deregister callouts
 	for (UINT8 currentCode = 0; currentCode < shadowFilterContext->FilterIdMaxNumber; ++currentCode)
 	{
+
+			// Delete FWPM_FILTERs.
 		if (shadowFilterContext->FilterIds[currentCode] != NULL)
 		{
-			// Delete FWPM_FILTERs.
 			status = FwpmFilterDeleteById(shadowFilterContext->WfpEngineHandle, shadowFilterContext->FilterIds[currentCode]);
-
+			shadowFilterContext->FilterIds[currentCode] = NULL;
+		}
+			
+		if ((shadowFilterContext->WpmCalloutIds)[currentCode] != NULL)
+		{
 			// Delete FWPM_CALLOUTs.
 			FwpmCalloutDeleteById(shadowFilterContext->WfpEngineHandle, (shadowFilterContext->WpmCalloutIds)[currentCode]);
 			(shadowFilterContext->WpmCalloutIds)[currentCode] = NULL;
+		}
 
+		if ((shadowFilterContext->WpsCalloutIds)[currentCode] != NULL)
+		{
 			// Delete FWPS_CALLOUTs.
 			status = FwpsCalloutUnregisterById((shadowFilterContext->WpsCalloutIds)[currentCode]);
 			(shadowFilterContext->WpsCalloutIds)[currentCode] = NULL;

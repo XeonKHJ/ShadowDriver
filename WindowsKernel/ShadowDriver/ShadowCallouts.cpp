@@ -266,6 +266,9 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->NetBufferList = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+
+					auto listHeader = &PendingNetBufferListHeader;
+					UNREFERENCED_PARAMETER(listHeader);
 					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
@@ -736,8 +739,9 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 				// Start modification.
 				if (currentBuffer)
 				{
-
+					auto toWriteSize = size;
 					SIZE_T dataWritten = 0;
+					PBYTE bufferAsBytes = (PBYTE)buffer;
 					for (PMDL currentMdl = NET_BUFFER_CURRENT_MDL(currentBuffer); currentMdl != nullptr && dataWritten < size; currentMdl = currentMdl->Next)
 					{
 #ifdef DBG
@@ -745,12 +749,12 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 #endif
 						auto currentMdlLength = MmGetMdlByteCount(currentMdl);
 						PBYTE currentMdlBuffer = (PBYTE)MmGetMdlVirtualAddress(currentMdl);
-						auto writtenSize = size < currentMdlLength ? size : currentMdlLength;
-#ifdef DBG
-						char* charBuffer = (char*)buffer;
-						UNREFERENCED_PARAMETER(charBuffer);
-#endif
-						RtlCopyMemory(currentMdlBuffer, buffer, writtenSize);
+						auto writtenSize = toWriteSize < currentMdlLength ? toWriteSize : currentMdlLength;
+						toWriteSize -= writtenSize;
+						dataWritten += writtenSize;
+
+						RtlCopyMemory(currentMdlBuffer, bufferAsBytes, writtenSize);
+						bufferAsBytes += writtenSize;
 					}
 				}
 				// Indicate that fragment index is out of range.
@@ -765,7 +769,7 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 		// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
 		if (nblToSend && pmContext->ReceviedFragmentCounts == pmContext->FragmentCounts)
 		{
-			RemoveEntryList(&currentNetBufferListEntry->ListEntry);
+			RemoveEntryList(&pmContext->ListEntry);
 
 			status = InjectionHelper::Inject(pmContext, direction, layer, nblToSend);
 			//status = FwpsInjectNetworkSendAsync(inejctionHandle, NULL, 0, currentNetBufferListEntry->CompartmentId, nblToSend, InjectionHelper::ModificationCompleted, context);
@@ -776,7 +780,7 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 #ifdef DBG
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Inject packet error.\n");
 #endif
-				NdisFreeCloneNetBufferList(nblToSend, 0);
+				FwpsFreeCloneNetBufferList(nblToSend, 0);
 			}
 		}
 
