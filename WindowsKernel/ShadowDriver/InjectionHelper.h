@@ -7,8 +7,10 @@ class InjectionHelper
 {
 public:
 	static NTSTATUS CreateInjector();
-	static UINT32 Inject(ShadowFilterContext * context,NetPacketDirection direction, NetLayer layer, void * buffer, SIZE_T size);
+
+	NTSTATUS InjectionHelper::Inject(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, SIZE_T size);
 	static NTSTATUS Inject(void* context, NetPacketDirection direction, NetLayer layer, PNET_BUFFER_LIST bufferList);
+	static NTSTATUS InjectNbl(void* context, NetLayer layer, NetPacketDirection direction, PNET_BUFFER_LIST bufferList);
 	static HANDLE NDISPoolHandle;
 	static void DeleteInjectors();
 	static HANDLE InjectionHandles[8];
