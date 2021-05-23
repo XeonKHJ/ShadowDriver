@@ -15,13 +15,15 @@ private:
 		NetPacketDirection direction
 	);
 
+	static void SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PacketModificationContext* pmContext, ShadowFilterContext* sfContext);
+
 	static void SendPacketToUserMode(
 		NetLayer layer,
 		NetPacketDirection direction,
 		PNET_BUFFER_LIST netBufferList,
 		ShadowFilterContext* context
 	);
-
+	static KGUARDED_MUTEX _mutex;
 public:
 	static PacketModificationContext PendingNetBufferListHeader;
 	static KSPIN_LOCK SpinLock;

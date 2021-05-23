@@ -4,7 +4,8 @@
 struct PacketModificationContext
 {
 	LIST_ENTRY ListEntry;
-	PNET_BUFFER_LIST NetBufferList;
+	PNET_BUFFER_LIST OriginalNBL;
+	PNET_BUFFER_LIST NewNBL;
 	int FragmentCounts;
 	int ReceviedFragmentCounts;
 	COMPARTMENT_ID CompartmentId;
