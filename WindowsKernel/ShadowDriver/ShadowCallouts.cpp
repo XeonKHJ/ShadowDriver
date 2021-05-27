@@ -757,11 +757,11 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 
 					ASSERT(newBufferListEntry->FragmentCounts > 0);
 
-					KeAcquireGuardedMutex(&_mutex);
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserting %p to list.\t\n", newBufferListEntry);
-					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserted %p to list.\t\n", newBufferListEntry);
-					KeReleaseGuardedMutex(&_mutex);
+					//KeAcquireGuardedMutex(&_mutex);
+					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserting %p to list.\t\n", newBufferListEntry);
+					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserted %p to list.\t\n", newBufferListEntry);
+					//KeReleaseGuardedMutex(&_mutex);
 
 					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, newBufferListEntry, context);
 				}
@@ -790,41 +790,40 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 
 	if (contextByIdentifier)
 	{
-		PacketModificationContext* netBufferListHeader = &(ShadowCallout::PendingNetBufferListHeader);
-		PacketModificationContext* pmContext = nullptr;
-		bool IsOrignalNBLExsit = false;
+		PacketModificationContext* pmContext = (PacketModificationContext*)identifier;
+		bool IsOrignalNBLExsit = true;
 
-		KeAcquireGuardedMutex(&_mutex);
-		PacketModificationContext* currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, PacketModificationContext, ListEntry);
-
-#ifdef DBG
-		// Traverse through list.
-		PLIST_ENTRY currentEntry = netBufferListHeader->ListEntry.Flink;
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link list: %p", &(netBufferListHeader->ListEntry));
-		while (currentEntry != &(netBufferListHeader->ListEntry))
-		{
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "->%p", currentEntry);
-			currentEntry = currentEntry->Flink;
-		}
-		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "\n");
-#endif
-
-		currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, PacketModificationContext, ListEntry);
-		while (currentNetBufferListEntry != netBufferListHeader)
-		{
-			PLIST_ENTRY temp = currentNetBufferListEntry->ListEntry.Flink;
-			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Flink is %p\n", temp);
-			if (currentNetBufferListEntry == contextByIdentifier)
-			{
-				pmContext = currentNetBufferListEntry;
-				(pmContext->ReceviedFragmentCounts)++;
-				IsOrignalNBLExsit = true;
-				break;
-			}
-			currentNetBufferListEntry = CONTAINING_RECORD(currentNetBufferListEntry->ListEntry.Flink, PacketModificationContext, ListEntry);
-			ASSERT(currentNetBufferListEntry != nullptr);
-		}
-		KeReleaseGuardedMutex(&_mutex);
+//		KeAcquireGuardedMutex(&_mutex);
+//		PacketModificationContext* currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, PacketModificationContext, ListEntry);
+//
+//#ifdef DBG
+//		// Traverse through list.
+//		PLIST_ENTRY currentEntry = netBufferListHeader->ListEntry.Flink;
+//		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link list: %p", &(netBufferListHeader->ListEntry));
+//		while (currentEntry != &(netBufferListHeader->ListEntry))
+//		{
+//			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "->%p", currentEntry);
+//			currentEntry = currentEntry->Flink;
+//		}
+//		DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "\n");
+//#endif
+//
+//		currentNetBufferListEntry = CONTAINING_RECORD(netBufferListHeader->ListEntry.Flink, PacketModificationContext, ListEntry);
+//		while (currentNetBufferListEntry != netBufferListHeader)
+//		{
+//			PLIST_ENTRY temp = currentNetBufferListEntry->ListEntry.Flink;
+//			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Flink is %p\n", temp);
+//			if (currentNetBufferListEntry == contextByIdentifier)
+//			{
+//				pmContext = currentNetBufferListEntry;
+//				(pmContext->ReceviedFragmentCounts)++;
+//				IsOrignalNBLExsit = true;
+//				break;
+//			}
+//			currentNetBufferListEntry = CONTAINING_RECORD(currentNetBufferListEntry->ListEntry.Flink, PacketModificationContext, ListEntry);
+//			ASSERT(currentNetBufferListEntry != nullptr);
+//		}
+//		KeReleaseGuardedMutex(&_mutex);
 
 		if (pmContext != nullptr)
 		{
@@ -861,9 +860,9 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 
 				ASSERT(pmContext->FragmentCounts != 0);
 
-				KeAcquireGuardedMutex(&_mutex);
-				RemoveEntryList(&(pmContext->ListEntry));
-				KeReleaseGuardedMutex(&_mutex);
+				//KeAcquireGuardedMutex(&_mutex);
+				//RemoveEntryList(&(pmContext->ListEntry));
+				//KeReleaseGuardedMutex(&_mutex);
 #ifdef DBG
 				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removed list entry %p\n", &(pmContext->ListEntry));
 #endif
@@ -877,6 +876,7 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Inject packet error.\n");
 #endif
 					FwpsFreeNetBufferList(pmContext->NewNBL);
+					delete pmContext;
 				}
 			}
 
