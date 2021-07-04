@@ -117,17 +117,17 @@ NTSTATUS InjectionHelper::Inject(void* context, NetPacketDirection direction, Ne
 NTSTATUS InjectionHelper::InjectNbl(void* context, NetLayer layer, NetPacketDirection direction, PNET_BUFFER_LIST bufferList)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	PacketModificationContext* pmContext = (PacketModificationContext*)context;
+	PacketModificationContext* pmData = (PacketModificationContext*)context;
 	switch (layer)
 	{
 	case NetworkLayer:
 		switch (direction)
 		{
 		case Out:
-			status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, pmContext->CompartmentId, bufferList, InjectionHelper::ModificationCompleted, context);
+			status = FwpsInjectNetworkSendAsync(InjectionHandles[2], NULL, 0, pmData->CompartmentId, bufferList, InjectionHelper::ModificationCompleted, context);
 			break;
 		case In:
-			status = FwpsInjectNetworkReceiveAsync(InjectionHandles[0], NULL, 0, pmContext->CompartmentId, pmContext->InterfaceIndex, pmContext->SubInterfaceIndex, bufferList, InjectionHelper::ModificationCompleted, context);
+			status = FwpsInjectNetworkReceiveAsync(InjectionHandles[0], NULL, 0, pmData->CompartmentId, pmData->InterfaceIndex, pmData->SubInterfaceIndex, bufferList, InjectionHelper::ModificationCompleted, context);
 			break;
 		default:
 			break;
@@ -140,7 +140,7 @@ NTSTATUS InjectionHelper::InjectNbl(void* context, NetLayer layer, NetPacketDire
 #ifdef DBG
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link layer outbound packet modifing...\n");
 #endif
-			status = FwpsInjectMacSendAsync(InjectionHandles[6], NULL, 0, FWPS_LAYER_OUTBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
+			status = FwpsInjectMacSendAsync(InjectionHandles[6], NULL, 0, FWPS_LAYER_OUTBOUND_MAC_FRAME_NATIVE, pmData->InterfaceIndex, pmData->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
 			break;
 		case In:
 
@@ -148,7 +148,7 @@ NTSTATUS InjectionHelper::InjectNbl(void* context, NetLayer layer, NetPacketDire
 			DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Link layer inbound packet modifing...\n");
 #endif
 
-			status = FwpsInjectMacReceiveAsync(InjectionHandles[4], NULL, 0, FWPS_LAYER_INBOUND_MAC_FRAME_NATIVE, pmContext->InterfaceIndex, pmContext->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
+			status = FwpsInjectMacReceiveAsync(InjectionHandles[4], NULL, 0, FWPS_LAYER_INBOUND_MAC_FRAME_NATIVE, pmData->InterfaceIndex, pmData->NdisPortNumber, bufferList, InjectionHelper::ModificationCompleted, context);
 			break;
 		default:
 			break;

@@ -117,14 +117,14 @@ NTSTATUS ShadowCallout::CalloutPreproecess(
 	return status;
 }
 
-void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PacketModificationContext* pmContext, ShadowFilterContext * sfContext)
+void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PacketModificationContext* pmData, ShadowFilterContext * sfContext)
 {
-	if (pmContext->OriginalNBL)
+	if (pmData->OriginalNBL)
 	{
 		if (sfContext->NetPacketFilteringCallout != NULL)
 		{
 			// Cauculate the number of net buffers.
-			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(pmContext->OriginalNBL);
+			PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(pmData->OriginalNBL);
 			int netBufferCount = 0;
 			for (PNET_BUFFER currentBuffer = firstNetBuffer; currentBuffer != nullptr; currentBuffer = NET_BUFFER_NEXT_NB(currentBuffer))
 			{
@@ -148,7 +148,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				if (packetBufferWithMetaInfo != nullptr)
 				{
 					BYTE* currentWrittenPos = packetBufferWithMetaInfo;
-					RtlCopyMemory(currentWrittenPos, &pmContext, idSize);
+					RtlCopyMemory(currentWrittenPos, &pmData, idSize);
 					currentWrittenPos += idSize;
 					RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
 					currentWrittenPos += sizeof(netBufferCount);
@@ -238,7 +238,7 @@ NTSTATUS ShadowCallout::InitializeNBLListHeader()
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	KeInitializeSpinLock(&SpinLock);
-	InitializeListHead(&(PendingNetBufferListHeader.ListEntry));
+	//InitializeListHead(&(PendingNetBufferListHeader.ListEntry));
 	KeInitializeGuardedMutex(&_mutex);
 	return status;
 }
@@ -325,7 +325,7 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 
 					auto listHeader = &PendingNetBufferListHeader;
 					UNREFERENCED_PARAMETER(listHeader);
-					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
 					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
@@ -404,8 +404,8 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 					newBufferListEntry->OriginalNBL = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32;
-					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32,
-						InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32;
+					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
 					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
@@ -487,8 +487,8 @@ VOID NTAPI ShadowCallout::NetworkInV6ClassifyFn(
 					newBufferListEntry->OriginalNBL = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V6_INTERFACE_INDEX].value.uint32;
-					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V6_SUB_INTERFACE_INDEX].value.uint32,
-						InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V6_SUB_INTERFACE_INDEX].value.uint32;
+					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
 					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
@@ -573,7 +573,7 @@ VOID NTAPI ShadowCallout::NetworkOutV6ClassifyFn(
 					newBufferListEntry->FragmentCounts = 0;
 					newBufferListEntry->OriginalNBL = clonedPacket;
 					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
-					InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
 					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
@@ -658,13 +658,13 @@ VOID NTAPI ShadowCallout::LinkOutClassifyFn(
 					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_OUTBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
 					newBufferListEntry->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_OUTBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
 
-#ifdef DBG
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Adding list entry %p, NET_BUFFER_PACKET is %p\n", &(newBufferListEntry->ListEntry), clonedPacket);
-#endif
-					InsertTailList(&(PendingNetBufferListHeader.ListEntry), &(newBufferListEntry->ListEntry));
-#ifdef DBG
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Added list entry %p, NET_BUFFER_PACKET is %p\n", &(newBufferListEntry->ListEntry), clonedPacket);
-#endif
+//#ifdef DBG
+//					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Adding list entry %p, NET_BUFFER_PACKET is %p\n", &(newBufferListEntry->ListEntry), clonedPacket);
+//#endif
+//					InsertTailList(&(PendingNetBufferListHeader.ListEntry), &(newBufferListEntry->ListEntry));
+//#ifdef DBG
+//					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Added list entry %p, NET_BUFFER_PACKET is %p\n", &(newBufferListEntry->ListEntry), clonedPacket);
+//#endif
 
 
 					// Get net buffer counts.
@@ -705,7 +705,7 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 	NTSTATUS status = STATUS_SUCCESS;
 
 #ifdef DBG
-	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
+	//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "LinkInClassifyFn\t\n");
 #endif
 	classifyOut->actionType = FWP_ACTION_PERMIT;
 
@@ -742,28 +742,33 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					classifyOut->flags |= FWPS_CLASSIFY_OUT_FLAG_ABSORB;
 
 					//// Inqueue cloned net buffer list.
-					PacketModificationContext* newBufferListEntry = new PacketModificationContext{};
-					newBufferListEntry->OriginalNBL = packet;
-					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
-					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
-					newBufferListEntry->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
-					newBufferListEntry->MacHeader = inMetaValues->ethernetMacHeaderSize;
+					PacketModificationContext* pmData = new PacketModificationContext{};
+					pmData->OriginalNBL = packet;
+					pmData->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					pmData->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32;
+					pmData->NdisPortNumber = (NDIS_PORT_NUMBER)(inFixedValues->incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_NDIS_PORT].value.int32);
+					pmData->MacHeader = inMetaValues->ethernetMacHeaderSize;
 					// Get net buffer counts.
 					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
 					{
-						++(newBufferListEntry->FragmentCounts);
+						++(pmData->FragmentCounts);
 					}
 
-					ASSERT(newBufferListEntry->FragmentCounts > 0);
+					ASSERT(pmData->FragmentCounts > 0);
 
+					if (pmData->FragmentCounts > 1)
+					{
+						DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "FragmentCount > 1\t\n");
+					}
+					
 					//KeAcquireGuardedMutex(&_mutex);
 					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserting %p to list.\t\n", newBufferListEntry);
 					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
-					//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserted %p to list.\t\n", newBufferListEntry);
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Inserted %p to list. Fragments count is %d. Original NBL pointer is %p\t\n", pmData,pmData->FragmentCounts , pmData->OriginalNBL);
 					//KeReleaseGuardedMutex(&_mutex);
 
-					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, newBufferListEntry, context);
+					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, pmData, context);
 				}
 
 
@@ -790,7 +795,7 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 
 	if (contextByIdentifier)
 	{
-		PacketModificationContext* pmContext = (PacketModificationContext*)identifier;
+		PacketModificationContext* pmData = (PacketModificationContext*)identifier;
 		bool IsOrignalNBLExsit = true;
 
 //		KeAcquireGuardedMutex(&_mutex);
@@ -825,46 +830,47 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 //		}
 //		KeReleaseGuardedMutex(&_mutex);
 
-		if (pmContext != nullptr)
+		if (pmData != nullptr)
 		{
-			ASSERT(pmContext->ReceviedFragmentCounts <= pmContext->FragmentCounts);
-			ASSERT(pmContext->FragmentCounts != 0);
+			//ASSERT(pmContext->ReceviedFragmentCounts <= pmContext->FragmentCounts);
+			//ASSERT(pmContext->FragmentCounts != 0);
 
+			// Inject packet only when original packet exsits.
 			if (IsOrignalNBLExsit)
 			{
 				BYTE* newBuffer = new BYTE[size];
 				RtlCopyMemory(newBuffer, buffer, size);
 				PMDL mdl = NdisAllocateMdl(InjectionHelper::NDISPoolHandle, buffer, (UINT)size);
-				status = FwpsAllocateNetBufferAndNetBufferList(InjectionHelper::NDISPoolHandle, 0, 0, mdl, 0, size, &(pmContext->NewNBL));
+				status = FwpsAllocateNetBufferAndNetBufferList(InjectionHelper::NDISPoolHandle, 0, 0, mdl, 0, size, &(pmData->NewNBL));
 
 				if (NT_SUCCESS(status))
 				{
-					status = InjectionHelper::Inject(pmContext, direction, layer, pmContext->NewNBL);
+					status = InjectionHelper::Inject(pmData, direction, layer, pmData->NewNBL);
 				}
 			}
 			else
 			{
 				// No matched packet.
 #ifdef DBG
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "No mathced packet in the queue for packet %p\n", pmContext);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "No exsits packet in the queue for packet %p\n", pmData);
 #endif
 			}
 
 
 			// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
-			if (pmContext->NewNBL && pmContext->ReceviedFragmentCounts == pmContext->FragmentCounts)
+			if (pmData->NewNBL && pmData->ReceviedFragmentCounts == pmData->FragmentCounts)
 			{
 #ifdef DBG
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removing list entry %p\n", &(pmContext->ListEntry));
+				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removing list entry %p\n", &(pmContext->ListEntry));
 #endif
-
-				ASSERT(pmContext->FragmentCounts != 0);
+				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Injecting %p. Fragments count is %d. Original NBL pointer is %p\t\n", pmData, pmData->FragmentCounts, pmData->OriginalNBL);
+				ASSERT(pmData->FragmentCounts != 0);
 
 				//KeAcquireGuardedMutex(&_mutex);
 				//RemoveEntryList(&(pmContext->ListEntry));
 				//KeReleaseGuardedMutex(&_mutex);
 #ifdef DBG
-				DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removed list entry %p\n", &(pmContext->ListEntry));
+				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removed list entry %p\n", &(pmContext->ListEntry));
 #endif
 
 				//status = FwpsInjectNetworkSendAsync(inejctionHandle, NULL, 0, currentNetBufferListEntry->CompartmentId, nblToSend, InjectionHelper::ModificationCompleted, context);
@@ -875,8 +881,8 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 #ifdef DBG
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, "Inject packet error.\n");
 #endif
-					FwpsFreeNetBufferList(pmContext->NewNBL);
-					delete pmContext;
+					FwpsFreeNetBufferList(pmData->NewNBL);
+					delete pmData;
 				}
 			}
 
@@ -896,5 +902,8 @@ void ShadowCallout::ModificationComplete(PNET_BUFFER_LIST netBufferList, void* p
 	FwpsFreeNetBufferList(netBufferList);
 
 	// Delete context.
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Delete %p to list.\t\n", packetContext);
+
 	delete packetContext;
+	
 }

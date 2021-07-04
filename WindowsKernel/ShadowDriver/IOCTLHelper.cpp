@@ -670,9 +670,6 @@ NTSTATUS IOCTLHelper::IoctlInjectPacket(PIRP irp, PIO_STACK_LOCATION ioStackLoca
 					UNREFERENCED_PARAMETER(packetStartPointer);
 					if (netBufferList)
 					{
-#ifdef DBG
-						DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "IOCTL inject control contains NET_BUFFER_LIST %p\n", netBufferList);
-#endif
 						status = ShadowFilter::InjectPacket(filter->GetContext(), direction, layer, packetStartPointer, packetSize, (unsigned long long)netBufferList, fragmentIndex);
 					}
 					else

@@ -32,7 +32,7 @@ public:
 		_In_ FWPS_CALLOUT_NOTIFY_TYPE notifyType,
 		_In_ const GUID* filterKey,
 		_Inout_ FWPS_FILTER* filter
-		);
+	);
 
 	static void PacketFlowDeleteNotfy(
 		_In_ UINT16 layerId,

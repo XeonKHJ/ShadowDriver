@@ -3,7 +3,7 @@
 
 struct PacketModificationContext
 {
-	LIST_ENTRY ListEntry;
+	//LIST_ENTRY ListEntry;
 	PNET_BUFFER_LIST OriginalNBL;
 	PNET_BUFFER_LIST NewNBL;
 	int FragmentCounts;
