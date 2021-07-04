@@ -141,30 +141,42 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				BYTE* packetBuffer = new BYTE[dataLength];
 				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(currentBuffer, dataLength, packetBuffer, 1, 0);
 
-				auto idSize = sizeof(ShadowFilterContext *);
-				size_t totolBufferLength = dataLength + idSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength) + sizeof(NetLayer) + sizeof(NetPacketDirection);
-				BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
 
-				if (packetBufferWithMetaInfo != nullptr)
+				if (dataBuffer == nullptr)
 				{
-					BYTE* currentWrittenPos = packetBufferWithMetaInfo;
-					RtlCopyMemory(currentWrittenPos, &pmData, idSize);
-					currentWrittenPos += idSize;
-					RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
-					currentWrittenPos += sizeof(netBufferCount);
-					RtlCopyMemory(currentWrittenPos, &fragIndex, sizeof(fragIndex));
-					currentWrittenPos += sizeof(fragIndex);
-					RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
-					currentWrittenPos += sizeof(offsetLength);
-					RtlCopyMemory(currentWrittenPos, &layer, sizeof(int));
-					currentWrittenPos += sizeof(NetLayer);
-					RtlCopyMemory(currentWrittenPos, &direction, sizeof(NetPacketDirection));
-					currentWrittenPos += sizeof(NetPacketDirection);
-					// Write data.
-					RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
-					(sfContext->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, sfContext->CustomContext);
+					// Need to log a warning here.
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NetworkOutV4ClassifyFn\t\n");
 
-					delete packetBufferWithMetaInfo;
+					// Delete pmData.
+					delete pmData;
+				}
+				else
+				{
+					auto idSize = sizeof(ShadowFilterContext*);
+					size_t totolBufferLength = dataLength + idSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength) + sizeof(NetLayer) + sizeof(NetPacketDirection);
+					BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
+
+					if (packetBufferWithMetaInfo != nullptr)
+					{
+						BYTE* currentWrittenPos = packetBufferWithMetaInfo;
+						RtlCopyMemory(currentWrittenPos, &pmData, idSize);
+						currentWrittenPos += idSize;
+						RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
+						currentWrittenPos += sizeof(netBufferCount);
+						RtlCopyMemory(currentWrittenPos, &fragIndex, sizeof(fragIndex));
+						currentWrittenPos += sizeof(fragIndex);
+						RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
+						currentWrittenPos += sizeof(offsetLength);
+						RtlCopyMemory(currentWrittenPos, &layer, sizeof(int));
+						currentWrittenPos += sizeof(NetLayer);
+						RtlCopyMemory(currentWrittenPos, &direction, sizeof(NetPacketDirection));
+						currentWrittenPos += sizeof(NetPacketDirection);
+						// Write data.
+						RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
+						(sfContext->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, sfContext->CustomContext);
+
+						delete packetBufferWithMetaInfo;
+					}
 				}
 
 				delete packetBuffer;
@@ -199,30 +211,39 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				BYTE* packetBuffer = new BYTE[dataLength];
 				PBYTE dataBuffer = (PBYTE)NdisGetDataBuffer(currentBuffer, dataLength, packetBuffer, 1, 0);
 
-				auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
-				size_t totolBufferLength = dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength) + sizeof(NetLayer) + sizeof(NetPacketDirection);
-				BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
-
-				if (packetBufferWithMetaInfo != nullptr)
+				if (dataBuffer == nullptr)
 				{
-					BYTE* currentWrittenPos = packetBufferWithMetaInfo;
-					RtlCopyMemory(currentWrittenPos, &packet, netBufferListPointerSize);
-					currentWrittenPos += netBufferListPointerSize;
-					RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
-					currentWrittenPos += sizeof(netBufferCount);
-					RtlCopyMemory(currentWrittenPos, &fragIndex, sizeof(fragIndex));
-					currentWrittenPos += sizeof(fragIndex);
-					RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
-					currentWrittenPos += sizeof(offsetLength);
-					RtlCopyMemory(currentWrittenPos, &layer, sizeof(int));
-					currentWrittenPos += sizeof(NetLayer);
-					RtlCopyMemory(currentWrittenPos, &direction, sizeof(NetPacketDirection));
-					currentWrittenPos += sizeof(NetPacketDirection);
-					// Write data.
-					RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
-					(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, context->CustomContext);
+					// Need to log a warning here.
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NetworkOutV4ClassifyFn\t\n");
+				}
+				else
+				{
+					auto netBufferListPointerSize = sizeof(PNET_BUFFER_LIST);
+					size_t totolBufferLength = dataLength + netBufferListPointerSize + sizeof(netBufferCount) + sizeof(fragIndex) + sizeof(offsetLength) + sizeof(NetLayer) + sizeof(NetPacketDirection);
+					BYTE* packetBufferWithMetaInfo = new BYTE[totolBufferLength];
 
-					delete packetBufferWithMetaInfo;
+					if (packetBufferWithMetaInfo != nullptr)
+					{
+						BYTE* currentWrittenPos = packetBufferWithMetaInfo;
+						RtlCopyMemory(currentWrittenPos, &packet, netBufferListPointerSize);
+						currentWrittenPos += netBufferListPointerSize;
+						RtlCopyMemory(currentWrittenPos, &netBufferCount, sizeof(netBufferCount));
+						currentWrittenPos += sizeof(netBufferCount);
+						RtlCopyMemory(currentWrittenPos, &fragIndex, sizeof(fragIndex));
+						currentWrittenPos += sizeof(fragIndex);
+						RtlCopyMemory(currentWrittenPos, &offsetLength, sizeof(offsetLength));
+						currentWrittenPos += sizeof(offsetLength);
+						RtlCopyMemory(currentWrittenPos, &layer, sizeof(int));
+						currentWrittenPos += sizeof(NetLayer);
+						RtlCopyMemory(currentWrittenPos, &direction, sizeof(NetPacketDirection));
+						currentWrittenPos += sizeof(NetPacketDirection);
+						// Write data.
+						RtlCopyMemory(currentWrittenPos, dataBuffer, dataLength);
+						(context->NetPacketFilteringCallout)(layer, direction, packetBufferWithMetaInfo, totolBufferLength, context->CustomContext);
+
+						delete packetBufferWithMetaInfo;
+					}
+
 				}
 
 				delete packetBuffer;
@@ -737,10 +758,6 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 			{
 				if (NT_SUCCESS(status))
 				{
-					classifyOut->actionType = FWP_ACTION_BLOCK;
-					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-					classifyOut->flags |= FWPS_CLASSIFY_OUT_FLAG_ABSORB;
-
 					//// Inqueue cloned net buffer list.
 					PacketModificationContext* pmData = new PacketModificationContext{};
 					pmData->OriginalNBL = packet;
@@ -769,6 +786,10 @@ VOID NTAPI ShadowCallout::LinkInClassifyFn(
 					//KeReleaseGuardedMutex(&_mutex);
 
 					SendPacketToUserMode(NetLayer::LinkLayer, NetPacketDirection::In, pmData, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+					classifyOut->flags |= FWPS_CLASSIFY_OUT_FLAG_ABSORB;
 				}
 
 
@@ -858,7 +879,7 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 
 
 			// If all fragments are received, the driver injectst the NET_BUFFER_LIST to network stack and deque this NET_BUFFER_LIST from callout queue.
-			if (pmData->NewNBL && pmData->ReceviedFragmentCounts == pmData->FragmentCounts)
+			if (pmData->NewNBL && pmData->ReceviedFragmentCounts == pmData->FragmentCounts && false)
 			{
 #ifdef DBG
 				//DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Removing list entry %p\n", &(pmContext->ListEntry));
@@ -894,9 +915,10 @@ NTSTATUS ShadowCallout::ModifyPacket(void* context, NetPacketDirection direction
 
 void ShadowCallout::ModificationComplete(PNET_BUFFER_LIST netBufferList, void* packetContext)
 {
-	PacketModificationContext* pmContext = (PacketModificationContext*)packetContext;
+	PacketModificationContext* pmData = (PacketModificationContext*)packetContext;
+	DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Injecting %p. Fragments count is %d. Original NBL pointer is %p\t\n", pmData, pmData->FragmentCounts, pmData->OriginalNBL);
+	UNREFERENCED_PARAMETER(pmData);
 
-	UNREFERENCED_PARAMETER(pmContext);
 
 	// Free cloned NET_BUFFER_LIST.
 	FwpsFreeNetBufferList(netBufferList);
