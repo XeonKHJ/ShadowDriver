@@ -101,20 +101,20 @@ namespace ShadowDriver.UWPDemo
                         switch(args.Direction)
                         {
                             case NetPacketDirection.Out:
-                                //address = IPAddress.Parse("192.168.1.104"); 
-                                //address.GetAddressBytes().CopyTo(buffer, 16);
+                                address = IPAddress.Parse("192.168.1.104"); 
+                                address.GetAddressBytes().CopyTo(buffer, 16);
 
                                 modifiedBuffer = buffer;
                                 break;
                             case NetPacketDirection.In:
-                                //address = IPAddress.Parse("22.22.22.22");
-                                //address.GetAddressBytes().CopyTo(buffer, 12);
-                                //buffer[10] = 0;
-                                //buffer[11] = 0;
-                                //var checkSumCalculateBytes = (buffer[0] & 0xf) * 4;
-                                //var checkSum = CalculateChecksum(buffer, checkSumCalculateBytes);
-                                //buffer[10] = (byte)((checkSum & 0xff00) >> 8);
-                                //buffer[11] = (byte)(checkSum & 0xff);
+                                address = IPAddress.Parse("22.22.22.22");
+                                address.GetAddressBytes().CopyTo(buffer, 12);
+                                buffer[10] = 0;
+                                buffer[11] = 0;
+                                var checkSumCalculateBytes = (buffer[0] & 0xf) * 4;
+                                var checkSum = CalculateChecksum(buffer, checkSumCalculateBytes);
+                                buffer[10] = (byte)((checkSum & 0xff00) >> 8);
+                                buffer[11] = (byte)(checkSum & 0xff);
                                 modifiedBuffer = buffer;
                                 break;
                         }
