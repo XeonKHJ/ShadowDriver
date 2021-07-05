@@ -145,7 +145,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				if (dataBuffer == nullptr)
 				{
 					// Need to log a warning here.
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NetworkOutV4ClassifyFn\t\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NdisGetDataBuffer returns nullptr.\t\n");
 
 					// Delete pmData.
 					delete pmData;
@@ -214,7 +214,7 @@ void ShadowCallout::SendPacketToUserMode(NetLayer layer, NetPacketDirection dire
 				if (dataBuffer == nullptr)
 				{
 					// Need to log a warning here.
-					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NetworkOutV4ClassifyFn\t\n");
+					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_WARNING_LEVEL, "NdisGetDataBuffer returns nullptr.\t\n");
 				}
 				else
 				{
@@ -329,35 +329,29 @@ VOID NTAPI ShadowCallout::NetworkOutV4ClassifyFn(
 			}
 			else
 			{
-				PNET_BUFFER_LIST clonedPacket = NULL;
-				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
-
 				if (NT_SUCCESS(status))
 				{
-					classifyOut->actionType = FWP_ACTION_BLOCK;
-					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
 					// Inqueue cloned net buffer list.
-					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
-					newBufferListEntry->ReceviedFragmentCounts = 0;
-					newBufferListEntry->FragmentCounts = 0;
-					newBufferListEntry->OriginalNBL = clonedPacket;
-					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
-
-					auto listHeader = &PendingNetBufferListHeader;
-					UNREFERENCED_PARAMETER(listHeader);
-					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
+					PacketModificationContext* pmData = new PacketModificationContext;
+					pmData->ReceviedFragmentCounts = 0;
+					pmData->FragmentCounts = 0;
+					pmData->OriginalNBL = packet;
+					pmData->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
 
 					// Get net buffer counts.
-					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
 					{
-						++(newBufferListEntry->FragmentCounts);
+						++(pmData->FragmentCounts);
 					}
 
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
 
-					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, clonedPacket, context);
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::Out, pmData, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+					classifyOut->flags |= FWPS_CLASSIFY_OUT_FLAG_ABSORB;
 				}
 			}
 		}
@@ -409,35 +403,32 @@ VOID NTAPI ShadowCallout::NetworkInV4ClassifyFn(
 			}
 			else
 			{
-				PNET_BUFFER_LIST clonedPacket = NULL;
-				status = FwpsAllocateCloneNetBufferList(packet, NULL, NULL, 0, &clonedPacket);
-
 				if (NT_SUCCESS(status))
 				{
-
-					classifyOut->actionType = FWP_ACTION_BLOCK;
-					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
 					// Inqueue cloned net buffer list.
-					PacketModificationContext* newBufferListEntry = new PacketModificationContext;
-					newBufferListEntry->ReceviedFragmentCounts = 0;
-					newBufferListEntry->FragmentCounts = 0;
-					newBufferListEntry->OriginalNBL = clonedPacket;
-					newBufferListEntry->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
-					newBufferListEntry->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32;
-					newBufferListEntry->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32;
+					PacketModificationContext* pmData = new PacketModificationContext;
+					pmData->ReceviedFragmentCounts = 0;
+					pmData->FragmentCounts = 0;
+					pmData->OriginalNBL = packet;
+					pmData->CompartmentId = (COMPARTMENT_ID)inMetaValues->compartmentId;
+					pmData->InterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_INTERFACE_INDEX].value.uint32;
+					pmData->SubInterfaceIndex = inFixedValues->incomingValue[FWPS_FIELD_INBOUND_IPPACKET_V4_SUB_INTERFACE_INDEX].value.uint32;
 					//InsertTailList(&PendingNetBufferListHeader.ListEntry, &(newBufferListEntry->ListEntry));
 
 					// Get net buffer counts.
-					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(clonedPacket);
+					PNET_BUFFER firstNetBuffer = NET_BUFFER_LIST_FIRST_NB(packet);
 					for (PNET_BUFFER currentNetBuffer = firstNetBuffer; currentNetBuffer != nullptr; currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer))
 					{
-						++(newBufferListEntry->FragmentCounts);
+						++(pmData->FragmentCounts);
 					}
 
 					DbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_TRACE_LEVEL, "Queued a net buffer list\t\n");
 
-					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, clonedPacket, context);
+					SendPacketToUserMode(NetLayer::NetworkLayer, NetPacketDirection::In, pmData, context);
+
+					classifyOut->actionType = FWP_ACTION_BLOCK;
+					classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+					classifyOut->flags |= FWPS_CLASSIFY_OUT_FLAG_ABSORB;
 				}
 			}
 		}
