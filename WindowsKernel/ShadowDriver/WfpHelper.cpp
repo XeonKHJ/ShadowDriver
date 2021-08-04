@@ -153,6 +153,7 @@ NTSTATUS WfpHelper::InitializeSublayer(ShadowFilterContext* context)
 	sublayer.displayData.description = L"ShadowDriver Sublayer";
 	sublayer.subLayerKey = context->SublayerGuid;
 	sublayer.weight = FWPM_WEIGHT_RANGE_MAX; //65500
+	
 	status = FwpmSubLayerAdd(context->WfpEngineHandle, &sublayer, NULL);
 	return status;
 }
