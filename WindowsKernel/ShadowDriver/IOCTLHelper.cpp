@@ -92,21 +92,6 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		ULONG ioControlCode = pIoStackIrp->Parameters.DeviceIoControl.IoControlCode;
 		switch (ioControlCode)
 		{
-		case IOCTL_SHADOWDRIVER_APP_REGISTER:
-#ifdef DBG
-			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
-#endif
-			status = IoctlRegisterApp(Irp, pIoStackIrp);
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
-			Irp->IoStatus.Status = status;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
-		case IOCTL_SHADOWDRIVER_APP_DEREGISTER:
-			status = IoctlDeregisterApp(Irp, pIoStackIrp);
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
-			Irp->IoStatus.Status = status;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
 		case IOCTL_SHADOWDRIVER_START_FILTERING:
 #ifdef DBG
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_START_WFP\n");
@@ -115,12 +100,6 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
-		case IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO:
-#ifdef DBG
-			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "IOCTL_SHADOWDRIVER_REQUIRE_PACKET_INFO\n");
-#endif
-			//IoctlRequirePacketInfo(Irp);
 			break;
 		case IOCTL_SHADOWDRIVER_DEQUEUE_NOTIFICATION:
 #if DBG
@@ -182,27 +161,6 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 		break;
 		case IOCTL_SHADOWDRIVER_STOP_FILTERING:
 			status = IoctlStopFiltering(Irp, pIoStackIrp);
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
-			Irp->IoStatus.Status = status;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
-		case IOCTL_SHADOWDRIVER_GET_REGISTERED_APP_COUNT:
-			status = STATUS_SUCCESS;
-			WriteDataToIrpOutputBuffer(&_helperCount, sizeof(int), Irp, pIoStackIrp);
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
-			Irp->IoStatus.Status = status;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
-		case IOCTL_SHADOWDRIVER_ENABLE_MODIFICATION:
-			status = STATUS_SUCCESS;
-			status = IoctlEnableModification(Irp, pIoStackIrp);
-			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
-			Irp->IoStatus.Status = status;
-			IoCompleteRequest(Irp, IO_NO_INCREMENT);
-			break;
-		case IOCTL_SHADOWDRIVER_INJECT_PACKET:
-			status = STATUS_SUCCESS;
-			status = IoctlInjectPacket(Irp, pIoStackIrp);
 			WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);

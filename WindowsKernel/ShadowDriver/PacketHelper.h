@@ -5,5 +5,5 @@
 class PacketHelper
 {
 public:
-	static void FilterFunc(NetLayer netLayer, NetPacketDirection direction, void* buffer, unsigned long long bufferSize, void* context);
+	static void FilterFunc(NetPacketDirection direction, void* buffer, unsigned long long bufferSize, void* context);
 };

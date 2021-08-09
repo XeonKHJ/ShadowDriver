@@ -11,14 +11,12 @@ private:
 		_Inout_opt_ void* layerData,
 		_In_ const FWPS_FILTER* filter,
 		_Inout_ FWPS_CLASSIFY_OUT* classifyOut,
-		NetLayer layer,
 		NetPacketDirection direction
 	);
 
-	static void SendPacketToUserMode(NetLayer layer, NetPacketDirection direction, PacketModificationContext* pmContext, ShadowFilterContext* sfContext);
+	static void SendPacketToUserMode(NetPacketDirection direction, PacketModificationContext* pmContext, ShadowFilterContext* sfContext);
 
 	static void SendPacketToUserMode(
-		NetLayer layer,
 		NetPacketDirection direction,
 		PNET_BUFFER_LIST netBufferList,
 		ShadowFilterContext* context
@@ -100,7 +98,7 @@ public:
 		_Inout_ FWPS_CLASSIFY_OUT* classifyOut
 	);
 
-	static NTSTATUS ModifyPacket(void* context, NetPacketDirection direction, NetLayer layer, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex);
+	static NTSTATUS ModifyPacket(void* context, NetPacketDirection direction, void* buffer, unsigned long long size, unsigned long long identifier, int fragmentIndex);
 
 	static void ModificationComplete(PNET_BUFFER_LIST netBufferList, void* packetContext);
 };

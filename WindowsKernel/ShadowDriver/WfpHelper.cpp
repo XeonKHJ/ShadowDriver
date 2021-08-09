@@ -51,20 +51,9 @@ WfpHelper::~WfpHelper()
 UINT8 WfpHelper::EncodeFilterCondition(FilterCondition* condition)
 {
 	UINT8 encodedCondition = 0;
-	switch (condition->FilterLayer)
-	{
-	case NetLayer::LinkLayer:
-	{
-		encodedCondition = 1;
-	}
-	break;
 
-	case NetLayer::NetworkLayer:
-	{
-		encodedCondition = 0;
-	}
-	break;
-	}
+	// Always network layer.
+	encodedCondition = 0;
 
 	switch (condition->FilterPath)
 	{

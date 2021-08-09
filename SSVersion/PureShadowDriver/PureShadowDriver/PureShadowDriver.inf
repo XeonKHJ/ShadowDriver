@@ -1,0 +1,86 @@
+;
+; PureShadowDriver.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Sample ; TODO: edit Class
+ClassGuid={78A1C341-4539-11d3-B88D-00C04FAD5171} ; TODO: edit ClassGuid
+Provider=%ManufacturerName%
+CatalogFile=PureShadowDriver.cat
+DriverVer= ; TODO: set DriverVer in stampinf property pages
+
+[DestinationDirs]
+DefaultDestDir = 12
+PureShadowDriver_Device_CoInstaller_CopyFiles = 11
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=SampleClassReg
+
+[SampleClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+PureShadowDriver.sys  = 1,,
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll=1 ; make sure the number matches with SourceDisksNames
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+%PureShadowDriver.DeviceDesc%=PureShadowDriver_Device, Root\PureShadowDriver ; TODO: edit hw-id
+
+[PureShadowDriver_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+PureShadowDriver.sys
+
+;-------------- Service installation
+[PureShadowDriver_Device.NT.Services]
+AddService = PureShadowDriver,%SPSVCINST_ASSOCSERVICE%, PureShadowDriver_Service_Inst
+
+; -------------- PureShadowDriver driver install sections
+[PureShadowDriver_Service_Inst]
+DisplayName    = %PureShadowDriver.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\PureShadowDriver.sys
+
+;
+;--- PureShadowDriver_Device Coinstaller installation ------
+;
+
+[PureShadowDriver_Device.NT.CoInstallers]
+AddReg=PureShadowDriver_Device_CoInstaller_AddReg
+CopyFiles=PureShadowDriver_Device_CoInstaller_CopyFiles
+
+[PureShadowDriver_Device_CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll,WdfCoInstaller"
+
+[PureShadowDriver_Device_CoInstaller_CopyFiles]
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll
+
+[PureShadowDriver_Device.NT.Wdf]
+KmdfService =  PureShadowDriver, PureShadowDriver_wdfsect
+[PureShadowDriver_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+ManufacturerName="<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+ClassName="Samples" ; TODO: edit ClassName
+DiskName = "PureShadowDriver Installation Disk"
+PureShadowDriver.DeviceDesc = "PureShadowDriver Device"
+PureShadowDriver.SVCDESC = "PureShadowDriver Service"

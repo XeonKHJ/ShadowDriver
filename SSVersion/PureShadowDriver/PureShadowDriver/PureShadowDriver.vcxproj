@@ -38,52 +38,28 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CancelSafeQueueCallouts.cpp" />
-    <ClCompile Include="Configuration.cpp" />
-    <ClCompile Include="Device.cpp" />
-    <ClCompile Include="Driver.cpp" />
-    <ClCompile Include="InjectionHelper.cpp" />
-    <ClCompile Include="IOCTLHelper.cpp" />
-    <ClCompile Include="NetFilteringCondition.cpp" />
-    <ClCompile Include="OverloadOperators.cpp" />
-    <ClCompile Include="Queue.cpp" />
-    <ClCompile Include="ShadowCallouts.cpp" />
-    <ClCompile Include="ShadowFilter.cpp" />
-    <ClCompile Include="PacketHelper.cpp" />
-    <ClCompile Include="WfpHelper.cpp" />
+    <ClCompile Include="Device.c" />
+    <ClCompile Include="Driver.c" />
+    <ClCompile Include="Queue.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CancelSafeQueueCallouts.h" />
-    <ClInclude Include="Configuration.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
-    <ClInclude Include="InjectionHelper.h" />
-    <ClInclude Include="IOCTLHelper.h" />
-    <ClInclude Include="IOCTLHelperContext.h" />
-    <ClInclude Include="IrpLinkEntry.h" />
-    <ClInclude Include="PacketModificationContext.h" />
-    <ClInclude Include="NetFilteringCondition.h" />
-    <ClInclude Include="OverloadOperators.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
-    <ClInclude Include="ShadowCallouts.h" />
-    <ClInclude Include="ShadowFilter.h" />
     <ClInclude Include="Trace.h" />
-    <ClInclude Include="PacketHelper.h" />
-    <ClInclude Include="ShadowFilterContext.h" />
-    <ClInclude Include="WfpHelper.h" />
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="ShadowDriver.inf" />
+    <Inf Include="PureShadowDriver.inf" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2219ED12-59FA-407D-A421-8E98ABCC059F}</ProjectGuid>
+    <ProjectGuid>{DBBB7FD1-5625-4437-8033-B0E9EFA60480}</ProjectGuid>
     <TemplateGuid>{497e31cb-056b-4f31-abb8-447fd55ee5a5}</TemplateGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration>Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
-    <RootNamespace>ShadowDriver</RootNamespace>
+    <RootNamespace>PureShadowDriver</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -166,7 +142,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -179,7 +154,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -206,13 +180,7 @@
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <PreprocessorDefinitions>NDIS640;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>$(DDK_LIB_PATH)fwpkclnt.lib;$(DDK_LIB_PATH)\ndis.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -252,18 +220,10 @@
       <WppRecorderEnabled>true</WppRecorderEnabled>
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
-      <PreprocessorDefinitions>NDIS640;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>$(DDK_LIB_PATH)fwpkclnt.lib;$(DDK_LIB_PATH)\ndis.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
-  </ItemGroup>
-  <ItemGroup>
-    <MessageCompile Include="ShadowDriverStatus.mc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

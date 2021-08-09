@@ -1,10 +1,5 @@
 #pragma once
 
-enum NetLayer
-{
-	NetworkLayer = 0,
-	LinkLayer = 1
-};
 enum NetPacketDirection
 {
 	Out = 0,
@@ -33,7 +28,6 @@ enum FilterMatchType
 class FilterCondition
 {
 public:
-	NetLayer FilterLayer;
 	NetPacketDirection FilterPath;
 	IpAddrFamily IPAddressType;
 	union
