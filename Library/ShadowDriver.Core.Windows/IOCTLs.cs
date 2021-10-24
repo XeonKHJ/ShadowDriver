@@ -48,7 +48,13 @@ namespace ShadowDriver.Core.Windows
         //#define IOCTL_SHADOWDRIVER_INJECT_PACKET                CTL_CODE(FILE_DEVICE_NETWORK, 0X927, METHOD_BUFFERED, FILE_ANY_ACCESS)
         public static IOControlCode IOCTLShadowDriverInjectPacket = new IOControlCode(0x00000012, 0x927, IOControlAccessMode.Any, IOControlBufferingMethod.Buffered);
 
-        //#define IOCTL_SHADOWDRIVER_DIRECT_IO_TEST               CTL_CODE(FILE_DEVICE_NETWORK, 0X928, METHOD_IN_DIRECT | METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
-        public static IOControlCode IOCTLShadowDriverDirectIOTest = new IOControlCode(0x00000012, 0x928, IOControlAccessMode.Any, IOControlBufferingMethod.DirectInput);
+        //#define IOCTL_SHADOWDRIVER_DIRECT_IN_TEST               CTL_CODE(FILE_DEVICE_NETWORK, 0X828, METHOD_IN_DIRECT, FILE_ANY_ACCESS)
+        public static IOControlCode IOCTLShadowDriverDirectInTest = new IOControlCode(0x00000012, 0X828, IOControlAccessMode.Any, IOControlBufferingMethod.DirectInput);
+
+        //#define IOCTL_SHADOWDRIVER_DIRECT_OUT_TEST              CTL_CODE(FILE_DEVICE_NETWORK, 0X829, METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
+        public static IOControlCode IOCTLShadowDriverDirectOutTest = new IOControlCode(0x00000012, 0X829, IOControlAccessMode.Any, IOControlBufferingMethod.DirectOutput);
+
+        //#define IOCTL_SHADOWDRIVER_NEITHER_IO_TEST              CTL_CODE(FILE_DEVICE_NETWORK, 0X830, METHOD_NEITHER, FILE_ANY_ACCESS)
+        public static IOControlCode IOCTLShadowDriverNeitherTest = new IOControlCode(0x00000012, 0X830, IOControlAccessMode.Any, IOControlBufferingMethod.Neither);
     }
 }

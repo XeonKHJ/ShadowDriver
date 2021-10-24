@@ -215,7 +215,7 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
 #ifdef DBG
-		case IOCTL_SHADOWDRIVER_DIRECT_IO_TEST:
+		case IOCTL_SHADOWDRIVER_DIRECT_IN_TEST:
 		{
 
 			auto inputBuffer = Irp->MdlAddress;
@@ -236,6 +236,19 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 
 			UNREFERENCED_PARAMETER(addrCount);
 			UNREFERENCED_PARAMETER(appid);
+
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
+		}
+		case IOCTL_SHADOWDRIVER_NEITHER_IO_TEST:
+		{
+			auto inputBuffer = Irp->UserBuffer;
+			int appid = *(int*)inputBuffer;
+			UNREFERENCED_PARAMETER(appid);
+			*(int*)inputBuffer = 40;
+
+			*(int *)pIoStackIrp->Parameters.DeviceIoControl.Type3InputBuffer = 30;
 
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);

@@ -289,5 +289,10 @@ namespace ShadowDriver.WPFDemo
         {
             await _filter.DirectIOTestAsync();
         }
+
+        private async void NeitherIOTestButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _filter.NeitherIOTestAsync();
+        }
     }
 }
