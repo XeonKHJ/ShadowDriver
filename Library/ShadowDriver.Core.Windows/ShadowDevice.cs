@@ -149,6 +149,81 @@ namespace ShadowDriver.Core.Windows
             return (uint)result;
         }
 
+        public async Task<uint> SendIOControlDirectAsync(IOControlCode ioControlCode, byte[] inputBuffer)
+        {
+            uint result = 0;
+
+            await Task.Run(() =>
+            {
+                IntPtr eventHandle = CreateEvent(IntPtr.Zero, true, false, null);
+                uint bytesReturn = 0;
+
+                bool overlappedResult = false;
+                OVERLAPPED overlapped = new()
+                {
+                    hEvent = eventHandle,
+                };
+
+                IntPtr inputBufferPointer = Marshal.AllocHGlobal(inputBuffer.Length);
+                //Marshal.Copy(outputBuffer, 0, outputBufferPointer, outputBuffer.Length);
+
+                Marshal.Copy(inputBuffer, 0, inputBufferPointer, inputBuffer.Length);
+                try
+                {
+                    result = DeviceIoControl(_deviceHandle, ioControlCode.ControlCode, IntPtr.Zero, 0,inputBufferPointer, inputBuffer.Length, ref bytesReturn, ref overlapped);
+                    overlappedResult = GetOverlappedResult(_deviceHandle, ref overlapped, ref bytesReturn, true);
+                }
+                catch (Exception exception)
+                {
+                    System.Diagnostics.Debug.WriteLine(exception);
+                }
+
+                if (overlappedResult)
+                {
+                    System.Diagnostics.Debug.WriteLine("overlappedResult true");
+
+                    if (bytesReturn != 0)
+                    {
+
+                    }
+                    //else
+                    //{
+                    //    var resultResult = ResetEvent(eventHandle);
+                    //}
+                }
+                else
+                {
+                    var errorCode = GetLastError();
+
+                    //if (errorCode == 996)
+                    //{
+                    //    var resultResult = ResetEvent(eventHandle);
+                    //}
+                    //else
+                    //{
+                    //    isIoCompleted = true;
+                    //}
+
+                    System.Diagnostics.Debug.WriteLine("overlappedResult false, error code {0}.", errorCode);
+                }
+
+                System.Diagnostics.Debug.WriteLine("IOCTL Done");
+                //}
+                //else
+                //{
+                //    System.Diagnostics.Debug.WriteLine("IOCTL Error");
+                //}
+
+                //Marshal.Copy(outputBufferPointer, outputBuffer, 0, outputBuffer.Length);
+                Marshal.FreeHGlobal(inputBufferPointer);
+                //Marshal.FreeHGlobal(outputBufferPointer);
+
+                CloseHandle(eventHandle);
+                System.Diagnostics.Debug.WriteLine("Output data length is {0}.", bytesReturn);
+            }).ConfigureAwait(false);
+
+            return (uint)result;
+        }
         public bool IsOpened { get; private set; }
     }
 }

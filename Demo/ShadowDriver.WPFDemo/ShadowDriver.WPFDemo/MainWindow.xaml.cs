@@ -284,5 +284,10 @@ namespace ShadowDriver.WPFDemo
                 DisplayException(exception);
             }
         }
+
+        private async void DirectIOTestButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _filter.DirectIOTestAsync();
+        }
     }
 }

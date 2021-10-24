@@ -77,6 +77,12 @@ void IOCTLHelper::RemoveHelper(IOCTLHelper* helper)
 	} while (currentEntry != &_helperListHeader);
 }
 
+/// <summary>
+/// Filter IOCTL request.Executing corresponding commands.
+/// </summary>
+/// <param name="DeviceObject"></param>
+/// <param name="Irp"></param>
+/// <returns></returns>
 NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject, _Inout_ _IRP* Irp)
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
@@ -208,6 +214,34 @@ NTSTATUS IOCTLHelper::ShadowDriverIrpIoControl(_In_ _DEVICE_OBJECT* DeviceObject
 			Irp->IoStatus.Status = status;
 			IoCompleteRequest(Irp, IO_NO_INCREMENT);
 			break;
+#ifdef DBG
+		case IOCTL_SHADOWDRIVER_DIRECT_IO_TEST:
+		{
+
+			auto inputBuffer = Irp->MdlAddress;
+			UNREFERENCED_PARAMETER(inputBuffer);
+			//int dataReadSize = sizeof(int);
+			//auto inputBufferLength = pIoStackIrp->Parameters.DeviceIoControl.InputBufferLength;
+			//if (inputBufferLength >= (ULONG)dataReadSize)
+			//{
+			//	
+			//	auto result = *((int*)(inputBuffer));
+			//	UNREFERENCED_PARAMETER(result);
+			//}
+			auto addr = MmGetMdlVirtualAddress(inputBuffer);
+			auto addrCount = MmGetMdlByteCount(inputBuffer);
+			int appid = *(int*)addr;
+			*(int*)addr = 30;
+			//WriteStatusToOutputBuffer(&status, Irp, pIoStackIrp);
+
+			UNREFERENCED_PARAMETER(addrCount);
+			UNREFERENCED_PARAMETER(appid);
+
+			Irp->IoStatus.Status = status;
+			IoCompleteRequest(Irp, IO_NO_INCREMENT);
+			break;
+		}
+#endif
 		default:
 #ifdef DBG 
 			DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, "Received an unknown IOCTL!\t\n");

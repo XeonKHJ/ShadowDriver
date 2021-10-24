@@ -47,5 +47,8 @@ namespace ShadowDriver.Core.Windows
 
         //#define IOCTL_SHADOWDRIVER_INJECT_PACKET                CTL_CODE(FILE_DEVICE_NETWORK, 0X927, METHOD_BUFFERED, FILE_ANY_ACCESS)
         public static IOControlCode IOCTLShadowDriverInjectPacket = new IOControlCode(0x00000012, 0x927, IOControlAccessMode.Any, IOControlBufferingMethod.Buffered);
+
+        //#define IOCTL_SHADOWDRIVER_DIRECT_IO_TEST               CTL_CODE(FILE_DEVICE_NETWORK, 0X928, METHOD_IN_DIRECT | METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
+        public static IOControlCode IOCTLShadowDriverDirectIOTest = new IOControlCode(0x00000012, 0x928, IOControlAccessMode.Any, IOControlBufferingMethod.DirectInput);
     }
 }

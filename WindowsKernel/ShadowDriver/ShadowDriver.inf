@@ -4,8 +4,10 @@
 
 [Version]
 Signature="$WINDOWS NT$"
-Class=Sample ; TODO: edit Class
-ClassGuid={78A1C341-4539-11d3-B88D-00C04FAD5171} ; TODO: edit ClassGuid
+;Class=NetService ; TODO: edit Class
+;ClassGuid={4d36e974-e325-11ce-bfc1-08002be10318} ; TODO: edit ClassGuid
+Class=System ; TODO: specify appropriate Class
+ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
 Provider=%ManufacturerName%
 CatalogFile=ShadowDriver.cat
 DriverVer= ; TODO: set DriverVer in stampinf property pages
@@ -19,8 +21,8 @@ ShadowDriver_Device_CoInstaller_CopyFiles = 11
 
 ; ================= Class section =====================
 
-[ClassInstall32]
-Addreg=SampleClassReg
+;[ClassInstall32]
+;Addreg=SampleClassReg
 
 [SampleClassReg]
 HKR,,,0,%ClassName%
@@ -83,7 +85,7 @@ KmdfLibraryVersion = $KMDFVERSION$
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
 ManufacturerName="Hongjia" ;TODO: Replace with your manufacturer name
-ClassName="Samples" ; TODO: edit ClassName
+ClassName="Sample" ; TODO: edit ClassName
 DiskName = "ShadowDriver Installation Disk"
 ShadowDriver.DeviceDesc = "ShadowDriver Device"
 ShadowDriver.SVCDESC = "ShadowDriver Service"

@@ -12,9 +12,11 @@
             <ColumnDefinition Width="*"></ColumnDefinition>
             <ColumnDefinition Width="2.5*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
+        <ScrollViewer>
         <StackPanel>
             <Grid Grid.Row="0" Grid.Column="0" VerticalAlignment="Top">
                 <Grid.RowDefinitions>
+                    <RowDefinition></RowDefinition>
                     <RowDefinition></RowDefinition>
                     <RowDefinition></RowDefinition>
                     <RowDefinition></RowDefinition>
@@ -36,6 +38,7 @@
                 <TextBlock x:Name="ConnectStatusBlock" Grid.Column="0" Grid.Row="5" Margin="10">Device Connect Status</TextBlock>
                 <Button x:Name="StartFilterButton" Grid.Column="0" Grid.Row="6" Margin="10" Click="StartFilterButton_Click">Start Filtering</Button>
                 <Button x:Name="StopFilteringButton" Grid.Column="0" Grid.Row="7" Margin="10" Click="StopFilteringButton_Click">Stop Filtering</Button>
+                <Button x:Name="DirectIOTestButton" Grid.Column="0" Grid.Row="8" Margin="10" Click="DirectIOTestButton_Click">Direct I/O Test</Button>
                 <TextBlock x:Name="RegisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="0" Text="{Binding AppRegisterStatus}"></TextBlock>
                 <TextBlock x:Name="DeregisterAppResultBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="1"></TextBlock>
                 <TextBlock x:Name="GetAppCountBlock" VerticalAlignment="Center" Grid.Column="1" Grid.Row="2"></TextBlock>
@@ -82,6 +85,7 @@
                 <Button Margin="10" x:Name="AddConditionButton" Click="AddConditionButton_Click" Grid.Row="7" Content="Add Condition"></Button>
             </Grid>
         </StackPanel>
+        </ScrollViewer>
         <ListView x:Name="PacketsView" Grid.Column="1"  Grid.RowSpan="2">
             <ListView.ItemTemplate>
                 <DataTemplate>

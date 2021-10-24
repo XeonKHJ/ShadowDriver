@@ -482,6 +482,25 @@ namespace ShadowDriver.Core.Windows
             }
         }
 
+#if DEBUG
+        public async Task DirectIOTestAsync()
+        {
+            var inputBuffer = _shadowRegisterContext.SeralizeAppIdToByteArray();
+            var outputBuffer = Array.Empty<byte>();
+            try
+            {
+                await _shadowDevice.SendIOControlDirectAsync(IOCTLs.IOCTLShadowDriverDirectIOTest, inputBuffer);
+            }
+            catch (NullReferenceException)
+            {
+                throw new ShadowFilterException(0xC0090040);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+#endif
         private static void HandleError(uint errorCode)
         {
             if (errorCode != 0)
